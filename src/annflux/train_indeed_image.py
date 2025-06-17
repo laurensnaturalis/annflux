@@ -371,6 +371,7 @@ def clean_filenames(images_path):
                     images_path,
                     fn.replace(":", "_")
                     .replace(".", "_")
+                    .replace("-", "_")
                     .replace("=", "_")
                     .replace("_jpg", ".jpg"),
                 ),
