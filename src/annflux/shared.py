@@ -17,8 +17,7 @@ from os import PathLike
 from pathlib import Path
 from typing import Union
 
-from annflux.repository.dataset import Dataset
-from annflux.repository.repository import Repository
+
 
 base_data_path = os.path.expanduser(os.path.join("~", "annflux", "data"))
 
@@ -68,6 +67,10 @@ class AnnfluxSource(object):
         return os.path.join(self.working_folder, "labels.json")
 
     @property
+    def label_definitions_path(self):
+        return os.path.join(self.working_folder, "label_defs.json")
+
+    @property
     def exclusivity_path(self):
         return os.path.join(self.working_folder, "exclusivity.csv")
 
@@ -77,9 +80,11 @@ class AnnfluxSource(object):
 
     @property
     def repository(self):
+        from annflux.repository.repository import Repository
         return Repository(os.path.join(self.working_folder, "datarepo"))
 
     @property
-    def dataset(self) -> Dataset:
+    def dataset(self) -> "annflux.repository.dataset.Dataset":
+        from annflux.repository.dataset import Dataset
         return self.repository.get(label=Dataset, tag="unseen").first()
 

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Examples by Label</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .label-group {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 20px;
+        }
+        .label-group h2 {
+            color: #333;
+        }
+        .image-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .image-container img {
+            max-width: 200px;
+            max-height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Examples by Label</h1>
+    <div id="content"></div>
+
+    <script>
+        d3.csv("/data").then(function(data) {
+            // Group data by label_true
+            const groupedData = d3.group(data, d => d.labeled==1 ? d.label_true : d.label_predicted);
+
+            const sortedGroupedData = Array.from(groupedData.entries()).sort((a, b) => b[1].length - a[1].length);
+
+
+            // Select the content div
+            const contentDiv = d3.select("#content");
+
+            // For each group, create a label group div and add images
+            sortedGroupedData.forEach(([key, value]) => {
+                const labelGroupDiv = contentDiv.append("div")
+                    .attr("class", "label-group");
+
+<!--                labelGroupDiv.append("h2")-->
+<!--                    .text(key);-->
+
+               labelGroupDiv.append("h2")
+                    .text(`${key} (${value.length})`);
+
+                const imageContainer = labelGroupDiv.append("div")
+                    .attr("class", "image-container");
+
+                // Display up to 3 images for each label
+                value.slice(0, 3).forEach(d => {
+                    imageContainer.append("img")
+                        .attr("alt", d.label_true)
+                        .attr("src", `/images/thumbnail/${d.image_id}`)
+                        .on("error", function() {
+                            console.error("Error loading image:", d.image_url); // Log error if image fails to load
+                        });
+                });
+            });
+        });
+    </script>
+</body>
+</html>

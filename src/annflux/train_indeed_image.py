@@ -45,9 +45,13 @@ def png_to_jpg(path: str):
 def make_images(images_path_):
     images_path_ = Path(images_path_)
     jpgs = glob.glob(str(images_path_ / "*.jpg"))
+    JPGs = glob.glob(str(images_path_ / "*.JPG"))
     pngs = glob.glob(str(images_path_ / "*.png"))
     all_files = glob.glob(str(images_path_ / "*"))
 
+    if len(JPGs) > 0:
+        for filepath in JPGs:
+            os.rename(filepath, os.path.basename(filepath) + ".jpg")
     if len(pngs) > 0:
         with Pool(32) as pool:
             pool.map(png_to_jpg, pngs)

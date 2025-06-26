@@ -75,6 +75,16 @@ General functionality
 
 - tf_backend.py: linear models
 
+# Data definitions
+
+## 
+
+Dictionary with single field `labels` that is a list of doublets (`list[tuple[str, str]]`) defining (child, parent) relations
+
+```json
+{"labels": [["Insect", "null"], ["No insect", "null"]]}
+```
+
 
 
 
