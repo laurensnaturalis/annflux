@@ -90,6 +90,10 @@ HIGH
 
 # Changelog
 
+## 1.0.2.0
+
+- Improved reporting on when label save fails
+
 ## 1.0.1.0
 
 - Basic UI contribution from Naturalis
