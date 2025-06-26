@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import hashlib
+import json
 import os
 from typing import List
 import numpy as np
 import pandas
 from tqdm import tqdm
+
+from annflux.shared import AnnfluxSource
 
 
 def numpy_load(
@@ -121,3 +124,10 @@ def file_hash(path):
             hasher.update(buf)
             buf = f.read(block_size)
     return hasher.hexdigest()
+
+
+def write_label_defs(annflux_folder: str, label_defs: list[tuple[str, str]]):
+    source = AnnfluxSource(os.path.join(annflux_folder, ".."))
+    os.makedirs(source.working_folder, exist_ok=True)
+    with open(source.label_definitions_path, "w") as f:
+        json.dump({"labels": label_defs}, f, indent=2)
