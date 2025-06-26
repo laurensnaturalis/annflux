@@ -687,9 +687,9 @@ limitations under the License.
         shardFlux(true);
         location.reload();
       })
-      .fail(function (e) {
+      .fail(function (jqXHR, textStatus, error) {
         alert(
-          "Failed to save labels, please contact laurens.hogeweg@naturalis.nl"
+          `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(jqXHR)}, ${textStatus}, ${error}`
         );
       });
   }
@@ -700,9 +700,9 @@ limitations under the License.
       .done(function (data) {
         location.reload();
       })
-      .fail(function (e) {
+      .fail(function (jqXHR, textStatus, error) {
         alert(
-          "Failed to save labels, please contact laurens.hogeweg@naturalis.nl"
+          `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(jqXHR)}, ${textStatus}, ${error}`
         );
       });
   }
