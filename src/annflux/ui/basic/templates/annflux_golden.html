@@ -44,6 +44,8 @@ limitations under the License.
 </body>
 <script>
   let gLayout = "label"; // "label"
+  const modality = "{{ modality }}";
+  const taskType = "{{ taskType }}";
   var myLayout;
   // localStorage.clear();
   savedState = localStorage.getItem("savedState");
@@ -478,16 +480,21 @@ limitations under the License.
     //TODO: re-add sound
     const img = $(`#gallery-${event.uid} img`);
     let curLayer = img.attr("data-curLayer");
-    console.log("img", img, curLayer);
-    if (curLayer === undefined || curLayer == "masked") {
-      curLayer = "original";
-      img.attr("src", `/images/original/thumbnail/${event.uid}`);
-    } else if (curLayer == "original") {
-      curLayer = "mask";
-      img.attr("src", `/images/mask/thumbnail/${event.uid}`);
-    } else if (curLayer == "mask") {
-      curLayer = "masked";
-      img.attr("src", `/images/thumbnail/${event.uid}`);
+    if (taskType == "instance-segmentation") {
+      console.log("img", img, curLayer);
+      if (curLayer === undefined || curLayer == "masked") {
+        curLayer = "original";
+        img.attr("src", `/images/original/thumbnail/${event.uid}`);
+      } else if (curLayer == "original") {
+        curLayer = "mask";
+        img.attr("src", `/images/mask/thumbnail/${event.uid}`);
+      } else if (curLayer == "mask") {
+        curLayer = "masked";
+        img.attr("src", `/images/thumbnail/${event.uid}`);
+      }
+    }
+    if (modality == "sound") {
+      playMedia(event);
     }
     img.attr("data-curLayer", curLayer);
     selectImageGallery(event);
@@ -689,7 +696,9 @@ limitations under the License.
       })
       .fail(function (jqXHR, textStatus, error) {
         alert(
-          `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(jqXHR)}, ${textStatus}, ${error}`
+          `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(
+            jqXHR
+          )}, ${textStatus}, ${error}`
         );
       });
   }
@@ -702,7 +711,9 @@ limitations under the License.
       })
       .fail(function (jqXHR, textStatus, error) {
         alert(
-          `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(jqXHR)}, ${textStatus}, ${error}`
+          `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(
+            jqXHR
+          )}, ${textStatus}, ${error}`
         );
       });
   }
@@ -767,8 +778,8 @@ limitations under the License.
         for (const char of label[0].toLocaleLowerCase()) {
           if (
             !shortcuts.has(char) &&
-            char != " " 
-            // && char != "d" 
+            char != " "
+            // && char != "d"
             // && char != "i"
           ) {
             shortcuts.set(char, label[0]);

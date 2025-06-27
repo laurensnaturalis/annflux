@@ -133,6 +133,19 @@ def nocache(view):
     return update_wrapper(no_cache, view)
 
 
+gModality: str | None = None
+
+
+def get_modality():
+    global gModality
+    if gModality is None:
+        modality = "image"
+        if "wav" in os.listdir(g_state.data_folder):
+            modality = "sound"
+        gModality = modality
+    return gModality
+
+
 @app.route("/annflux")
 @app.route("/")
 def annflux_endpoint():
@@ -140,7 +153,8 @@ def annflux_endpoint():
     return render_template(
         {"annflux": "html", "golden": "annflux_golden.html"}[
             os.getenv("INDEED_TEMPLATE", "golden")
-        ]
+        ],
+        **{"modality": get_modality(), "taskType": "classification"},
     )
 
 
@@ -166,6 +180,14 @@ def thumbnail(uid):
     thumb_path = os.path.join(images_path, f"{uid}.jpg")
     if os.path.exists(thumb_path):
         return send_file(thumb_path, mimetype="image/jpg", as_attachment=False)
+
+
+@app.route("/sounds/<uid>")
+def sound(uid):
+    wav_path = os.path.join(images_path.replace("images", "wav"), f"{uid}.wav")
+    print(wav_path)
+    if os.path.exists(wav_path):
+        return send_file(wav_path, mimetype="audio/wav", as_attachment=False)
 
 
 class StatusUpdate(Callback):
@@ -364,7 +386,9 @@ time_estimators = []
 states = []
 
 
-def estimate_duration(annflux_state: AnnFluxState, step_state: Tuple[str, int, int]) -> (int, int):
+def estimate_duration(
+    annflux_state: AnnFluxState, step_state: Tuple[str, int, int]
+) -> (int, int):
     """
     Estimate duration of state transitions to provide progressbar functionality
 
@@ -424,7 +448,7 @@ def estimate_duration(annflux_state: AnnFluxState, step_state: Tuple[str, int, i
         result = np.mean(results), np.std(results)
     else:
         # if no information about the state transition, assume 30 seconds
-        result = 30, 0 if step_state[0] != "idle" else 0,0
+        result = 30, 0 if step_state[0] != "idle" else 0, 0
     return result
 
 

@@ -1,0 +1,4 @@
+birdnetlib
+spectrogrammer
+pydub
+librosa
