@@ -210,7 +210,7 @@ def train(
     seen_data = seen_data[seen_data.image_id.isin(set(labeled_ids))]
     seen_labels = [annotations[x_] for x_ in seen_data.image_id]
     seen_data["filename"] = seen_data[id_column].apply(
-        lambda x_: os.path.join(source.images_path, x_ + ".jpg")
+        lambda x_: os.path.join(source.images_folder, x_ + ".jpg")
     )
     seen_annotated_labels = list(
         itertools.chain(*[labels_.split(",") for labels_ in seen_labels])
@@ -282,7 +282,7 @@ def init_folder(
     )
     start_labels = [(x_, "null") for x_ in start_labels]  # TODO
 
-    images_path = source.images_path
+    images_path = source.images_folder
     start_labels = source.start_labels if start_labels is None else start_labels
     if len(exclusivity_groups) == 0:
         exclusivity = source.exclusivity
