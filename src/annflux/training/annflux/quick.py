@@ -437,9 +437,6 @@ def make_predictions(
     :param knn_rank_exponent:
     :return:
     """
-    print(len(indices), len(distances), len(train_labels))
-    # assert len(indices) == len(distances) == len(train_labels)
-    custom_thresholds = {"Normal": 0.50, "Too dark": 0.5}
     tmp_counter = 0
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
         org_index = org_map[i]
@@ -451,7 +448,9 @@ def make_predictions(
             if multilabel_ is not None:
                 distance_weight = (
                     distances[i][i2] ** knn_rank_exponent
-                )  # if knn_rank_exponent is None else ((2 + i2) ** knn_rank_exponent)
+                )
+                if distance_weight < 1e-8:
+                    distance_weight = 1e-8
                 for label_ in multilabel_:
                     probabilities[label_] += 1 / distance_weight
                 if len(multilabel_) > 0:
@@ -460,14 +459,11 @@ def make_predictions(
             probabilities[label_] /= max_mass
         tmp_counter += org_index in test_indices
         if len(probabilities) > 0:
-            # max_label = list(probabilities.keys())[np.argmax(probabilities.values())]
             max_labels = [
                 label_
                 for label_, prob_ in probabilities.items()
-                if prob_ > custom_thresholds.get(label_, 0.5)
+                if prob_ > 0.5
             ]
-            if "Normal" in max_labels and len(max_labels) > 1:
-                max_labels.remove("Normal")
             if len(max_labels) == 0:
                 max_index = np.argmax(list(probabilities.values()))
                 max_labels = [list(probabilities.keys())[max_index]]
@@ -478,7 +474,6 @@ def make_predictions(
                 )
                 if 0.01 < prob_ < 0.50
             ]
-            # print(max_labels)
             data.at[org_index, "score_possible"] = ",".join(
                 [f"{probabilities[label_]:.2f}" for label_ in possible_labels]
             )
