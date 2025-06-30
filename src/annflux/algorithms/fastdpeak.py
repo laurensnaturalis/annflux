@@ -8,6 +8,7 @@ import numpy as np
 import pandas
 from sklearn.metrics import pairwise_distances
 from sklearn.neighbors import NearestNeighbors
+from tqdm import tqdm
 
 from annflux.algorithms.embeddings import compute_tsne
 from annflux.repository.repository import Repository
@@ -134,7 +135,7 @@ def m2(project_folder: str):
     combined.update(child_to_parent_ldp)
     print("len(combined)", len(combined))
     combined_depth = {}
-    num_children = [0, ] * len(combined)
+    num_children: list[int] = [0, ] * len(combined)
     for child, parent in combined.items():
         child_ = child
         parent_ = combined[child]
@@ -154,27 +155,35 @@ def m2(project_folder: str):
         combined_depth[child] = d_
     print("max(combined_depth.values())", max(combined_depth.values()))
     print("max(num_children)", max(num_children))
-    data["is_ldp"] = None
-    data["depth"] = None
-    for r, row in data.iterrows():
-        data.at[r, "is_ldp"] = int(r in local_density_peaks)
-        data.at[r, "depth"] = max(num_children) - num_children[r]
-    # data.depth = data.apply(
-    #     lambda row_: row_.depth
+    local_density_peaks_set = set(local_density_peaks)
+    indices_ = range(len(data))
+    data["dp_is_ldp"] = [int(r in local_density_peaks_set) for r in indices_]
+    data["dp_depth"] = [num_children[r] for r in indices_]
+    data["dp_depth"] = data["dp_depth"].max() - data["dp_depth"]
+    data["dp_depth_alt"] = [combined_depth[r] for r in indices_]
+    data["dp_parent"] = [int(combined[r]) for r in indices_]
+    # for r, row in tqdm(data.iterrows(), desc="setting data in table"):
+    #     data.at[r, "dp_is_ldp"] =
+    #     data.at[r, "dp_depth"] = max(num_children) - num_children[r]
+    #     data.at[r, "dp_depth_alt"] = combined_depth[r]
+    #     data.at[r, "dp_parent"] = combined[r]
+
+    # data["dp_depth"] = data.apply(
+    #     lambda row_: row_["dp_depth"]
     #     if row_.is_ldp == 1
-    #     else row_.depth + len(local_density_peaks),
+    #     else row_["dp_depth"] + len(local_density_peaks),
     #     axis=1,
     # )
     display_order = [
         None,
     ] * len(data)
 
-    for i, pos in enumerate(np.argsort(data.depth.values)):
+    for i, pos in enumerate(np.argsort(data["dp_depth"].values)):
         display_order[pos] = i
 
     data["display_order"] = display_order
-    print(np.where(data.depth.values == 0)[0][0])
-    print(np.argsort(data.depth.values))
+    print(np.where(data["dp_depth"].values == 0)[0][0])
+    print(np.argsort(data["dp_depth"].values))
     data.to_csv("indeed.csv", index=False)
 
     import matplotlib.pyplot as plt
