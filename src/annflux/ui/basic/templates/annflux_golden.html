@@ -49,6 +49,13 @@ limitations under the License.
   savedState = localStorage.getItem("savedState");
   savedLayout = localStorage.getItem("savedLayout");
 
+  if(!sessionStorage.isNewSession) {
+    localStorage.removeItem("activeTime");
+    console.log("removed activeTime from localStorage")
+  }
+
+  sessionStorage.isNewSession = true;
+
   if (savedState !== null && savedLayout == gLayout) {
     logUI("Loading custom layout state");
     myLayout = new GoldenLayout(JSON.parse(savedState));

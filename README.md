@@ -90,6 +90,11 @@ HIGH
 
 # Changelog
 
+## 1.0.3.0
+
+- Fix for distance_weight==0 in quick.py
+- Reset local activeTime when starting new browser session
+
 ## 1.0.2.0
 
 - Improved reporting on when label save fails
