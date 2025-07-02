@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 import json
 import logging
 import os
@@ -287,7 +288,7 @@ def quick_reclassification(
         labeled_indices_.extend(test_indices)
         logger.info(f"quicker_updates: labeled_indices_={len(labeled_indices_)}")
     state.g_quick_status = "predicting labeled"
-    make_predictions(
+    distance_to_probability = make_predictions(
         annotations,
         data,
         indices_,
@@ -300,6 +301,10 @@ def quick_reclassification(
         skip_first=True,
         knn_rank_exponent=state.knn_rank_exponent,
     )
+    print(distance_to_probability[:10])
+    import matplotlib.pyplot as plt
+    plt.scatter(*zip(*distance_to_probability))
+    plt.savefig("distance_to_probability.png")
     prev_near_labeled_perc = get_performance_key_val(
         state.performance_path, "percentage_near_labeled", -1.0
     )
@@ -426,12 +431,12 @@ def make_predictions(
     distances,
     train_labels,
     org_map: List[int],
-    predicted_test,
+    predicted_test_out: list[list[str]],
     test_indices,
-    true_test,
+    true_test_out: list[list[str]],
     skip_first=False,
     knn_rank_exponent=0.5,
-):
+) -> list[tuple[float, float]]:
     """
 
     :param annotations:
@@ -442,20 +447,19 @@ def make_predictions(
     training set
     :param train_labels: array with labels of knn training set
     :param org_map: maps index of (indices, distances) to original index
-    :param predicted_test:
+    :param predicted_test_out:
     :param test_indices: test_indices in original dataset
-    :param true_test:
-    :param skip_first:
+    :param true_test_out:
+    :param skip_first: skip first neighbor for computing predictions, typically used when making predictions on labelled data
     :param knn_rank_exponent:
-    :return:
+    :return: a list of (distance, probability) tuples for labeled non-test data
     """
-    print(len(indices), len(distances), len(train_labels))
-    # assert len(indices) == len(distances) == len(train_labels)
-    custom_thresholds = {"Normal": 0.50, "Too dark": 0.5}
-    tmp_counter = 0
+    distance_to_probability: list[tuple[float, float]] = []
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
         org_index = org_map[i]
+        is_labeled = data.at[org_index, "uid"] in annotations and org_index not in test_indices
         probabilities = defaultdict(lambda: 0)
+        # knn class histogram
         max_mass = 0
         for i2, multilabel_ in enumerate(train_labels[indices_for_i]):
             if skip_first and i2 == 0:
@@ -463,23 +467,28 @@ def make_predictions(
             if multilabel_ is not None:
                 distance_weight = (
                     distances[i][i2] ** knn_rank_exponent
-                )  # if knn_rank_exponent is None else ((2 + i2) ** knn_rank_exponent)
+                )
                 for label_ in multilabel_:
                     probabilities[label_] += 1 / distance_weight
+                    #
+                    if is_labeled:
+                        true_labels = annotations[data.at[org_index, "uid"]].split(",")
+                        for label2_ in probabilities:
+                            if label2_ in true_labels:
+                                running_prob = (1 / distance_weight) / (max_mass + (1 / distance_weight))
+                                distance_to_probability.append((distances[i][i2], running_prob))
+
                 if len(multilabel_) > 0:
                     max_mass += 1 / distance_weight
+        # knn class probability
         for label_ in probabilities:
             probabilities[label_] /= max_mass
-        tmp_counter += org_index in test_indices
         if len(probabilities) > 0:
-            # max_label = list(probabilities.keys())[np.argmax(probabilities.values())]
             max_labels = [
                 label_
                 for label_, prob_ in probabilities.items()
-                if prob_ > custom_thresholds.get(label_, 0.5)
+                if prob_ > 0.5
             ]
-            if "Normal" in max_labels and len(max_labels) > 1:
-                max_labels.remove("Normal")
             if len(max_labels) == 0:
                 max_index = np.argmax(list(probabilities.values()))
                 max_labels = [list(probabilities.keys())[max_index]]
@@ -490,7 +499,6 @@ def make_predictions(
                 )
                 if 0.01 < prob_ < 0.50
             ]
-            # print(max_labels)
             data.at[org_index, "score_possible"] = ",".join(
                 [f"{probabilities[label_]:.2f}" for label_ in possible_labels]
             )
@@ -506,15 +514,13 @@ def make_predictions(
                 # entropy
                 p = np.array(list(probabilities.values()))
                 data.at[org_index, "entropy"] = -1 * (p * np.log2(p)).sum()
-                #
-
-                if org_index in test_indices and predicted_test is not None:
+                # test data
+                if org_index in test_indices and predicted_test_out is not None:
                     test_uid = data.at[org_index, "uid"]
                     if test_uid in annotations.keys():
-                        # print("in test", max_label, annotations[test_uid])
-                        predicted_test.append(max_labels)
-                        true_test.append(annotations[test_uid].split(","))
-                elif data.at[org_index, "uid"] in annotations:
+                        predicted_test_out.append(max_labels)
+                        true_test_out.append(annotations[test_uid].split(","))
+                elif is_labeled: # labelled data
                     data.at[org_index, "score_true"] = probabilities.get(
                         annotations[data.at[org_index, "uid"]], -1
                     )
@@ -522,4 +528,4 @@ def make_predictions(
                 data.at[org_index, "label_predicted"] = None
                 data.at[org_index, "score_predicted"] = 0
                 data.at[org_index, "scores_predicted"] = None
-    print("tmp_counter", tmp_counter)
+    return distance_to_probability
