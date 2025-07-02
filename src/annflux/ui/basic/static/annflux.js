@@ -14,214 +14,213 @@
  * limitations under the License.
  */
 function addDots(data, x, y, color_by, transform, width, height) {
-    const [show_data, k] = filterData(data, 10000, transform, width, height);
-    console.log("addDots", show_data.length);
-    // Add dots
-    dots = g
-        .append("g")
-        .attr("id", "dots")
-        .selectAll("dot")
-        .data(show_data)
-        .enter()
-        .append("circle")
-        .attr("cx", function (d) {
-            return x(d.e_0);
-        })
-        .attr("cy", function (d) {
-            return y(d.e_1);
-        })
-        .attr("r", 3.0 / k)
-        .attr("id", function (d) {
-            return "dot-" + d.uid;
-        })
-        .style("fill", function (d) {
-            return color_by ? d[color_by] : d.color_class;
-        })
-        .style("stroke", function (d) {
-            return d.color_prob;
-        })
-        .style("stroke-width", function (d) {
-            return (d.labeled == 0 ? 2 * (1 - d.score_predicted) : 2) / k;
-        });
+  const [show_data, k] = filterData(data, 10000, transform, width, height);
+  console.log("addDots", show_data.length);
+  // Add dots
+  dots = g
+    .append("g")
+    .attr("id", "dots")
+    .selectAll("dot")
+    .data(show_data)
+    .enter()
+    .append("circle")
+    .attr("cx", function (d) {
+      return x(d.e_0);
+    })
+    .attr("cy", function (d) {
+      return y(d.e_1);
+    })
+    .attr("r", 3.0 / k)
+    .attr("id", function (d) {
+      return "dot-" + d.uid;
+    })
+    .style("fill", function (d) {
+      return color_by ? d[color_by] : d.color_class;
+    })
+    // .style("stroke", function (d) {
+    //   return d.color_prob;
+    // })
+    .style("stroke-width", function (d) {
+      return (d.labeled == 0 ? 2 * (1 - d.score_predicted) : 2) / k;
+    });
 }
 
 function addTimeline(data, transform, width, height) {
-    const [show_data, k] = filterData(data, 1000, transform, width, height); // TODO: same data as dots
-    // Add dots
-    let bars = g
-        .append("g")
-        .attr("id", "time_bars")
-        .selectAll("bar")
-        .data(show_data)
-        .enter()
-        .append("line")
-        .attr("x1", function (d) {
-            return time_x(d.time_s);
-        })
-        .attr("x2", function (d) {
-            return time_x(d.time_s);
-        })
-        .attr("y1", function (d) {
-            return height;
-        })
-        .attr("y2", function (d) {
-            return height - d.score_predicted * 50;
-        })
-        .attr("id", function (d) {
-            return "time_bar-" + d.time_s;
-        })
-        .attr("stroke", function (d) {
-            return d.color_class;
-        })
-        .style("stroke-width", function (d) {
-            return 1;
-        });
-    return bars;
+  const [show_data, k] = filterData(data, 1000, transform, width, height); // TODO: same data as dots
+  // Add dots
+  let bars = g
+    .append("g")
+    .attr("id", "time_bars")
+    .selectAll("bar")
+    .data(show_data)
+    .enter()
+    .append("line")
+    .attr("x1", function (d) {
+      return time_x(d.time_s);
+    })
+    .attr("x2", function (d) {
+      return time_x(d.time_s);
+    })
+    .attr("y1", function (d) {
+      return height;
+    })
+    .attr("y2", function (d) {
+      return height - d.score_predicted * 50;
+    })
+    .attr("id", function (d) {
+      return "time_bar-" + d.time_s;
+    })
+    .attr("stroke", function (d) {
+      return d.color_class;
+    })
+    .style("stroke-width", function (d) {
+      return 1;
+    });
+  return bars;
 }
 
 function filterData(data, max_n, transform, width, height) {
-    const now = new Date().getTime() / 1000;
-    let k = 1;
-    let Tx = 1;
-    let Ty = 1;
-    console.log("transform", transform);
-    if (transform !== undefined && transform) {
-        k = transform.k;
-        Tx = transform.x;
-        Ty = transform.y;
+  const now = new Date().getTime() / 1000;
+  let k = 1;
+  let Tx = 1;
+  let Ty = 1;
+  console.log("transform", transform);
+  if (transform !== undefined && transform) {
+    k = transform.k;
+    Tx = transform.x;
+    Ty = transform.y;
+  }
+  let show_data_start = [...data];
+  show_data_start.sort((a, b) => a.display_order - b.display_order);
+  const label_predicted = urlParams.get("label_predicted");
+  if (label_predicted) {
+    show_data_start = show_data_start.filter((a) =>
+      // a["label_predicted"].toLowerCase().includes(label_predicted)
+      urlParams.get("not_label_predicted") == "on"
+        ? !a["label_predicted"].toLowerCase().includes(label_predicted)
+        : a["label_predicted"].toLowerCase().includes(label_predicted)
+    );
+  }
+  const label_true = urlParams.get("label_true");
+  if (label_true) {
+    show_data_start = show_data_start.filter((a) =>
+      urlParams.get("not_label_true") == "on"
+        ? !a["label_true"].toLowerCase().includes(label_true)
+        : a["label_true"].toLowerCase().includes(label_true)
+    );
+  }
+  const label_undetermined = urlParams.get("label_undetermined");
+  if (label_undetermined) {
+    show_data_start = show_data_start.filter((a) =>
+      a["label_undetermined"].toLowerCase().includes(label_undetermined)
+    );
+  }
+  let show_data = [];
+  // alert(width, height);
+  for (const d of show_data_start) {
+    const tX = x(d.e_0) * k + Tx;
+    const tY = y(d.e_1) * k + Ty;
+    // console.log(tX, tY);
+    if (tX > 0 && tX < width && tY > 0 && tY < height) {
+      show_data.push(d);
     }
-    let show_data_start = [...data];
-    show_data_start.sort((a, b) => a.display_order - b.display_order);
-    const label_predicted = urlParams.get("label_predicted");
-    if (label_predicted) {
-        show_data_start = show_data_start.filter((a) =>
-            // a["label_predicted"].toLowerCase().includes(label_predicted)
-            urlParams.get("not_label_predicted") == "on"
-                ? !a["label_predicted"].toLowerCase().includes(label_predicted)
-                : a["label_predicted"].toLowerCase().includes(label_predicted)
-        );
+    if (show_data.length >= max_n) {
+      break;
     }
-    const label_true = urlParams.get("label_true");
-    if (label_true) {
-        show_data_start = show_data_start.filter((a) =>
-            urlParams.get("not_label_true") == "on"
-                ? !a["label_true"].toLowerCase().includes(label_true)
-                : a["label_true"].toLowerCase().includes(label_true)
-        );
-    }
-    const label_undetermined = urlParams.get("label_undetermined");
-    if (label_undetermined) {
-        show_data_start = show_data_start.filter((a) =>
-            a["label_undetermined"].toLowerCase().includes(label_undetermined)
-        );
-    }
-    let show_data = [];
-    // alert(width, height);
-    for (const d of show_data_start) {
-        const tX = x(d.e_0) * k + Tx;
-        const tY = y(d.e_1) * k + Ty;
-        // console.log(tX, tY);
-        if (tX > 0 && tX < width && tY > 0 && tY < height) {
-            show_data.push(d);
-        }
-        if (show_data.length >= max_n) {
-            break;
-        }
-    }
-    show_data = show_data.reverse();
-    console.log("show_data.length", show_data.length);
-    // console.log("filterData took", new Date().getTime() / 1000 - now)
-    return [show_data, k];
+  }
+  show_data = show_data.reverse();
+  console.log("show_data.length", show_data.length);
+  // console.log("filterData took", new Date().getTime() / 1000 - now)
+  return [show_data, k];
 }
 
-
 function addImages(data, x, y, transform, width, height) {
-    const [show_data, k] = filterData(data, 50, transform, width, height);
-    g.append("g")
-        .attr("id", "images")
-        .selectAll("images")
-        .data(show_data)
-        .enter()
-        .append("image")
-        .attr("x", function (d) {
-            return x(d.e_0);
-        })
-        .attr("y", function (d) {
-            return y(d.e_1);
-        })
-        .attr("width", function (d) {
-            return 128 / k;
-        })
-        .attr("height", function (d) {
-            return 128 / k;
-        })
-        .attr("href", function (d) {
-            return "/images/thumbnail/" + d.uid;
-        })
-        .attr("id", function (d) {
-            return "map-" + d.uid;
-        })
-        .attr("data-label", function (d) {
-            return d.label_true;
-        });
+  const [show_data, k] = filterData(data, 50, transform, width, height);
+  g.append("g")
+    .attr("id", "images")
+    .selectAll("images")
+    .data(show_data)
+    .enter()
+    .append("image")
+    .attr("x", function (d) {
+      return x(d.e_0);
+    })
+    .attr("y", function (d) {
+      return y(d.e_1);
+    })
+    .attr("width", function (d) {
+      return 128 / k;
+    })
+    .attr("height", function (d) {
+      return 128 / k;
+    })
+    .attr("href", function (d) {
+      return "/images/thumbnail/" + d.uid;
+    })
+    .attr("id", function (d) {
+      return "map-" + d.uid;
+    })
+    .attr("data-label", function (d) {
+      return d.label_true;
+    });
 
-    d3.selectAll("image").on("click", selectImage);
+  d3.selectAll("image").on("click", selectImage);
 }
 
 function clearImages() {
-    d3.select("#images").remove();
+  d3.select("#images").remove();
 }
 
 function round(num, places) {
-    const factor = Math.pow(10, places);
-    return Math.round((num + Number.EPSILON) * factor) / factor;
+  const factor = Math.pow(10, places);
+  return Math.round((num + Number.EPSILON) * factor) / factor;
 }
 
 function invertMap(childToParentMap) {
-    const parentToChildMap = new Map();
+  const parentToChildMap = new Map();
 
-    for (const [child, parent] of childToParentMap) {
-        if (!parentToChildMap.has(parent)) {
-            parentToChildMap.set(parent, []);
-        }
-        parentToChildMap.get(parent).push(child);
+  for (const [child, parent] of childToParentMap) {
+    if (!parentToChildMap.has(parent)) {
+      parentToChildMap.set(parent, []);
     }
+    parentToChildMap.get(parent).push(child);
+  }
 
-    return parentToChildMap;
+  return parentToChildMap;
 }
 
 function renderPerformance(data) {
-    console.log("performance");
-    const test_performance = data["test_performance"];
-    const diff =
-        test_performance[test_performance.length - 1][2] -
-        test_performance[test_performance.length - 2][2];
-    $("#test_performance").html(
-        round(test_performance[test_performance.length - 1][2] * 100.0, 1) +
-        " (" +
-        round(diff * 100.0, 1) +
-        ") %"
-    );
-    $("#percentage_near_labeled").html(
-        round(data["percentage_near_labeled"] * 100.0, 1)
-    );
+  console.log("performance");
+  const test_performance = data["test_performance"];
+  const diff =
+    test_performance[test_performance.length - 1][2] -
+    test_performance[test_performance.length - 2][2];
+  $("#test_performance").html(
+    round(test_performance[test_performance.length - 1][2] * 100.0, 1) +
+      " (" +
+      round(diff * 100.0, 1) +
+      ") %"
+  );
+  $("#percentage_near_labeled").html(
+    round(data["percentage_near_labeled"] * 100.0, 1)
+  );
 }
 
 function excludeDescendants(left, right, parentToChildren, exclusivity) {
-    if (parentToChildren.has(left)) {
-        for (const child of parentToChildren.get(left)) {
-            if (!exclusivity.get(child)) {
-                exclusivity.set(child, []);
-            }
-            for (const el of right) {
-                exclusivity.get(child).push(el);
-                if (!exclusivity.get(el)) {
-                    exclusivity.set(el, []);
-                }
-                exclusivity.get(el).push(child);
-            }
+  if (parentToChildren.has(left)) {
+    for (const child of parentToChildren.get(left)) {
+      if (!exclusivity.get(child)) {
+        exclusivity.set(child, []);
+      }
+      for (const el of right) {
+        exclusivity.get(child).push(el);
+        if (!exclusivity.get(el)) {
+          exclusivity.set(el, []);
         }
+        exclusivity.get(el).push(child);
+      }
     }
+  }
 }
 
 controlHtml = `<div id="map_control">
@@ -348,6 +347,7 @@ controlHtml = `<div id="map_control">
               </option>
               <option value="color_prob">Probability</option>
               <option value="color_fre">FRE</option>
+              <option value="dp_cluster_color">Density peak cluster</option>
             </select>
           </td>
         </tr>
@@ -387,8 +387,7 @@ controlHtml = `<div id="map_control">
           </td>
         </tr>
       </table>
-    </div>`
-
+    </div>`;
 
 const mapHtml = `<div id="my_dataviz" tabindex="0"></div> 
     <div id="help" style="position: fixed; max-width: 60%; background-color: #333333cc; display: none; z-index:100">
@@ -444,4 +443,5 @@ const mapHtml = `<div id="my_dataviz" tabindex="0"></div>
           <td>Version</td>
           <td><span id="package_version"></span></td>
         </tr>
-      </table></div>`
+      </table></div>`;
+
