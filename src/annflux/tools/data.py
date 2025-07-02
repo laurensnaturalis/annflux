@@ -34,7 +34,9 @@ def canon_(s_: str | list[str]) -> str | None:
     Canonizes a multilabel string separated by comma's
     """
     return (
-        ",".join(sorted(s_.split(","))) if isinstance(s_, str) else ",".join(sorted(s_))
+        ",".join(sorted(s_.split(",")))
+        if isinstance(s_, str)
+        else ",".join(sorted(s_))
         if s_ is not None and not pandas.isna(s_)
         else None
     )
@@ -104,14 +106,27 @@ def color_and_label(
     )
 
     time_start = time.time()
-    prob_to_color = {k: rgb2hex(cmap(k / 100)) for k in range(101)}
+    cluster_to_color = {k: rgb2hex(cmap(k / 100)) for k in range(101)}
     data_to_update["color_prob"] = data_to_update.apply(
-        lambda x_: prob_to_color[int(x_.score_predicted * 100)]
+        lambda x_: cluster_to_color[int(x_.score_predicted * 100)]
         if not x_.labeled
         else "#800080",
         axis=1,
     )
     logger.info(f"color_prob took={time.time() - start_time}")
+    #
+    if "dp_cluster" in data_to_update.columns:
+        time_start = time.time()
+        num_clusters = int(data_to_update["dp_cluster"].max())
+        cluster_to_color = {
+            k: rgb2hex(cmap(float(k / num_clusters))) for k in range(num_clusters + 1)
+        }
+        data_to_update["dp_cluster_color"] = data_to_update.apply(
+            lambda x_: cluster_to_color[int(x_["dp_cluster"])] if not pandas.isna(x_["dp_cluster"]) else "#800080",
+            axis=1,
+        )
+        logger.info(f"coloring dp_cluster took={time.time() - start_time}")
+    #
     if "fre" in data_to_update.columns:
         q5, q95 = np.percentile(data_to_update.fre, [1, 99])
         logger.info(f"fre={q5, q95}")
@@ -119,8 +134,9 @@ def color_and_label(
             data_to_update["fre_for_color"] = data_to_update.fre.apply(
                 lambda x_: (np.clip(x_, q5, q95) - q5) / (q95 - q5)
             )
+            cluster_to_color = {k: rgb2hex(cmap(k / 100)) for k in range(101)}
             data_to_update["color_fre"] = data_to_update.apply(
-                lambda x_: prob_to_color[int(x_.fre_for_color * 100)]
+                lambda x_: cluster_to_color[int(x_.fre_for_color * 100)]
                 if not pandas.isna(x_.fre_for_color)
                 else "",
                 axis=1,

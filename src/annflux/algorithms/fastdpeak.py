@@ -55,9 +55,12 @@ def m2(project_folder: str):
     folder = resultset.path
 
     species_true = data.label_true
-    features = numpy_load(f"{folder}/last_full.npz", "lastFull")
+    # features = numpy_load(f"{folder}/last_full.npz", "lastFull")
+    #
+    # features = compute_tsne(features)
 
-    features = compute_tsne(features)
+    t_ = pandas.read_csv(source.data_state_path)
+    features = t_[["e_0", "e_1"]].values
 
     print("features.shape", features.shape)
     knn_index = faiss.index_factory(
@@ -161,7 +164,7 @@ def m2(project_folder: str):
     data["dp_depth"] = [num_children[r] for r in indices_]
     data["dp_depth"] = data["dp_depth"].max() - data["dp_depth"]
     data["dp_depth_alt"] = [combined_depth[r] for r in indices_]
-    data["dp_parent"] = [int(combined[r]) for r in indices_]
+    data["dp_parent"] = [int(combined[r]) if combined[r] is not None else -1 for r in indices_]
     # for r, row in tqdm(data.iterrows(), desc="setting data in table"):
     #     data.at[r, "dp_is_ldp"] =
     #     data.at[r, "dp_depth"] = max(num_children) - num_children[r]
@@ -364,4 +367,4 @@ def fast_find_parent_node_ldp(local_density_peaks, densities, features):
 
 
 if __name__ == "__main__":
-    m2("/mnt/big/indeed/diopsis-hazehorst-apr5-6")
+    m2("/mnt/big/indeed/mollusca")

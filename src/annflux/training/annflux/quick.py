@@ -369,16 +369,28 @@ def quick_reclassification(
     # history
     state.g_quick_status = "setting Most needed"
     #
-    blurp = sorted(counter_of_most_need.items(), key=lambda t_: -t_[1])
-    for i_, (most_needed_i, most_needed) in enumerate(blurp):
-        # print("most_needed", most_needed, data.at[most_needed_i, "uid"])
-        # assert (
-        #     most_needed_i not in labeled_indices and most_needed_i not in test_indices
-        # )
+    tmp_ = sorted(counter_of_most_need.items(), key=lambda t_: -t_[1])
+    for i_, (most_needed_i, most_needed) in enumerate(tmp_):
         data.at[most_needed_i, "most_needed"] = i_
-        if i_ > 20:
+        if i_ > 1000:
             break
+    #
+    if "dp_most_needed" in data.columns:
+        logger.info("Using dp_most_needed for most needed")
+        data["direct_most_needed"] = data["most_needed"]
+        data["most_needed"] = data["dp_most_needed"]
 
+        near_labeled_perc = 0
+        counts_per_cluster = data.groupby("dp_cluster").size().reset_index(name="counts")
+        counts_per_cluster = {row_.dp_cluster:row_.counts for _, row_ in counts_per_cluster.iterrows()}
+        for _, row in data.sort_values("dp_most_needed").iterrows():
+            near_labeled_perc += (counts_per_cluster[row["dp_cluster"]] / len(data))
+            if near_labeled_perc > 1.0:
+                near_labeled_perc = 1.0
+                break
+        write_performance_key_val(
+            state.performance_path, "percentage_near_labeled", near_labeled_perc
+        )
     #
     state.g_quick_status = "computing performance"
     compute_performance(predicted_test, true_test, state, annotations, data)
