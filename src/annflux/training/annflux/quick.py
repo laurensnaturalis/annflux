@@ -12,12 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import copy
 import json
 import logging
 import os
 import time
-from collections import defaultdict
+from collections import defaultdict, Counter
 from typing import Set, Dict, List
 
 import faiss
@@ -167,37 +166,31 @@ def quick_reclassification(
     print("instant_reclassification 5", time.time() - start_time)
 
     # print("labeled_indices", labeled_indices)
-    k = 110
-    knn_results_path = result_set.get_path_for("knn_results.npz")
-    if not os.path.exists(knn_results_path):
-        state.g_quick_status = "computing knn index"
-        knn_index = faiss.index_factory(
-            state.features.shape[1],
-            "Flat",
-            {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
-        )
-        state.features *= 1 - 1e-2 * np.random.rand(
-            state.features.shape[0], state.features.shape[1]
-        )
-        print(state.features.shape)
+    state.all_distances, state.all_indices = compute_knn(
+        state.features,
+        state.features,
+        110,
+        result_set.get_path_for("knn_results.npz"),
+        state,
+        logger,
+    )
 
-        knn_index.train(state.features)
-        knn_index.add(state.features)
-
-        state.all_distances, state.all_indices = knn_index.search(state.features, k=k)
-
-        np.savez(
-            knn_results_path,
-            all_distances=state.all_distances,
-            all_indices=state.all_indices,
+    has_dp_cluster = "dp_cluster" in data.columns
+    dp_most_needed_idx: np.array = None
+    if has_dp_cluster:
+        dp_most_needed_idx = data[
+            data["dp_most_needed"] < data["dp_most_needed"].max()
+        ].index.values
+        assert len(dp_most_needed_idx) == int(data["dp_most_needed"].max()) # includes 0
+        dp_distances, dp_indices = compute_knn(
+            state.features[dp_most_needed_idx],
+            state.features,
+            1, # nearest cluster center (cf. "mean")
+            result_set.get_path_for("knn_results_dp.npz"),
+            state,
+            logger,
         )
-    else:
-        logger.info(f"Loading kNN results from {knn_results_path}")
-        knn_results = np.load(knn_results_path)
-        state.all_distances, state.all_indices = (
-            knn_results["all_distances"],
-            knn_results["all_indices"],
-        )
+        print("has_dp_cluster", dp_distances.shape)
 
     state.cache_for = result_set.entry.uid
     state.version_for_recompute = (
@@ -205,24 +198,6 @@ def quick_reclassification(
     )
 
     time_start = time.time()
-
-    if knn_type == "standard":
-        knn_index_train = faiss.index_factory(
-            state.features.shape[1],
-            "Flat",
-            {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
-        )
-        features_train = state.features[state.labeled_indices]
-        print("standard, |features_train|", len(features_train))
-
-        knn_index_train.train(features_train)
-        knn_index_train.add(features_train)
-
-        state.all_distances, state.all_indices = knn_index_train.search(
-            state.features, k=30
-        )
-
-        state.label_array = state.label_array[state.labeled_indices]
 
     print("knn labeled", time.time() - time_start)
     distances, indices = (
@@ -248,8 +223,6 @@ def quick_reclassification(
         new_labeled_nn_idx = set(state.all_indices[new_labeled_idx].flatten())
         logger.info(f"new_labeled_nn_idx={len(new_labeled_nn_idx)}")
         new_labeled_nn_uids = data[data.index.isin(new_labeled_nn_idx)].uid
-    #
-    # optimize_weight_exponent_func(state, annotations, data, distances, indices)
     #
     if quicker_updates:
         if "score_possible" not in data:
@@ -301,10 +274,16 @@ def quick_reclassification(
         skip_first=True,
         knn_rank_exponent=state.knn_rank_exponent,
     )
-    print(distance_to_probability[:10])
-    import matplotlib.pyplot as plt
-    plt.scatter(*zip(*distance_to_probability))
-    plt.savefig("distance_to_probability.png")
+    debug = False
+    if debug:
+        print(distance_to_probability[:10])
+        import matplotlib.pyplot as plt
+
+        plt.scatter(*zip(*distance_to_probability))
+        plt.savefig("distance_to_probability.png")
+
+
+    #
     prev_near_labeled_perc = get_performance_key_val(
         state.performance_path, "percentage_near_labeled", -1.0
     )
@@ -386,16 +365,46 @@ def quick_reclassification(
         data["most_needed"] = data["dp_most_needed"]
 
         near_labeled_perc = 0
-        counts_per_cluster = data.groupby("dp_cluster").size().reset_index(name="counts")
-        counts_per_cluster = {row_.dp_cluster:row_.counts for _, row_ in counts_per_cluster.iterrows()}
+        counts_per_cluster = (
+            data.groupby("dp_cluster").size().reset_index(name="counts")
+        )
+        counts_per_cluster = {
+            row_.dp_cluster: row_.counts for _, row_ in counts_per_cluster.iterrows()
+        }
         for _, row in data.sort_values("dp_most_needed").iterrows():
-            near_labeled_perc += (counts_per_cluster[row["dp_cluster"]] / len(data))
+            near_labeled_perc += counts_per_cluster[row["dp_cluster"]] / len(data)
             if near_labeled_perc > 1.0:
                 near_labeled_perc = 1.0
                 break
         write_performance_key_val(
             state.performance_path, "percentage_near_labeled", near_labeled_perc
         )
+    #
+    # use DP cluster to predict unpredicted
+    if has_dp_cluster:
+        state.g_quick_status = "computing predictions for unpredicted using DP cluster"
+        unpredicted_idx = data[
+            pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
+        ].index.values
+        print(f"{len(unpredicted_idx)=}")
+        print(state.label_array[dp_most_needed_idx])
+        print(dp_indices.shape)
+        make_predictions(
+            annotations,
+            data,
+            dp_indices[unpredicted_idx],
+            dp_distances[unpredicted_idx],
+            state.label_array[dp_most_needed_idx],
+            unpredicted_idx,
+            None,
+            test_indices,
+            None,
+            knn_rank_exponent=state.knn_rank_exponent,
+        )
+        unpredicted_idx = data[
+            pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
+        ].index.values
+        print(f"{len(unpredicted_idx)=}")
     #
     state.g_quick_status = "computing performance"
     compute_performance(predicted_test, true_test, state, annotations, data)
@@ -422,6 +431,47 @@ def quick_reclassification(
     print("no prediction", len(data[(data.score_predicted == 0) & (data.labeled == 0)]))
     print("instant_reclassification done")
     state.g_quick_status = "idle"
+
+
+def compute_knn(
+    features_train: np.array,
+    features_test: np.array,
+    k,
+    knn_results_path,
+    state,
+    logger,
+):
+    if not os.path.exists(knn_results_path):
+        state.g_quick_status = "computing knn index"
+        knn_index = faiss.index_factory(
+            features_train.shape[1],
+            "Flat",
+            {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
+        )
+        features_train *= 1 - 1e-2 * np.random.rand(
+            features_train.shape[0], features_train.shape[1]
+        )
+        print(features_train.shape)
+
+        knn_index.train(features_train)
+        knn_index.add(features_train)
+
+        # state.all_distances, state.all_indices = knn_index.search(state.features, k=k)
+        all_distances, all_indices = knn_index.search(features_test, k=k)
+
+        np.savez(
+            knn_results_path,
+            all_distances=all_distances,
+            all_indices=all_indices,
+        )
+    else:
+        logger.info(f"Loading kNN results from {knn_results_path}")
+        knn_results = np.load(knn_results_path)
+        all_distances, all_indices = (
+            knn_results["all_distances"],
+            knn_results["all_indices"],
+        )
+    return all_distances, all_indices
 
 
 def make_predictions(
@@ -457,7 +507,9 @@ def make_predictions(
     distance_to_probability: list[tuple[float, float]] = []
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
         org_index = org_map[i]
-        is_labeled = data.at[org_index, "uid"] in annotations and org_index not in test_indices
+        is_labeled = (
+            data.at[org_index, "uid"] in annotations and org_index not in test_indices
+        )
         probabilities = defaultdict(lambda: 0)
         # knn class histogram
         max_mass = 0
@@ -465,9 +517,7 @@ def make_predictions(
             if skip_first and i2 == 0:
                 continue
             if multilabel_ is not None:
-                distance_weight = (
-                    distances[i][i2] ** knn_rank_exponent
-                )
+                distance_weight = distances[i][i2] ** knn_rank_exponent
                 for label_ in multilabel_:
                     probabilities[label_] += 1 / distance_weight
                     #
@@ -475,8 +525,12 @@ def make_predictions(
                         true_labels = annotations[data.at[org_index, "uid"]].split(",")
                         for label2_ in probabilities:
                             if label2_ in true_labels:
-                                running_prob = (1 / distance_weight) / (max_mass + (1 / distance_weight))
-                                distance_to_probability.append((distances[i][i2], running_prob))
+                                running_prob = (1 / distance_weight) / (
+                                    max_mass + (1 / distance_weight)
+                                )
+                                distance_to_probability.append(
+                                    (distances[i][i2], running_prob)
+                                )
 
                 if len(multilabel_) > 0:
                     max_mass += 1 / distance_weight
@@ -485,9 +539,7 @@ def make_predictions(
             probabilities[label_] /= max_mass
         if len(probabilities) > 0:
             max_labels = [
-                label_
-                for label_, prob_ in probabilities.items()
-                if prob_ > 0.5
+                label_ for label_, prob_ in probabilities.items() if prob_ > 0.5
             ]
             if len(max_labels) == 0:
                 max_index = np.argmax(list(probabilities.values()))
@@ -520,7 +572,7 @@ def make_predictions(
                     if test_uid in annotations.keys():
                         predicted_test_out.append(max_labels)
                         true_test_out.append(annotations[test_uid].split(","))
-                elif is_labeled: # labelled data
+                elif is_labeled:  # labelled data
                     data.at[org_index, "score_true"] = probabilities.get(
                         annotations[data.at[org_index, "uid"]], -1
                     )

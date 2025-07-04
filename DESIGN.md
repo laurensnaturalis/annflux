@@ -75,8 +75,11 @@ General functionality
 
 - tf_backend.py: linear models
 
+# Columns in state table
 
-
+| Name |Description| Category| Type |Computed in|
+|------| ------- |--------|------|---|
+|`dp_most_needed`|Density-peak based computation of most needed point to annotate|AL score|int|fastdpeak_merge.py|
 
 
 
