@@ -36,37 +36,46 @@ from annflux.performance.basic import (
 from annflux.tools.core import AnnFluxState
 from annflux.tools.data import canon_, color_and_label
 from annflux.tools.io import numpy_load
-from annflux.tools.mixed import remove_sys
+from annflux.tools.mixed import remove_sys, str2bool
+from annflux.training.annflux.group_classifier_cnn import classify
+
+min_prev_near_labeled_perc = 0.99  # TODO: configurable
+
+logger = logging.getLogger("annflux_server")
 
 
-min_prev_near_labeled_perc = 1.0  # TODO: configurable
+def group_classification(features, annflux_data) -> (np.array, float, list[str]):
+    return classify(features, annflux_data)
 
 
-def quick_reclassification(
-    state: AnnFluxState, knn_type="quick", logger: logging.Logger = None
-):
+def quick_reclassification(state: AnnFluxState, knn_type="quick", group=False):
+    if not group:
+        quick_reclassification_instance(knn_type, state)
+    else:
+        quick_reclassification_group(knn_type, state)
+
+
+def quick_reclassification_instance(knn_type, state):
     """
     Trains a quick new model using kNN
     """
     start_time = time.time()
-
     repo = Repository(os.path.join(state.working_folder, "datarepo"))
-    result_set: Resultset = repo.get(label=Resultset, tag="unseen").last()
+    result_set = repo.get(label=Resultset, tag="unseen").last()
     folder = result_set.path
-
     data = pandas.read_csv(
         os.path.join(state.data_folder, "annflux", "annflux.csv"),
         dtype={"label_predicted": str, "score_true": float, "uid": str},
     )
     data.reset_index(drop=True, inplace=True)
-    print("instant_reclassification 2", time.time() - start_time)
+    logger.info(f"instant_reclassification 2={time.time() - start_time}")
     with open(state.labels_path) as f:
         annotations = json.load(f)
-
     with open(os.path.join(state.working_folder, "split.json")) as f:
         test_uids = set(json.load(f)["test"])
-    print("instant_reclassification 3", time.time())
-
+    logger.info(f"instant_reclassification 3={time.time()}")
+    custom_path = f"{folder}/custom.npz"
+    custom2_path = f"{folder}/custom.npy"
     reload_features = state.cache_for != result_set.entry.uid
     recompute = state.version_for_recompute != (
         result_set.entry.uid + "_" + str(state.trained_for_version_previous)
