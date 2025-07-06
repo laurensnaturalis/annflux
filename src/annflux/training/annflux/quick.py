@@ -16,7 +16,7 @@ import json
 import logging
 import os
 import time
-from collections import defaultdict, Counter
+from collections import defaultdict
 from typing import Set, Dict, List
 
 import faiss
@@ -181,11 +181,13 @@ def quick_reclassification(
         dp_most_needed_idx = data[
             data["dp_most_needed"] < data["dp_most_needed"].max()
         ].index.values
-        assert len(dp_most_needed_idx) == int(data["dp_most_needed"].max()) # includes 0
+        assert len(dp_most_needed_idx) == int(
+            data["dp_most_needed"].max()
+        )  # includes 0
         dp_distances, dp_indices = compute_knn(
             state.features[dp_most_needed_idx],
             state.features,
-            1, # nearest cluster center (cf. "mean")
+            1,  # nearest cluster center (cf. "mean")
             result_set.get_path_for("knn_results_dp.npz"),
             state,
             logger,
@@ -282,7 +284,6 @@ def quick_reclassification(
         plt.scatter(*zip(*distance_to_probability))
         plt.savefig("distance_to_probability.png")
 
-
     #
     prev_near_labeled_perc = get_performance_key_val(
         state.performance_path, "percentage_near_labeled", -1.0
@@ -364,31 +365,35 @@ def quick_reclassification(
         data["direct_most_needed"] = data["most_needed"]
         data["most_needed"] = data["dp_most_needed"]
 
-        near_labeled_perc = 0
-        counts_per_cluster = (
-            data.groupby("dp_cluster").size().reset_index(name="counts")
-        )
-        counts_per_cluster = {
-            row_.dp_cluster: row_.counts for _, row_ in counts_per_cluster.iterrows()
-        }
-        for _, row in data.sort_values("dp_most_needed").iterrows():
-            near_labeled_perc += counts_per_cluster[row["dp_cluster"]] / len(data)
-            if near_labeled_perc > 1.0:
-                near_labeled_perc = 1.0
-                break
+        data_ = data[data["dp_most_needed"] < data["dp_most_needed"].max()]
+        near_labeled_perc = len(data_[data["labeled"]==1]) / len(data_)
+
+        # counts_per_cluster = (
+        #     data.groupby("dp_cluster").size().reset_index(name="counts")
+        # )
+        # counts_per_cluster = {
+        #     row_.dp_cluster: row_.counts for _, row_ in counts_per_cluster.iterrows()
+        # }
+        # for _, row in data.sort_values("dp_most_needed").iterrows():
+        #     print(f"{counts_per_cluster[row['dp_cluster']] / len(data)=}")
+        #     if row["labeled"] == 1 and row["dp_cluster"] < len(counts_per_cluster):
+        #         near_labeled_perc += counts_per_cluster[row["dp_cluster"]] / len(data)
+        #     print(f"{near_labeled_perc=}")
+        #     if near_labeled_perc > 1.0:
+        #         near_labeled_perc = 1.0
+        #         break
         write_performance_key_val(
             state.performance_path, "percentage_near_labeled", near_labeled_perc
         )
     #
     # use DP cluster to predict unpredicted
-    if has_dp_cluster:
+    if has_dp_cluster and len(annotations) > 0:
         state.g_quick_status = "computing predictions for unpredicted using DP cluster"
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
         ].index.values
-        print(f"{len(unpredicted_idx)=}")
-        print(state.label_array[dp_most_needed_idx])
-        print(dp_indices.shape)
+        print(f"{len(unpredicted_idx)=} before make_predictions")
+        print(f"{state.label_array[dp_most_needed_idx]=}")
         make_predictions(
             annotations,
             data,
@@ -400,11 +405,12 @@ def quick_reclassification(
             test_indices,
             None,
             knn_rank_exponent=state.knn_rank_exponent,
+            value_for_debug=1
         )
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
         ].index.values
-        print(f"{len(unpredicted_idx)=}")
+        print(f"{len(unpredicted_idx)=} after make_predictions")
     #
     state.g_quick_status = "computing performance"
     compute_performance(predicted_test, true_test, state, annotations, data)
@@ -486,6 +492,7 @@ def make_predictions(
     true_test_out: list[list[str]],
     skip_first=False,
     knn_rank_exponent=0.5,
+    value_for_debug: int | None = None,
 ) -> list[tuple[float, float]]:
     """
 
@@ -516,11 +523,15 @@ def make_predictions(
         for i2, multilabel_ in enumerate(train_labels[indices_for_i]):
             if skip_first and i2 == 0:
                 continue
+            # if value_for_debug == 1:
+            #     print(f"{train_labels[indices_for_i]=}")
             if multilabel_ is not None:
                 distance_weight = distances[i][i2] ** knn_rank_exponent
+                if distance_weight < 1e-8:
+                    distance_weight = 1e-8
                 for label_ in multilabel_:
                     probabilities[label_] += 1 / distance_weight
-                    #
+                    # get data for estimating relation between distance and probability
                     if is_labeled:
                         true_labels = annotations[data.at[org_index, "uid"]].split(",")
                         for label2_ in probabilities:
@@ -531,7 +542,7 @@ def make_predictions(
                                 distance_to_probability.append(
                                     (distances[i][i2], running_prob)
                                 )
-
+                    #
                 if len(multilabel_) > 0:
                     max_mass += 1 / distance_weight
         # knn class probability

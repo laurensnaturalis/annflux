@@ -29,6 +29,8 @@ from sklearn.ensemble import RandomForestRegressor
 from tensorflow.python.keras.callbacks import Callback
 
 from annflux.algorithms.embeddings import compute_tsne
+from annflux.algorithms.fastdpeak import fast_density_peak_clustering
+from annflux.algorithms.fastdpeak_merge import peak_merge
 from annflux.tools.core import AnnFluxState
 from annflux.tools.data import (
     add_group_to_exclusivity,
@@ -354,7 +356,12 @@ def retrain_job(state: AnnFluxState):
     data["e_0"] = embedding[:, 0]
     data["e_1"] = embedding[:, 1]
     data.to_csv(os.path.join(state.data_folder, "annflux", "annflux.csv"), index=False)
+
     state.trained_for_version_pre = len(state.labeled_indices)
+    #
+    fast_density_peak_clustering(state.data_folder)
+    peak_merge(state.data_folder)
+    #
     quick_reclassification(state, logger=logger)
     print("done", state.trained_for_version)
     state.trained_for_version = len(state.labeled_indices)
@@ -470,11 +477,18 @@ def status():
     detailed_performance_path = os.path.join(
         g_state.working_folder, "detailed_performance.csv"
     )
+    num_unlabeled_certain = 0
+    perc_likely_certain = 0
+    average_precision = 0
+    average_recall = 0
     if os.path.exists(detailed_performance_path):
         detailed_performance_ = pandas.read_csv(detailed_performance_path)
-        num_unlabeled_certain = int(detailed_performance_.num_predicted_certain.sum())
-    else:
-        num_unlabeled_certain = 0
+        if len(detailed_performance_) > 0:
+            num_unlabeled_certain = int(detailed_performance_.num_predicted_certain.sum())
+            perc_likely_certain = detailed_performance_.num_predicted_certain.sum() / (detailed_performance_.num_predicted_uncertain.sum() + num_unlabeled_certain)
+            average_recall = detailed_performance_.recall.mean()
+            average_precision = detailed_performance_.precision.mean()
+
     time_remaining_s = estimated_duration_s - status_duration
     return {
         "status": g_state.g_quick_status,
@@ -488,6 +502,9 @@ def status():
         "duration_perc": f"{time_remaining_s / estimated_duration_s if estimated_duration_s > 0 else 0:.2f}",
         "package_version": g_version,
         "num_labeled": len(g_state.labeled_indices) if g_state.labeled_indices else 0,
+        "perc_likely_certain": perc_likely_certain,
+        "average_precision": average_precision,
+        "average_recall": average_recall,
         # "performance": json.load(open(performance_path))
     }
 

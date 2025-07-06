@@ -689,7 +689,9 @@ limitations under the License.
       })
       .fail(function (jqXHR, textStatus, error) {
         alert(
-          `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(jqXHR)}, ${textStatus}, ${error}`
+          `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(
+            jqXHR
+          )}, ${textStatus}, ${error}`
         );
       });
   }
@@ -702,7 +704,9 @@ limitations under the License.
       })
       .fail(function (jqXHR, textStatus, error) {
         alert(
-          `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(jqXHR)}, ${textStatus}, ${error}`
+          `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(
+            jqXHR
+          )}, ${textStatus}, ${error}`
         );
       });
   }
@@ -767,8 +771,8 @@ limitations under the License.
         for (const char of label[0].toLocaleLowerCase()) {
           if (
             !shortcuts.has(char) &&
-            char != " " 
-            // && char != "d" 
+            char != " "
+            // && char != "d"
             // && char != "i"
           ) {
             shortcuts.set(char, label[0]);
@@ -1087,6 +1091,13 @@ limitations under the License.
         $("#speed_certain").html(
           Math.round(data["num_unlabeled_certain"] / (activeTime / 3600), 1)
         );
+        $("#likely_certain_perc").html(
+          Math.round(parseFloat(data["perc_likely_certain"]) * 1000, 1) / 10
+        );
+        $("#average_precision").html(
+          round(data["average_precision"] * 100.0, 1)
+        );
+        $("#average_recall").html(round(data["average_recall"] * 100.0, 1));
       }
     );
   }

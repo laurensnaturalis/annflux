@@ -251,13 +251,19 @@ controlHtml = `<div id="map_control">
             <a href="/detailed_performance">Performance</a>
           </td>
           <td>
-            <span id="test_performance"></span>
+            <span id="test_performance"></span> Avg. precision = <span id="average_precision"></span> % - Avg. recall <span id="average_recall"></span> %
           </td>
         </tr>
         <tr>
-          <td>Space covered</td>
+          <td>Space covered </td>
           <td>
             <span id="percentage_near_labeled"></span> %
+          </td>
+        </tr>
+        <tr>
+          <td>Likely certain</td>
+          <td>
+            <span id="likely_certain_perc"></span> %
           </td>
         </tr>
         <tr>
@@ -444,4 +450,3 @@ const mapHtml = `<div id="my_dataviz" tabindex="0"></div>
           <td><span id="package_version"></span></td>
         </tr>
       </table></div>`;
-

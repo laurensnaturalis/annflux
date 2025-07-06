@@ -1,14 +1,17 @@
 # Design philosophy
 
-AnnFlux is set up as easily extendable research tool and functional components can be easily modified or replaced. 
+AnnFlux is set up as easily extendable research tool and functional components can be easily modified or replaced.
 
-To help this, communication between components is done as much as possible through common data formats (NumPy arrays, Pandas Dataframes) or common file formats (CSV, parquet).
+To help this, communication between components is done as much as possible through common data formats (NumPy arrays,
+Pandas Dataframes) or common file formats (CSV, parquet).
 
-If code becomes very complicated in its internal communication, or its execution becomes slow, this is a sign that a redesign or refactoring is needed.
+If code becomes very complicated in its internal communication, or its execution becomes slow, this is a sign that a
+redesign or refactoring is needed.
 
 # Workflow
 
 ## Main
+
 1. Compute features for every image in a dataset
 2. Embed features
 3. Annotate the feature space through exploration and active learning
@@ -22,7 +25,8 @@ If code becomes very complicated in its internal communication, or its execution
 
 # Components
 
-NB: the files repo_results_to_embedding.py and train_indeed_image.py function as plumbing around feature embedding and model training respectively.
+NB: the files repo_results_to_embedding.py and train_indeed_image.py function as plumbing around feature embedding and
+model training respectively.
 
 # Algorithms
 
@@ -36,6 +40,7 @@ NB: the files repo_results_to_embedding.py and train_indeed_image.py function as
 - basic.py: computes basic performance measure + functionality for I/O
 
 # Repository
+
 Objects for persistence and provenance of ML objects
 
 - dataset.py: represents a dataset (an immutable selection of data)
@@ -44,6 +49,7 @@ Objects for persistence and provenance of ML objects
 - repository.py: a collection of datasets, models, and resultsets
 
 # Scripts
+
 Provides tooling for the user to interact with AnnFlux
 
 - annflux_cli.py: the main command-line interface (CLI) entry point
@@ -55,6 +61,7 @@ Provides tooling for the user to interact with AnnFlux
 - test_train.py: tests separately the training functionality
 
 # Tools
+
 General functionality
 
 - core.py: functionality to keep the state of the annotation process
@@ -63,9 +70,11 @@ General functionality
 - mixed.py: general functionality, including logging
 
 # Training
+
 ## AnnFlux
 
-- clip.py: computes features using CLIP based architectures, also provides functionality for parameter efficient fine-tuning
+- clip.py: computes features using CLIP based architectures, also provides functionality for parameter efficient
+  fine-tuning
 - clip_server.py: functionality for running a trained CLIP mode as a webservice
 - clip_shared.py: shared functionality between clip.py and clip_server.py
 - feature_extractor.py: base class for general feature extractors
@@ -77,10 +86,19 @@ General functionality
 
 # Columns in state table
 
-| Name |Description| Category| Type |Computed in|
-|------| ------- |--------|------|---|
-|`dp_most_needed`|Density-peak based computation of most needed point to annotate|AL score|int|fastdpeak_merge.py|
+| Name             | Description                                                     | Category   | Type     | Computed in        |
+|------------------|-----------------------------------------------------------------|------------|----------|--------------------|
+| `dp_most_needed` | Density-peak based computation of most needed point to annotate | AL score   | int      | fastdpeak_merge.py |
+| `dp_is_ldp` | Indicates whether point is a density peak | Clustering | bool/int | fastdpeak.py |
 
+# Algorithms
 
+| Name                           | Description              | Category                     | Columns in                            | Columns modified | Columns out                                          | Computed in        | Reference         |
+|--------------------------------|--------------------------|------------------------------|---------------------------------------|------------------|------------------------------------------------------|--------------------|-------------------|
+| `fast_density_peak_clustering` | Density-peak computation | Clustering                   | `e_0`, `e_1`                          | -                | `dp_is_ldp`, `dp_depth`, `dp_depth_alt`, `dp_parent` | fastdpeak.py       | TODO              |
+| `peak_merge`                   | Density-peak merge       | Clustering / active learning | `dp_parent`, `dp_depth`, `dp_cluster` | `dp_cluster`     | `dp_most_needed`                                     | fastdpeak_merge.py | None (own design) |
+| `make_predictions`             | kNN-based predictions    | Classification               | `dp_parent`, `dp_depth`, `dp_cluster` | `dp_cluster`     | `dp_most_needed`                                     | quick.py           | None (own design) |
+
+#
 
 

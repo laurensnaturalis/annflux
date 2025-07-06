@@ -1,65 +1,34 @@
 import copy
-import os
 from collections import defaultdict
-from typing import Set, Dict
+from typing import Dict, Set
 
 import faiss
 import numpy as np
 import pandas
 from sklearn.metrics import pairwise_distances
-from sklearn.neighbors import NearestNeighbors
-from tqdm import tqdm
 
-from annflux.algorithms.embeddings import compute_tsne
-from annflux.repository.repository import Repository
-from annflux.repository.resultset import Resultset
 from annflux.shared import AnnfluxSource
-from annflux.tools.io import numpy_load
 
 
-def m():
-    num_clusters = 4
-    points_per_cluster = 100
-    seed = 43
-    np.random.seed(seed)
-    cluster_centers = np.random.rand(num_clusters, 2)
-    print(cluster_centers)
-    features = []
-    for cluster_center in cluster_centers:
-        for _ in range(points_per_cluster):
-            features.append(cluster_center + np.random.rand(1, 2) * 0.10)
-    print(features)
+def fast_density_peak_clustering(source_or_folder: str | AnnfluxSource, show=False):
+    """
+    Applies fast density peak clustering (TODO: ref)
 
-    features = np.vstack(features)
-    # plt.scatter(points[:, 0], points[:, 1])
-    # plt.show()
+    Modifies the data state on disk
 
-    nbrs = NearestNeighbors(n_neighbors=5, algorithm="ball_tree").fit(features)
-    distances, knn_indices = nbrs.kneighbors(features)
-    distances = distances[:, 1:]
-    knn_indices = knn_indices[:, 1:]
+    TODO: apply to original features instead of embeddings
+    """
+    if not isinstance(source_or_folder, AnnfluxSource):
+        source = AnnfluxSource(source_or_folder)
+    else:
+        source = source_or_folder
 
-    knn_densities = distances[:, -1]
-
-    p1 = set(range(len(features)))
-    find_local_density_peak(knn_densities, p1, knn_indices, distances)
-
-
-def m2(project_folder: str):
-    source = AnnfluxSource(project_folder)
     data = pandas.read_csv(
         source.data_state_path, dtype={"label_predicted": str, "score_true": float}
     )
-    repo = source.repository
-    resultset = repo.get(label=Resultset, tag="unseen").last()
-    folder = resultset.path
 
-    species_true = data.label_true
-    # features = numpy_load(f"{folder}/last_full.npz", "lastFull")
-    #
-    # features = compute_tsne(features)
 
-    t_ = pandas.read_csv(source.data_state_path)
+    t_ = data
     features = t_[["e_0", "e_1"]].values
 
     print("features.shape", features.shape)
@@ -87,8 +56,6 @@ def m2(project_folder: str):
                     distances[i_, 0] *= 0.99
                     break
 
-    # print(knn_indices[a])
-    # print(knn_indices[b])
     knn_indices = knn_indices[:, 1:]
 
     distances = distances[:, 1:]
@@ -110,10 +77,8 @@ def m2(project_folder: str):
     for child, parent in child_to_parent_non_ldp.items():
         # print(child, parent)
         assert knn_densities[child] <= knn_densities[parent]
-    print("here", len(child_to_parent_non_ldp))
     child_to_ldp_parent = {}
     child_to_depth = {}
-    # print("zoeloe", child_to_parent[b])
     for child, parent in child_to_parent_non_ldp.items():
         if parent in local_density_peaks:
             child_to_ldp_parent[child] = parent
@@ -138,7 +103,9 @@ def m2(project_folder: str):
     combined.update(child_to_parent_ldp)
     print("len(combined)", len(combined))
     combined_depth = {}
-    num_children: list[int] = [0, ] * len(combined)
+    num_children: list[int] = [
+        0,
+    ] * len(combined)
     for child, parent in combined.items():
         child_ = child
         parent_ = combined[child]
@@ -164,19 +131,10 @@ def m2(project_folder: str):
     data["dp_depth"] = [num_children[r] for r in indices_]
     data["dp_depth"] = data["dp_depth"].max() - data["dp_depth"]
     data["dp_depth_alt"] = [combined_depth[r] for r in indices_]
-    data["dp_parent"] = [int(combined[r]) if combined[r] is not None else -1 for r in indices_]
-    # for r, row in tqdm(data.iterrows(), desc="setting data in table"):
-    #     data.at[r, "dp_is_ldp"] =
-    #     data.at[r, "dp_depth"] = max(num_children) - num_children[r]
-    #     data.at[r, "dp_depth_alt"] = combined_depth[r]
-    #     data.at[r, "dp_parent"] = combined[r]
+    data["dp_parent"] = [
+        int(combined[r]) if combined[r] is not None else -1 for r in indices_
+    ]
 
-    # data["dp_depth"] = data.apply(
-    #     lambda row_: row_["dp_depth"]
-    #     if row_.is_ldp == 1
-    #     else row_["dp_depth"] + len(local_density_peaks),
-    #     axis=1,
-    # )
     display_order = [
         None,
     ] * len(data)
@@ -187,120 +145,85 @@ def m2(project_folder: str):
     data["display_order"] = display_order
     print(np.where(data["dp_depth"].values == 0)[0][0])
     print(np.argsort(data["dp_depth"].values))
-    data.to_csv("indeed.csv", index=False)
+    print(f"Writing to {source.data_state_path=}")
+    data.to_csv(source.data_state_path, index=False)
 
-    import matplotlib.pyplot as plt
+    if show:
+        import matplotlib.pyplot as plt
 
-    if features.shape[1] != 2:
-        tsne_model = nptsne.TextureTsne(verbose=False)
-        features = tsne_model.fit_transform(features)
-        features = np.reshape(features, (int(features.shape[0] / 2), 2))
+        species_true = data.label_true
 
-    from matplotlib.pyplot import cm
-
-    plt.subplot(221)
-    plt.title(f"|ldp| = {len(local_density_peaks)}")
-    color = iter(cm.rainbow(np.linspace(0, 1, len(local_density_peaks))))
-    ldp_parent_to_children = defaultdict(lambda: [])
-    for child, parent in child_to_ldp_parent.items():
-        ldp_parent_to_children[parent].append(child)
-    for ldp in sorted(local_density_peaks):
-        children = ldp_parent_to_children[ldp]
-        c = next(color).reshape(1, -1)
-        p = plt.scatter(features[children, 0], features[children, 1], c=c)
-        p = plt.scatter(
-            features[ldp : ldp + 1, 0], features[ldp : ldp + 1, 1], c=c, marker="x"
-        )  # c=p.get_facecolors()[0].reshape(1,-1), marker="x")
-        # print(p.get_facecolors()[0])
-    plt.subplot(222)
-
-    color = iter(cm.rainbow(np.linspace(0, 1, len(set(species_true)))))
-    for species in set(species_true):
-        sel = np.where(species_true == species)[0]
-        centroid = np.mean(features[sel], axis=0)
-        # print(centroid)
-        c = next(color).reshape(1, -1)
-        p = plt.scatter(features[sel, 0], features[sel, 1], c=c)
-        plt.annotate(species, centroid)
-
-    plt.subplot(223)
-
-    children = ldp_parent_to_children[list(local_density_peaks)[0]]
-    global_to_local = dict(list(zip(children, range(len(children)))))
-    x = features[children, 0]
-    y = [child_to_depth[x_] for x_ in children]
-    for c, child in enumerate(children):
-        if child_to_parent_non_ldp[child] in children:
-            local_parent_index = global_to_local[child_to_parent_non_ldp[child]]
-            plt.plot(
-                [x[c], x[local_parent_index]],
-                [y[c], y[local_parent_index]],
-                c="k",
-                lw=0.5,
-            )
-    plt.scatter(x, y)
-
-    plt.subplot(224)
-
-    ldp_parent_to_children = defaultdict(lambda: [])
-    for child, parent in child_to_parent_ldp.items():
-        ldp_parent_to_children[parent].append(child)
-    children = np.array(list(sorted(local_density_peaks)))
-    global_to_local = dict(list(zip(children, range(len(children)))))
-    x = features[children, 0]
-    y = [child_to_parent_ldp_depth[x_] for x_ in children]
-    color = iter(cm.rainbow(np.linspace(0, 1, len(local_density_peaks))))
-    for c, child in enumerate(children):
-        if child_to_parent_ldp[child] in children:
-            local_parent_index = global_to_local[child_to_parent_ldp[child]]
-            plt.plot(
-                [x[c], x[local_parent_index]],
-                [y[c], y[local_parent_index]],
-                c="k",
-                lw=0.5,
-            )
-    plt.scatter(x, y, c=[next(color) for _ in range(len(x))])
-
-    plt.show()
-
-    # plt.scatter(features[:, 0], features[:, 1])
-    # plt.scatter(
-    #     features[list(local_density_peaks), 0],
-    #     features[list(local_density_peaks), 1],
-    #     c="r",
-    # )
-    # plt.show()
-
-
-def data_from_chordata():
-    np.random.seed(43)
-    n_ = 2000
-    feature_cache_path = f"fcache_{n_}.npz"
-    if not os.path.exists(feature_cache_path):
-        features = np.load("/mnt/big/naturalis/ood_cache/feature_chordata_adb.npz")[
-            "arr_0"
-        ]
-        first_n_species = 30
-        data = pandas.read_csv("/mnt/big/naturalis/ood_cache/results_chordata_adb.csv")
-        species_true = data.species_true
-        species_unique_order = []
-        species_unique = set()
-        for x_ in species_true:
-            if x_ not in species_unique:
-                species_unique_order.append(x_)
-                species_unique.add(x_)
-        end_i = np.where(species_true == species_unique_order[first_n_species])[0][-1]
-        print("end_i", end_i)
-        selection = np.random.choice(np.arange(end_i), n_)
-        features = features[selection]
-        if True:
+        if features.shape[1] != 2:
             tsne_model = nptsne.TextureTsne(verbose=False)
             features = tsne_model.fit_transform(features)
             features = np.reshape(features, (int(features.shape[0] / 2), 2))
-        np.savez(
-            feature_cache_path, features=features, species_true=species_true[selection]
-        )
-    return feature_cache_path
+
+        from matplotlib.pyplot import cm
+
+        plt.subplot(221)
+        plt.title(f"|ldp| = {len(local_density_peaks)}")
+        color = iter(cm.rainbow(np.linspace(0, 1, len(local_density_peaks))))
+        ldp_parent_to_children = defaultdict(lambda: [])
+        for child, parent in child_to_ldp_parent.items():
+            ldp_parent_to_children[parent].append(child)
+        for ldp in sorted(local_density_peaks):
+            children = ldp_parent_to_children[ldp]
+            c = next(color).reshape(1, -1)
+            p = plt.scatter(features[children, 0], features[children, 1], c=c)
+            p = plt.scatter(
+                features[ldp : ldp + 1, 0], features[ldp : ldp + 1, 1], c=c, marker="x"
+            )  # c=p.get_facecolors()[0].reshape(1,-1), marker="x")
+            # print(p.get_facecolors()[0])
+        plt.subplot(222)
+
+        color = iter(cm.rainbow(np.linspace(0, 1, len(set(species_true)))))
+        for species in set(species_true):
+            sel = np.where(species_true == species)[0]
+            centroid = np.mean(features[sel], axis=0)
+            # print(centroid)
+            c = next(color).reshape(1, -1)
+            p = plt.scatter(features[sel, 0], features[sel, 1], c=c)
+            plt.annotate(species, centroid)
+
+        plt.subplot(223)
+
+        children = ldp_parent_to_children[list(local_density_peaks)[0]]
+        global_to_local = dict(list(zip(children, range(len(children)))))
+        x = features[children, 0]
+        y = [child_to_depth[x_] for x_ in children]
+        for c, child in enumerate(children):
+            if child_to_parent_non_ldp[child] in children:
+                local_parent_index = global_to_local[child_to_parent_non_ldp[child]]
+                plt.plot(
+                    [x[c], x[local_parent_index]],
+                    [y[c], y[local_parent_index]],
+                    c="k",
+                    lw=0.5,
+                )
+        plt.scatter(x, y)
+
+        plt.subplot(224)
+
+        ldp_parent_to_children = defaultdict(lambda: [])
+        for child, parent in child_to_parent_ldp.items():
+            ldp_parent_to_children[parent].append(child)
+        children = np.array(list(sorted(local_density_peaks)))
+        global_to_local = dict(list(zip(children, range(len(children)))))
+        x = features[children, 0]
+        y = [child_to_parent_ldp_depth[x_] for x_ in children]
+        color = iter(cm.rainbow(np.linspace(0, 1, len(local_density_peaks))))
+        for c, child in enumerate(children):
+            if child_to_parent_ldp[child] in children:
+                local_parent_index = global_to_local[child_to_parent_ldp[child]]
+                plt.plot(
+                    [x[c], x[local_parent_index]],
+                    [y[c], y[local_parent_index]],
+                    c="k",
+                    lw=0.5,
+                )
+        plt.scatter(x, y, c=[next(color) for _ in range(len(x))])
+
+        plt.show()
 
 
 def find_local_density_peak(
@@ -367,4 +290,4 @@ def fast_find_parent_node_ldp(local_density_peaks, densities, features):
 
 
 if __name__ == "__main__":
-    m2("/mnt/big/indeed/mollusca")
+    fast_density_peak_clustering("/mnt/big/indeed/mollusca")
