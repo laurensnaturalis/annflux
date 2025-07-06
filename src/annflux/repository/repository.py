@@ -104,6 +104,18 @@ class RepositoryEntry(object):
     def __eq__(self, right):
         return self.uid == right.uid
 
+    def to_json(self):
+        return {
+            "uid": self.uid,
+            "label": self.label,
+            "tag": self.tag,
+            "date": self.date,
+            "message": self.message,
+            "ancestors": self.ancestors,
+            "path": self.path,
+            "repository": self.repository.path,
+        }
+
 
 class CollectionWrapper(list):
     """
@@ -136,6 +148,9 @@ class Repository(object):
                 self.index_path, index=False
             )
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}:{self.path},size={len(self.entries)}"
+
     @staticmethod
     def entry_to_path(entry: RepositoryEntry):
         """
@@ -144,6 +159,7 @@ class Repository(object):
         :return:
         """
         # TODO: replace constant column indices by header lookup
+        # TODO: use f-string
         return "{}-{}-{}".format(entry[1], entry[3], entry[0][:8])  # noqa
 
     @staticmethod
@@ -224,7 +240,9 @@ class Repository(object):
             ancestor_tags = [x.tag for x in ancestors]
             if ancestor_tags != [tag] * len(ancestor_tags):
                 raise ValueError(
-                    "one or more of the ancestor tags do not match supplied tag", tag, ancestor_tags
+                    "one or more of the ancestor tags do not match supplied tag",
+                    tag,
+                    ancestor_tags,
                 )
 
         # by default allow_mixed_repos == False and objects must all be in the same repository to be committed

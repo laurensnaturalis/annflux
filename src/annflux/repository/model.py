@@ -17,15 +17,23 @@ import os
 import shutil
 from abc import abstractmethod
 
-from ..tools.io import file_hash
+import matplotlib
+
 from .dataset import Dataset
+from ..tools.io import file_hash
+
+try:
+    import _tkinter  # noqa
+except ImportError:
+    matplotlib.use("Agg")
+
 from .repository import Repository, RepositoryEntry
 
 
 class Model(object):
     label = "model"
 
-    def __init__(self, path_or_entry, class_to_label_path=None):
+    def __init__(self, path_or_entry: str | RepositoryEntry, class_to_label_path=None):
         """
 
         :type path_or_entry: RepositoryEntry
@@ -33,17 +41,21 @@ class Model(object):
         :param class_to_label_path:
         """
         if isinstance(path_or_entry, str):
-            self.path = path_or_entry
-            self.source_path = self.path
+            self._path = path_or_entry
+            self.source_path = self._path
             self.class_to_label_path = class_to_label_path
         else:
             self.entry = path_or_entry
-            self.path = path_or_entry.path
-            self.class_to_label_path = os.path.join(self.path, "labels.csv")
+            self._path = path_or_entry.path
+            self.class_to_label_path = os.path.join(self._path, "labels.csv")
 
     @property
     def size(self) -> int:
         return 96  # MB
+
+    @property
+    def path(self) -> str:
+        return self._path
 
     @property
     def model(self):
@@ -65,37 +77,48 @@ class Model(object):
 class ClipModel(Model):
     def __init__(self, path_or_entry: RepositoryEntry | str, class_to_label_path=None):
         super().__init__(path_or_entry, class_to_label_path)
-        if isinstance(path_or_entry, str):
-            self.adapter_folder = os.path.join(path_or_entry, "adapter")
-
-        else:
-            self.adapter_folder = os.path.join(path_or_entry.path, "adapter")
+        self.folder = (
+            path_or_entry if isinstance(path_or_entry, str) else path_or_entry.path
+        )
+        self.adapter_folder = os.path.join(self.folder, "adapter")
         self.weights_path = os.path.join(
             self.adapter_folder, "adapter_model.safetensors"
         )
+        self.class_to_label_path = os.path.join(self.folder, "labels.csv")
+        self.model_configuration_path = os.path.join(self.folder, "model.json")
 
     @property
     def size(self) -> int:
         return 150
 
     def get_uid(self):
-        return file_hash(self.weights_path)
+        return (
+            file_hash(self.weights_path)
+            if os.path.exists(self.weights_path)
+            else file_hash(os.path.join(self.folder, "model.json"))
+        )
 
     def store_contents(self, directory, mode):
         shutil.copy(self.class_to_label_path, directory)
-        shutil.copytree(self.adapter_folder, os.path.join(directory, "adapter"))
+        shutil.copy(self.model_configuration_path, directory)
+        if os.path.exists(self.adapter_folder):
+            shutil.copytree(self.adapter_folder, os.path.join(directory, "adapter"))
 
     def export_model_package(self, out_folder: str):
         os.makedirs(out_folder, exist_ok=False)
         shutil.copy(self.class_to_label_path, out_folder)
         shutil.copytree(self.adapter_folder, os.path.join(out_folder, "adapter"))
+        with open(os.path.join(out_folder, "description.json"), "w") as f:
+            json.dump({"entry": self.entry.to_json()}, f)
 
 
 class KerasModel(Model):
+    def save_protobuffer(self):
+        pass
+
     def __init__(
         self,
         model_folder_path_or_entry: (str, RepositoryEntry),
-        path_or_entry,
         classid_to_class_path=None,
         model_configuration_path=None,
     ):
@@ -104,12 +127,13 @@ class KerasModel(Model):
         :param model_folder_path_or_entry: model folder where temporary results are stored OR RepositoryEntry object
         :param classid_to_class_path: obsolete, for backwards compatibility
         """
-        super().__init__(path_or_entry)
+        super().__init__(model_folder_path_or_entry)
         if isinstance(model_folder_path_or_entry, str):
             self.entry = None
-            self.path = model_folder_path_or_entry
-            self.source_path = self.path
+            self._path = model_folder_path_or_entry
+            self.source_path = self._path
             self.weights_path = os.path.join(self.source_path, "weights_stage{n}.h5")
+            self.protobuf_path = os.path.join(self.source_path, "model_stage{n}/")
             for stage in [3, 2, 1]:
                 path = self.weights_path.format(n=stage)
                 if os.path.exists(path):
@@ -126,16 +150,17 @@ class KerasModel(Model):
 
         elif hasattr(model_folder_path_or_entry, "path"):
             self.entry = model_folder_path_or_entry
-            self.path = model_folder_path_or_entry.path
-            self.weights_path = os.path.join(self.path, "weights.h5")
-            self.class_to_label_path = os.path.join(self.path, "labels.txt")
+            self._path = model_folder_path_or_entry.path
+            self.weights_path = os.path.join(self._path, "weights.h5")
+            self.protobuf_path = os.path.join(self._path, "model.pb")
+            self.class_to_label_path = os.path.join(self._path, "labels.txt")
         else:
-            self.path = "tmp"
-            self.class_to_label_path = os.path.join(self.path, "labels.txt")
+            self._path = "tmp"
+            self.class_to_label_path = os.path.join(self._path, "labels.txt")
             pass
 
         self.model_configuration_path = (
-            os.path.join(self.path, "model.json")
+            os.path.join(self._path, "model.json")
             if hasattr(self, "path")
             else model_configuration_path
         )

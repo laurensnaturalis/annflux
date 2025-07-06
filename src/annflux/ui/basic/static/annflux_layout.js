@@ -139,7 +139,13 @@ var partLabelConfig = {
               type: "component",
               componentName: "FullImage",
               componentState: { label: "E" },
+              height: 50
             },
+            {
+              type: "component",
+              componentName: "FullEmbedding",
+              componentState: { label: "F" },
+            }
           ],
         },
       ],

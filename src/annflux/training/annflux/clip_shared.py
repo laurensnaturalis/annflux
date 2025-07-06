@@ -48,15 +48,16 @@ def test(
             # print("input_ids", input_ids)
             with torch.set_grad_enabled(False):
                 outputs = model(input_ids, pixel_values, attention_mask)
+                if isinstance(outputs, tuple):
+                    print([type(x_) for x_ in outputs])
                 logits_per_image = outputs.logits_per_image
 
                 _, predictions = torch.max(logits_per_image, 1)
                 probs = torch.softmax(logits_per_image, 1).cpu().numpy()
-                tmp__ = defaultdict(lambda: set())
+                tmp_pred = defaultdict(lambda: set())
                 for pred_val, true_val in zip(predictions.cpu().numpy().tolist(), captions):
                     pred_caption = unique_captions[pred_val]
-                    tmp__[true_val].add(pred_caption)
-                    # print(pred_caption, " ", true_val)
+                    tmp_pred[true_val].add(pred_caption)
                     running_corrects += (pred_caption == true_val) * 1
                     predicted_captions.append(pred_caption)
 

@@ -68,35 +68,28 @@ def quick_reclassification(
     print("instant_reclassification 3", time.time())
 
     reload_features = state.cache_for != result_set.entry.uid
-    print(
-        "version_for_recompute",
-        state.version_for_recompute,
-        result_set.entry.uid,
-        state.trained_for_version_pre,
+    recompute = state.version_for_recompute != (
+        result_set.entry.uid + "_" + str(state.trained_for_version_previous)
+    )
+    logger.info(
+        f"{state.version_for_recompute=}, {result_set.entry.uid=},{state.trained_for_version_previous=}"
     )
     if reload_features:
         state.g_quick_status = "Loading features"
 
-        state.features = numpy_load(f"{folder}/last_full.npz", "lastFull")
-
-    print(len(data), len(state.features))
-    assert len(data) == len(state.features)
-
+        if os.path.exists(custom_path):
+            state.features = numpy_load(custom_path, "arr_0")
+        elif os.path.exists(custom2_path):
+            state.features = np.load(custom2_path)
+        else:
+            state.features = numpy_load(f"{folder}/last_full.npz", "lastFull")
+    assert len(data) == len(state.features), f"{len(data)=}, {len(state.features)=}"
     annotated_uids = set(annotations.keys())
-    pseudolabel_uids = {}
-    use_pseudo_label = False
-    if "as_pseudolabel" in data.columns and use_pseudo_label:
-        pseudolabel_uids = set(data[data.as_pseudolabel == 1].uid.values.tolist())
-        annotated_uids = annotated_uids.union(pseudolabel_uids)
-    print("|pseudolabel_uids|", len(pseudolabel_uids))
-    tmp_ = annotated_uids - test_uids
-    # old_labeled_indices = copy.deepcopy(labeled_indices) if labeled_indices is not None else None
+    most_needed_first = annotated_uids - test_uids
     state.labeled_indices = sorted(
-        [i for i, uid in enumerate(data.uid.values) if uid in tmp_]
+        [i for i, uid in enumerate(data.uid.values) if uid in most_needed_first]
     )
-    print("instant_reclassification 4", time.time() - start_time)
-    uid_to_predicted = dict(zip(data.uid, data.label_predicted))
-
+    logger.info(f"instant_reclassification 4={time.time() - start_time}")
     #
     data["label_undetermined"] = None
     for i, uid in enumerate(data.uid.values):
@@ -113,33 +106,17 @@ def quick_reclassification(
                 else:
                     sure_labels.append(label_)
             annotations[uid] = ",".join(sorted(sure_labels))
-    print(
-        "set(annotations.values())",
-        len(set(annotations.values())),
-        set(annotations.values()),
-    )
-    #
-
     state.label_array = np.array(
         [
-            (
-                annotations.get(uid).split(",")
-                if annotations.get(uid)
-                else (
-                    uid_to_predicted.get(uid).split(",")
-                    if uid in pseudolabel_uids
-                    else None
-                )
-            )
+            (annotations.get(uid).split(",") if annotations.get(uid) else None)
             if uid not in test_uids
             else None
             for i, uid in enumerate(data.uid.values)
         ],
-        dtype="object",
+        dtype=object,
     )
-
     state.label_array = np.array(
-        [remove_sys(x_) for x_ in state.label_array], dtype="object"
+        [remove_sys(x_) for x_ in state.label_array], dtype=object
     )
     state.label_array_test = np.array(
         [
@@ -148,13 +125,13 @@ def quick_reclassification(
             else None
             for i, uid in enumerate(data.uid.values)
         ],
-        dtype="object",
+        dtype=object,
     )
-    print("state.label_array_test", state.label_array_test)
-    print("|label_array_test|", len(state.label_array_test))
+    logger.info(f"state.label_array_test={state.label_array_test}")
+    logger.info(f"|label_array_test|={len(state.label_array_test)}")
     test_indices = set([i for i, uid in enumerate(data.uid.values) if uid in test_uids])
-    print("|test_uids|", len(test_uids))
-    print("|test_indices|", len(test_indices))
+    logger.info(f"|test_uids|={len(test_uids)}")
+    logger.info(f"|test_indices|={len(test_indices)}")
     state.labeled_test_indices = sorted(
         [
             i
@@ -162,47 +139,55 @@ def quick_reclassification(
             if uid in test_uids and uid in annotations
         ]
     )
-    print("|labeled_test_indices|", len(state.labeled_test_indices))
-    print("instant_reclassification 5", time.time() - start_time)
-
-    # print("labeled_indices", labeled_indices)
-    k = 110
-    knn_results_path = result_set.get_path_for("knn_results.npz")
-    if not os.path.exists(knn_results_path):
-        state.g_quick_status = "computing knn index"
-        knn_index = faiss.index_factory(
-            state.features.shape[1],
-            "Flat",
-            {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
-        )
-        state.features *= 1 - 1e-2 * np.random.rand(
-            state.features.shape[0], state.features.shape[1]
-        )
-        print(state.features.shape)
-
-        knn_index.train(state.features)
-        knn_index.add(state.features)
-
-        state.all_distances, state.all_indices = knn_index.search(state.features, k=k)
-
-        np.savez(
-            knn_results_path,
-            all_distances=state.all_distances,
-            all_indices=state.all_indices,
-        )
-    else:
-        logger.info(f"Loading kNN results from {knn_results_path}")
-        knn_results = np.load(knn_results_path)
-        state.all_distances, state.all_indices = (
-            knn_results["all_distances"],
-            knn_results["all_indices"],
-        )
-
+    logger.info(f"|labeled_test_indices|={len(state.labeled_test_indices)}")
+    logger.info(f"instant_reclassification 5={time.time() - start_time}")
+    k = 110  # the magic number that should be investigated
     state.cache_for = result_set.entry.uid
     state.version_for_recompute = (
-        result_set.entry.uid + "_" + str(state.trained_for_version_pre)
+        result_set.entry.uid + "_" + str(state.trained_for_version_previous)
     )
+    if recompute:
+        knn_results_cache_path = os.path.join(
+            state.working_folder,
+            f"{state.version_for_recompute}.npz",
+        )
+        if not os.path.exists(knn_results_cache_path) or not str2bool(
+            os.getenv("USE_KNN_CACHE", False)
+        ):
+            state.g_quick_status = "computing knn index"
+            knn_index = faiss.index_factory(
+                state.features.shape[1],
+                "Flat",
+                {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
+            )
+            state.features *= 1 - 1e-2 * np.random.rand(
+                state.features.shape[0], state.features.shape[1]
+            )
 
+            # TODO(improvement): use the many features of FAISS to speed up
+
+            knn_index.train(state.features)
+            knn_index.add(state.features)
+
+            state.all_distances, state.all_indices = knn_index.search(
+                state.features, k=k
+            )
+
+            np.savez(
+                knn_results_cache_path,
+                all_distances=state.all_distances,
+                all_indices=state.all_indices,
+            )
+            logger.info(f"Cached to {knn_results_cache_path}")
+
+            del knn_index  # make sure we do not accidentally re-use it
+        else:
+            cache_ = np.load(knn_results_cache_path)
+            state.all_distances = cache_["all_distances"]
+            state.all_indices = cache_["all_indices"]
+            logger.info(
+                f"Loaded from {knn_results_cache_path}, {state.all_distances.shape=}"
+            )
     time_start = time.time()
 
     if knn_type == "standard":
@@ -212,7 +197,7 @@ def quick_reclassification(
             {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
         )
         features_train = state.features[state.labeled_indices]
-        print("standard, |features_train|", len(features_train))
+        logger.info(f"standard, |features_train|={len(features_train)}")
 
         knn_index_train.train(features_train)
         knn_index_train.add(features_train)
@@ -222,8 +207,7 @@ def quick_reclassification(
         )
 
         state.label_array = state.label_array[state.labeled_indices]
-
-    print("knn labeled", time.time() - time_start)
+    logger.info(f"knn labeled={time.time() - time_start}")
     distances, indices = (
         state.all_distances[state.labeled_indices],
         state.all_indices[state.labeled_indices],
@@ -294,9 +278,7 @@ def quick_reclassification(
         distances_,
         state.label_array,
         labeled_indices_,
-        None,
         test_indices,
-        None,
         skip_first=True,
         knn_rank_exponent=state.knn_rank_exponent,
     )
@@ -321,7 +303,6 @@ def quick_reclassification(
         near_labeled_indices = np.arange(len(state.all_distances))
         counter_of_most_need = {}
     time_start = time.time()
-    # distances, indices = knn_index.search(features[near_labeled_indices], k=k)
     distances, indices = (
         state.all_distances[near_labeled_indices],
         state.all_indices[near_labeled_indices],
@@ -354,36 +335,28 @@ def quick_reclassification(
         distances_,
         state.label_array,
         near_labeled_indices_,
-        predicted_test,
         test_indices,
-        true_test,
         knn_rank_exponent=state.knn_rank_exponent,
     )
-    print("|predicted_test|", len(predicted_test))
-    print("make_predictions end", time.time())
+    logger.info(f"|predicted_test|={len(predicted_test)}")
+    logger.info(f"make_predictions end={time.time()}")
     data.label_predicted = data.label_predicted.apply(lambda x_: canon_(x_))
     data.label_true = data.label_true.apply(lambda x_: canon_(x_))
     # FRE
     state.g_quick_status = "computing FRE"
-    compute_fre(state.label_array, data, state.features, state.labeled_indices)
-    # history
-    state.g_quick_status = "setting Most needed"
+    compute_fre(annotations, data, state.features, state.labeled_indices, test_uids)
     #
-    blurp = sorted(counter_of_most_need.items(), key=lambda t_: -t_[1])
-    for i_, (most_needed_i, most_needed) in enumerate(blurp):
-        # print("most_needed", most_needed, data.at[most_needed_i, "uid"])
-        # assert (
-        #     most_needed_i not in labeled_indices and most_needed_i not in test_indices
-        # )
+    most_needed_first = sorted(counter_of_most_need.items(), key=lambda t_: -t_[1])
+    for i_, (most_needed_i, _) in enumerate(most_needed_first):
         data.at[most_needed_i, "most_needed"] = i_
-        if i_ > 20:
+        if i_ > 500:  # TODO(improvement): based on actual page size
             break
-
+    del most_needed_first
     #
     state.g_quick_status = "computing performance"
     compute_performance(predicted_test, true_test, state, annotations, data)
     state.g_quick_status = "coloring and labelling"
-    color_and_label(
+    class_to_color = color_and_label(
         data,
         annotations,
         display_update_uids=new_labeled_nn_uids
@@ -396,61 +369,205 @@ def quick_reclassification(
         data["double_checked"] = data["uid"].apply(
             lambda x_: int(x_ in set(double_checked))
         )
-
-    if "species_true" in data:
-        data = data.drop("species_true", axis=1)
-    if "species_predicted" in data:
-        data = data.drop("species_predicted", axis=1)
-    data.to_csv(os.path.join(state.data_folder, "annflux", "annflux.csv"), index=False)
-    print("no prediction", len(data[(data.score_predicted == 0) & (data.labeled == 0)]))
-    print("instant_reclassification done")
+    data.to_csv(state.annflux_path, index=False)
+    logger.info(
+        f"no prediction={len(data[(data.score_predicted == 0) & (data.labeled == 0)])}"
+    )
+    logger.info(f"instant_reclassification done = {time.time() - start_time}")
+    pandas.DataFrame(
+        data=zip(class_to_color.keys(), class_to_color.values()),
+        columns=("class", "color"),
+    ).to_csv(os.path.join(state.data_folder, "annflux", "class_to_color.csv"))
     state.g_quick_status = "idle"
+
+
+def quick_reclassification_group(knn_type, state):
+    """
+    Trains a quick new model using kNN
+    """
+    start_time = time.time()
+    group_annflux_path = os.path.join(state.working_folder, "group0_annflux.csv")
+    data = pandas.read_csv(
+        group_annflux_path,
+        dtype={"label_predicted": str, "score_true": float, "uid": str},
+    )
+    with open(state.labels_path) as f:
+        annotations = json.load(f)
+    # with open(os.path.join(state.working_folder, "split.json")) as f:
+    #     test_uids = set(json.load(f)["test"])
+
+    state.group_features = np.load(
+        os.path.join(state.working_folder, "group0_features.npz")
+    )["lastFull"]
+    assert len(data) == len(state.group_features), (
+        f"{len(data)=}, {len(state.group_features)=}"
+    )
+    uids, labels = zip(*annotations.items())
+    train_uids, test_uids = train_test_split(uids, test_size=0.10, stratify=labels)
+    test_uids = set(test_uids)
+    train_uids = set(train_uids)
+
+    state.group_label_array = get_label_array(annotations, data, train_uids)
+    state.group_label_array_test = get_label_array(annotations, data, test_uids)
+    logger.info(f"|group_label_array_test|={len(state.group_label_array_test)}")
+    test_indices = set([i for i, uid in enumerate(data.uid.values) if uid in test_uids])
+    logger.info(f"|test_uids|={len(test_uids)}")
+    logger.info(f"|test_indices|={len(test_indices)}")
+    state.group_labeled_test_indices = sorted(
+        [
+            i
+            for i, uid in enumerate(data.uid.values)
+            if uid in test_uids and uid in annotations
+        ]
+    )
+    state.group_labeled_indices = sorted(
+        [i for i, uid in enumerate(data.uid.values) if uid in annotations]
+    )
+    logger.info(f"|group_labeled_test_indices|={len(state.group_labeled_test_indices)}")
+    k = 30  # the magic number that should be investigated
+
+    state.g_quick_status = "computing group knn index"
+    knn_index = faiss.index_factory(
+        state.group_features.shape[1],
+        "Flat",
+        {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
+    )
+    state.group_features *= 1 - 1e-2 * np.random.rand(
+        state.group_features.shape[0], state.group_features.shape[1]
+    )
+
+    knn_index.train(state.group_features)
+    knn_index.add(state.group_features)
+
+    state.all_distances_group, state.all_indices_group = knn_index.search(
+        state.group_features, k=k
+    )
+
+    near_labeled_indices = np.array(range(len(data)))  # TODO
+    data["label_predicted"] = None
+    data["scores_predicted"] = None
+    data["label_possible"] = None
+    data["score_possible"] = None
+
+    # - make predictions for labeled indices
+    labeled_indices = state.group_labeled_indices
+    distances, indices = (
+        state.all_distances_group[labeled_indices],
+        state.all_indices_group[labeled_indices],
+    )
+    logger.info(f"group labeled_indices={len(labeled_indices)}")
+    state.g_quick_status = "predicting group labeled"
+    make_predictions(
+        annotations,
+        data,
+        indices,
+        distances,
+        state.group_label_array,
+        labeled_indices,
+        test_indices,
+        skip_first=True,
+        knn_rank_exponent=state.knn_rank_exponent,
+    )
+
+    # - make predictions for near labeled
+    distances, indices = (
+        state.all_distances_group[near_labeled_indices],
+        state.all_indices_group[near_labeled_indices],
+    )
+    indices_ = indices
+    distances_ = distances
+    near_labeled_indices_ = near_labeled_indices
+
+    state.g_quick_status = "computing predictions"
+    out_predicted_test, out_true_test = make_predictions(
+        annotations,
+        data,
+        indices_,
+        distances_,
+        state.group_label_array,
+        near_labeled_indices_,
+        test_indices,
+        knn_rank_exponent=state.knn_rank_exponent,
+    )
+    logger.info(f"|predicted_test|={len(out_predicted_test)}")
+    logger.info(f"make_predictions end={time.time()}")
+    data.label_predicted = data.label_predicted.apply(lambda x_: canon_(x_))
+    data.label_true = data.label_true.apply(lambda x_: canon_(x_))
+    #
+    # compute_performance(predicted_test, true_test, state, annotations, data)
+    state.g_quick_status = "coloring and labelling"
+    class_to_color = color_and_label(
+        data,
+        annotations,
+    )
+
+    data.to_csv(group_annflux_path, index=False)
+    logger.info(
+        f"no prediction={len(data[(data.score_predicted == 0) & (data.labeled == 0)])}"
+    )
+    logger.info(f"quick_reclassification_group done = {time.time() - start_time}")
+    pandas.DataFrame(
+        data=zip(class_to_color.keys(), class_to_color.values()),
+        columns=("class", "color"),
+    ).to_csv(os.path.join(state.data_folder, "annflux", "class_to_color_group.csv"))
+    state.g_quick_status = "idle"
+
+
+def get_label_array(annotations, data, include_uids):
+    return np.array(
+        [
+            (
+                remove_sys(annotations.get(uid).split(","))
+                if annotations.get(uid)
+                else None
+            )
+            if uid in include_uids
+            else None
+            for i, uid in enumerate(data.uid.values)
+        ],
+        dtype=object,
+    )
 
 
 def make_predictions(
     annotations: Dict[str, str],
     data: pandas.DataFrame,
-    indices,
-    distances,
-    train_labels,
-    org_map: List[int],
-    predicted_test,
-    test_indices,
-    true_test,
+    indices: np.array,
+    distances: np.array,
+    train_labels: list[list[str]],
+    data_indices: list[int],
+    test_indices: list[int],
     skip_first=False,
     knn_rank_exponent=0.5,
-):
+) -> (list[list[str]], list[list[str]]):
     """
-
-    :param annotations:
-    :param data:
+    The predictions are made for the knn results in (`indices`, `distances`) which correspond to the indices in data defined
+     by `org_map`
+    :param annotations: map from uid to true label string
+    :param data: AnnFlux data frame
     :param indices: matrix with rows corresponding to predicted samples and columns to indices of neighbors in knn
     training set
     :param distances: matrix with rows corresponding to predicted samples and columns to distances to neighbors in knn
     training set
     :param train_labels: array with labels of knn training set
-    :param org_map: maps index of (indices, distances) to original index
-    :param predicted_test:
-    :param test_indices: test_indices in original dataset
-    :param true_test:
+    :param data_indices: indices of (indices, distances) in `data`
+    :param test_indices: test_indices in `data`
     :param skip_first:
     :param knn_rank_exponent:
     :return:
     """
     tmp_counter = 0
+    predicted_test = []
+    true_test = []
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
-        org_index = org_map[i]
+        org_index = data_indices[i]
         probabilities = defaultdict(lambda: 0)
         max_mass = 0
         for i2, multilabel_ in enumerate(train_labels[indices_for_i]):
             if skip_first and i2 == 0:
                 continue
             if multilabel_ is not None:
-                distance_weight = (
-                    distances[i][i2] ** knn_rank_exponent
-                )
-                if distance_weight < 1e-8:
-                    distance_weight = 1e-8
+                distance_weight = distances[i][i2] ** knn_rank_exponent
                 for label_ in multilabel_:
                     probabilities[label_] += 1 / distance_weight
                 if len(multilabel_) > 0:
@@ -460,9 +577,7 @@ def make_predictions(
         tmp_counter += org_index in test_indices
         if len(probabilities) > 0:
             max_labels = [
-                label_
-                for label_, prob_ in probabilities.items()
-                if prob_ > 0.5
+                label_ for label_, prob_ in probabilities.items() if prob_ > 0.5
             ]
             if len(max_labels) == 0:
                 max_index = np.argmax(list(probabilities.values()))
@@ -494,7 +609,6 @@ def make_predictions(
                 if org_index in test_indices and predicted_test is not None:
                     test_uid = data.at[org_index, "uid"]
                     if test_uid in annotations.keys():
-                        # print("in test", max_label, annotations[test_uid])
                         predicted_test.append(max_labels)
                         true_test.append(annotations[test_uid].split(","))
                 elif data.at[org_index, "uid"] in annotations:
@@ -505,4 +619,5 @@ def make_predictions(
                 data.at[org_index, "label_predicted"] = None
                 data.at[org_index, "score_predicted"] = 0
                 data.at[org_index, "scores_predicted"] = None
-    print("tmp_counter", tmp_counter)
+
+    return predicted_test, true_test

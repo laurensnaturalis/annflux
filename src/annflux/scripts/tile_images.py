@@ -34,6 +34,8 @@ def tile_and_save_image_with_padding(
     """
     basename = os.path.splitext(os.path.basename(img_path))[0]
 
+    first_patch_name = f"{prefix}{basename}_x0_y0.jpg"
+
     PIL.Image.MAX_IMAGE_PIXELS = 259341992 * 2  # for things such as orthophotos
     img = Image.open(img_path)
     width, height = img.size

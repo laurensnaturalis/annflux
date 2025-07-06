@@ -62,22 +62,14 @@ class Dataset(RepositoryObject):
         return self.entry.uid if hasattr(self, "entry") else "no_uid"
 
     def get_uid(self):
-        data = pandas.read_csv(self.path)
+        data = pandas.read_csv(self.path, dtype={"label": str})
 
         filenames = map(lambda x: os.path.split(x)[-1], data["filename"])
-        labels = data["label"]
-        labels_morph = data["label_morph"] if "label_morph" in data else None
+        labels = data["label"].fillna("")
 
-        if labels_morph is None:
-            return hashlib.sha224(
-                (",".join(filenames) + ",".join(labels)).encode("utf-8")
-            ).hexdigest()
-        else:
-            return hashlib.sha224(
-                (
-                    ",".join(filenames) + ",".join(labels) + ",".join(labels_morph)
-                ).encode("utf-8")
-            ).hexdigest()
+        return hashlib.sha224(
+            (",".join(filenames) + ",".join(labels)).encode("utf-8")
+        ).hexdigest()
 
     def store_contents(self, directory, mode):
         shutil.copy(self.path, os.path.join(directory, "dataset.csv"))

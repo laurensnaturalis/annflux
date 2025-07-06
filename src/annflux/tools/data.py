@@ -41,9 +41,9 @@ def canon_(s_: str | list[str]) -> str | None:
 
 
 def color_and_label(
-    data,
-    annotations,
-    display_update_uids: List[str] = None,
+    data: pandas.DataFrame,
+    annotations: dict[str, str],
+    display_update_uids: list[str] = None,
     logger: logging.Logger = get_basic_logger("color_and_label"),
 ):
     start_time = time.time()
@@ -144,7 +144,7 @@ def color_and_label(
     )
     logger.info(f"color_class took={time.time() - start_time}")
     #
-    if "label_possible" in data_to_update.columns:
+    if "label_possible" in data_to_update.columns and "score_possible" in data_to_update.columns:
         data_to_update["incorrect_score"] = 0.0
         for r, row in data_to_update.iterrows():
             if (
@@ -181,8 +181,30 @@ def color_and_label(
             data_to_update.incorrect_score.max() - data_to_update.incorrect_score
         )
     #
+    if "record_id" in data.columns:
+        record_ids = data.record_id.unique()
+        has_records = len(record_ids) < len(data)
+        if has_records:
+            data["predicted_x"] = None
+            data["true_x"] = None
+            for record_id in record_ids:
+                sel = data[data.record_id == record_id]
+                _, predicted_set = get_labels(sel, "label_predicted")
+                _, true_set = get_labels(sel, "label_true")
+                all_labels = predicted_set | true_set
+                label_to_index = dict(zip(list(all_labels), range(len(all_labels))))
+
+                # within the record assign coordinates & jitter
+                for r, row in sel.iterrows():
+                    data.at[r, "predicted_x"] = (
+                        label_to_index[row.label_predicted] * 2 + np.random.rand()
+                    )
+                    data.at[r, "true_x"] = label_to_index[row.label_true] * 2 + np.random.rand()
+    #
     logger.info(f"label_possible took={time.time() - start_time}")
     logger.info(f"coloring took={time.time() - time_start}")
+
+    return class_to_color
 
 
 def remove_uids_from_double_check(
@@ -203,12 +225,24 @@ def remove_uids_from_double_check(
         json.dump(j_doublecheck, f, indent=2)
 
 
+
+
 def get_images_path() -> str:
     """
     Get default path for images
     :return:
     """
     return os.path.join(get_project_root(), "images")
+
+def get_group_images_path() -> str:
+    """
+    Get default path for images
+    :return:
+    """
+    return os.path.join(get_project_root(), "images_group")
+
+def get_failed_images_path() -> str:
+    return os.path.join(get_project_root(), "images_failed")
 
 
 def get_project_root() -> str:

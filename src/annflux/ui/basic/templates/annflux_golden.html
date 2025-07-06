@@ -27,6 +27,8 @@ limitations under the License.
 ></script>
 <script type="text/javascript" src="/static/annflux.js"></script>
 <script type="text/javascript" src="/static/annflux_layout.js"></script>
+<script type="text/javascript" src="/static/annflux_objects.js"></script>
+<script type="text/javascript" src="/static/lap.js"></script>
 <link
   type="text/css"
   rel="stylesheet"
@@ -38,23 +40,17 @@ limitations under the License.
   href="https://golden-layout.com/files/latest/css/goldenlayout-dark-theme.css"
 />
 <link type="text/css" rel="stylesheet" href="/static/annflux.css" />
+<link type="text/css" rel="stylesheet" href="/labels/css" />
 
 <body>
   <div id="layoutContainer"></div>
 </body>
 <script>
-  let gLayout = "label"; // "label"
+  let gLayout = "{{ layout }}";
   var myLayout;
   // localStorage.clear();
   savedState = localStorage.getItem("savedState");
   savedLayout = localStorage.getItem("savedLayout");
-
-  if(!sessionStorage.isNewSession) {
-    localStorage.removeItem("activeTime");
-    console.log("removed activeTime from localStorage")
-  }
-
-  sessionStorage.isNewSession = true;
 
   if (savedState !== null && savedLayout == gLayout) {
     logUI("Loading custom layout state");
@@ -62,6 +58,7 @@ limitations under the License.
   } else {
     let layoutDef = new Map([
       ["partLabel", partLabelConfig],
+      ["tileLabel", partLabelConfig],
       ["label", labelConfig],
     ]).get(gLayout);
     console.log("layoutDef", layoutDef);
@@ -78,6 +75,9 @@ limitations under the License.
   let galleryContainer = null;
   let fullImageContainer = null;
   let controlContainer = null;
+  let fullImageTileMap = null;
+  let embeddingMapContainer = null;
+  let fullImageEmbeddingMap = null;
 
   function saveState() {
     var state = JSON.stringify(myLayout.toConfig());
@@ -147,10 +147,23 @@ limitations under the License.
       container
         .getElement()
         .html(
-          `<div id="fullImageWrapper" class="img-overlay-wrap"><img src='something' id="fullImage"/></div>`
+          gLayout == "partLabel"
+            ? `<div id="fullImageWrapper" class="img-overlay-wrap"><img src='something' id="fullImage"/></div>`
+            : `<div id="fullImageTiled" tabindex="0"></div>`
         );
     }
   });
+  myLayout.registerComponent(
+    "FullEmbedding",
+    function (container, componentState) {
+      if (componentState.label == "F") {
+        embeddingMapContainer = container;
+        container
+          .getElement()
+          .html(`<div id="fullImageMap" tabindex="0"></div>`);
+      }
+    }
+  );
 
   myLayout.init();
 
