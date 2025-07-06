@@ -2,11 +2,12 @@ from collections import Counter
 
 import pandas
 import numpy as np
+from tqdm import tqdm
 
 from annflux.shared import AnnfluxSource
 
 
-def get_descendants(parent_to_child, start_node) -> set[int]:
+def get_descendants(parent_to_child: dict[int, list[int]], start_node: int) -> set[int]:
     descendants = set()
     stack = [start_node]
     while stack:
@@ -17,15 +18,25 @@ def get_descendants(parent_to_child, start_node) -> set[int]:
     return descendants
 
 
-def m(project_folder: str):
-    source = AnnfluxSource(project_folder)
+def peak_merge(source_or_folder: str | AnnfluxSource):
+    """
+    Merges density peaks produced by `fastdpeak.py` or a similar algorithm
+
+    Assumes data state has columns `dp_parent` and `dp_depth` and `dp_cluster`
+
+    Reduces number of clusters
+
+    Outputs column `dp_most_needed`
+    """
+    if not isinstance(source_or_folder, AnnfluxSource):
+        source = AnnfluxSource(source_or_folder)
+    else:
+        source = source_or_folder
     t = pandas.read_csv(
         source.data_state_path, dtype={"label_predicted": str, "score_true": float}
     )
     t["dp_parent"] = t["dp_parent"].fillna(-1).astype(int)
-    # t.to_parquet("annflux.pq")
-    #
-    # t = pandas.read_parquet("annflux.pq")
+
     t["num_children"] = t["dp_depth"].max() - t["dp_depth"]
 
     print(t["num_children"].min(), t["num_children"].max())
@@ -35,12 +46,13 @@ def m(project_folder: str):
     t["num_children_alt"] = None
     child_to_parent = dict(zip(range(len(t)), t["dp_parent"]))
 
-    parent_to_children = {}
+    parent_to_children: dict[int, list[int]] = {}
     for child, parent in child_to_parent.items():
         if parent not in parent_to_children:
             parent_to_children[parent] = []
         parent_to_children[parent].append(child)
     #
+    r_: int
     for r_, row in t.iterrows():
         t.at[r_, "num_children_alt"] = len(parent_to_children.get(r_, []))
     # assign merge clusters
@@ -77,28 +89,21 @@ def m(project_folder: str):
     print(t["num_children_alt"].sum())
     target_num_clusters = np.sqrt(len(t)) / 2
 
-    # for r_, row in t[pandas.isna(t["dp_cluster"])].iterrows():
-    #     parent = row.dp_parent
-    #     while parent != -1:
-    #         parent_idx = int(row.dp_parent)
-    #         row = t.iloc[parent_idx]
-    #         print(row["dp_is_ldp"], parent_idx, len(set(sorted(parent_to_children.get(parent_idx, []))).intersection(dp_idx)) > 0, row["dp_cluster"])
-    #         parent = row.dp_parent
-    #
-    #
-    #     break
     print(f"{len(cluster_counts)=}")
     loop = 0
     strategy = "merge_tail"
     largest_cluster_overall = None
-    new_num_clusters = None
     sum_tail_factor = 0.9
     tail_factor = 0.25
     reduced_in_loops = []
 
     while len(t["dp_cluster"].unique()) > target_num_clusters:
         reduced_in_loop = 0
-        for _, cluster in cluster_counts.sort_values("counts").iterrows():
+        for _, cluster in tqdm(
+            cluster_counts.sort_values("counts").iterrows(),
+            desc=f"merging loop {loop}",
+            total=len(cluster_counts),
+        ):
             # print(cluster)
             cluster_rows = t[t["dp_cluster"] == cluster["dp_cluster"]]
             num_clusters = 1
@@ -185,14 +190,14 @@ def m(project_folder: str):
                     new_num_clusters = len(t["dp_cluster"].unique())
                     recent_cluster_counts = Counter(t["dp_cluster"]).most_common()[:10]
                     largest_cluster_overall = recent_cluster_counts[0][0]
-                    print(
-                        "merging",
-                        len(from_),
-                        to_,
-                        new_num_clusters,
-                        recent_cluster_counts,
-                        loop,
-                    )
+                    # print(
+                    #     "merging",
+                    #     len(from_),
+                    #     to_,
+                    #     new_num_clusters,
+                    #     recent_cluster_counts,
+                    #     loop,
+                    # )
                     if new_num_clusters <= target_num_clusters:
                         done = True
                         break
@@ -208,9 +213,6 @@ def m(project_folder: str):
                 break
         print(f"{reduced_in_loop=}, {sum_tail_factor=}")
         loop += 1
-    # for _, row in cluster_counts.iterrows():
-    #     print(row)
-
     print(len(t["dp_cluster"].unique()))
 
     cluster_counts = Counter(t["dp_cluster"]).most_common()
@@ -223,15 +225,23 @@ def m(project_folder: str):
     t["dp_cluster"] = t["dp_cluster"].apply(lambda x_: order_map.get(x_))
 
     # most needed points
-    # TODO: use original features, not embedding
     t["dp_most_needed"] = t["dp_cluster"].max() + 1
-    for rank_, (_, row) in enumerate(t.groupby("dp_cluster").size().reset_index(name="counts").sort_values("counts", ascending=False).iterrows()):
+    for rank_, (_, row) in enumerate(
+        t.groupby("dp_cluster")
+        .size()
+        .reset_index(name="counts")
+        .sort_values("counts", ascending=False)
+        .iterrows()
+    ):
         # pick the point with the lowest depth
-        t.at[t[t["dp_cluster"]==row.dp_cluster]["dp_depth"].idxmin(), "dp_most_needed"] = rank_
+        t.at[
+            t[t["dp_cluster"] == row.dp_cluster]["dp_depth"].idxmin(), "dp_most_needed"
+        ] = rank_
     #
 
+    print(f"peak_merge output written to {source.data_state_path=}")
     t.to_csv(source.data_state_path, index=False)
 
 
 if __name__ == "__main__":
-    m("/mnt/big/indeed/mollusca")
+    peak_merge("/mnt/big/indeed/mollusca")

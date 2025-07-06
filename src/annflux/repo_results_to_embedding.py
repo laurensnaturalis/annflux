@@ -14,13 +14,16 @@
 # limitations under the License.
 import json
 import os
+import sys
 
 import numpy as np
 import pandas
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MultiLabelBinarizer
 
-from annflux.algorithms.embeddings import compute_tsne
+from annflux.algorithms.embeddings import compute_tsne, normalize_and_scale
+from annflux.algorithms.fastdpeak import fast_density_peak_clustering
+from annflux.algorithms.fastdpeak_merge import peak_merge
 from annflux.performance.basic import write_performance
 from annflux.shared import AnnfluxSource
 from annflux.repository.repository import Repository
@@ -59,7 +62,10 @@ def embed_and_prepare(source: AnnfluxSource, show=False, compute_performance=Fal
         acc_test = accuracy_score(
             binarizer.transform(true_test),
             binarizer.transform(
-                [x_.split(",") if not pandas.isna(x_) else [] for x_ in labeled_test_data.label_predicted]
+                [
+                    x_.split(",") if not pandas.isna(x_) else []
+                    for x_ in labeled_test_data.label_predicted
+                ]
             ),
         )
         write_performance(
@@ -77,22 +83,23 @@ def embed_and_prepare(source: AnnfluxSource, show=False, compute_performance=Fal
     else:
         features = numpy_load(f"{folder}/last_full.npz", "lastFull")
     embedding = compute_tsne(features)
-    embedding -= np.min(embedding, axis=0, keepdims=True)
-    embedding /= np.max(embedding, axis=0, keepdims=True)
-    embedding *= 40
-    embedding -= 20
-    import matplotlib.pyplot as plt
-    sel = np.arange(
-        len(embedding)
-    )
+    embedding = normalize_and_scale(embedding)
+
+    sel = np.arange(len(embedding))
     data = data.iloc[sel]
     data["e_0"] = embedding[sel, 0]
     data["e_1"] = embedding[sel, 1]
-    data["uid"] = data["uid"].apply(lambda x_: x_)
     data["in_test"] = data["uid"].apply(lambda x_: int(x_ in test_uids))
+    data.to_csv(source.data_state_path, index=False)
+    fast_density_peak_clustering(source) # TODO: return data and don't save in function
+    peak_merge(source) # TODO: return data and don't save in function
+    data = pandas.read_csv(source.data_state_path)
     color_and_label(data, annotations)
-    data.to_csv(os.path.join(working_folder, "annflux.csv"), index=False)
+    data.to_csv(source.data_state_path, index=False)
     if show:
+        import matplotlib.pyplot as plt
         plt.scatter(embedding[sel, 0], embedding[sel, 1], c=data.score_predicted)
         plt.show()
 
+if __name__ == '__main__':
+    embed_and_prepare(AnnfluxSource(sys.argv[1]))
