@@ -48,7 +48,15 @@ class AnnfluxSource(object):
         )
 
     @property
-    def images_path(self):
+    def flux_data_path(self):
+        return os.path.join(self.working_folder_, "annflux.csv")
+
+    @property
+    def stream_data_path(self):
+        return os.path.join(self.working_folder_, "stream_process.csv")
+
+    @property
+    def images_folder(self):
         return (
             os.path.join(base_data_path, self.images_path_)
             if base_data_path is not None
@@ -56,11 +64,23 @@ class AnnfluxSource(object):
         )
 
     @property
+    def original_images_path(self):
+        return str(self.folder / "original")
+
+
+    @property
     def working_folder(self):
         return (
             os.path.join(base_data_path, self.working_folder_)
             if base_data_path is not None
             else self.working_folder_
+        )
+
+    @property
+    def feature_cache_folder(self):
+        return (
+            os.path.join(self.working_folder, "feature_cache")
+
         )
 
     @property
@@ -76,7 +96,7 @@ class AnnfluxSource(object):
         return os.path.join(self.working_folder, "split.json")
 
     @property
-    def repository(self):
+    def repository(self) -> Repository:
         return Repository(os.path.join(self.working_folder, "datarepo"))
 
     @property

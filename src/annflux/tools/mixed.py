@@ -44,9 +44,10 @@ def get_logger(filename: str, mode: str = "a", level=logging.INFO) -> logging.Lo
     :param filename:
     :param mode: file mode ('a','w', etc.) for log file
     :param level:
+    :param name:
     :return:
     """
-    logger = logging.getLogger("")
+    logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.handlers = []
     file_logger, formatter = create_file_logger(filename, mode)
@@ -69,7 +70,7 @@ def create_file_logger(filename, mode):
 
 def get_basic_logger(name: str):
     logger = logging.getLogger(name)
-    logger.setLevel(logging.WARNING)
+    logger.setLevel(logging.INFO)
     return logger
 
 

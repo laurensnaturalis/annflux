@@ -42,6 +42,10 @@ class AnnFluxState(object):
         return str(self.working_folder_ / "timings.csv")
 
     @property
+    def annflux_path(self) -> str:
+        return str(self.working_folder_ / "annflux.csv")
+
+    @property
     def g_quick_status(self):
         return self.g_quick_status_
 
@@ -83,7 +87,7 @@ class AnnFluxState(object):
     g_quick_status_ = None
     new_labeled_uids = None
     train_thread = None
-    trained_for_version_pre = None
+    trained_for_version_previous = None
     linear_status_epoch: int = None
     trained_for_version: int = None
     optimize_weight_exponent: bool = False

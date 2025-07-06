@@ -34,6 +34,9 @@ class ClipServer(object):
     def __init__(self, folder):
         self.folder = folder
         self.labels_path = os.path.join(self.folder, "labels.csv")
+        self.repository_entry = json.load(
+            open(os.path.join(self.folder, "description.json"))
+        )
         self.adapter_folder = os.path.join(folder, "adapter")
         self.load_model()
 
@@ -66,6 +69,7 @@ class ClipServer(object):
             inputs_["caption"] = np.array(caption, dtype=object)
             return inputs_
 
+        # TODO(improvement): use batched processing
         data_test = pandas.DataFrame({"filename": [file_path], "caption": ["unkown"]})
         test_set = Image_dataset(
             root_dir="Images", data_frame=data_test, processor=self.processor
@@ -114,7 +118,7 @@ def analyse():
         "name": "https://schemas.arise-biodiversity.nl/dsi/multi-object-multi-image#single-one-prediction-per-region",
         "generated_by": {
             "datetime": datetime.datetime.now().isoformat() + "Z",
-            "version": "repo:model:8d3aca47",  # TODO
+            "version": f"repo:model:{server.repository_entry['entry']['uid']}",
             "tag": "StreetSurfaceVis",  # TODO
         },
         "media": [],
@@ -192,7 +196,7 @@ def m(model_folder):
     server = ClipServer(model_folder)
 
     app.run(
-        debug=False,
+        debug=str2bool(os.getenv("APP_DEBUG", False)),
         host="127.0.0.1",
         threaded=True,
         port=int(os.getenv("PORT", "8008")),

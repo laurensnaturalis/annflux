@@ -41,9 +41,9 @@ def make_resultset(dataset: Dataset, features: np.array, repo: Repository) -> Re
         model = repo.get(label=Model, tag="trained").first()
         repo.commit(
             resultset,
-            ancestors=[dataset, model] if model is not None else [dataset],
+            ancestors=[dataset] + ([model] if model is not None else []),
             tag="unseen",
-            allow_mixed_tags=True
+            allow_mixed_tags=True,
         )
     except:  # noqa
         print(f"{tmp_folder=}")
@@ -64,6 +64,9 @@ class BaseFeatureExtractor(abc.ABC):
     def compute_features(
         self, dataset: Dataset, multi=False, batch_size=32
     ) -> np.array:
+        pass
+
+    def get_feature_size(self) -> int:
         pass
 
 

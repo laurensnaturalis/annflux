@@ -27,12 +27,17 @@ from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
 from annflux.tools.data import color_and_label
 from annflux.tools.io import read_table_pandas, numpy_load
+from annflux.tools.mixed import get_basic_logger
+
+logger = get_basic_logger("repo_results_to_embedding")
 
 
 def embed_and_prepare(source: AnnfluxSource, show=False, compute_performance=False):
     working_folder = source.working_folder
     repo = Repository(os.path.join(working_folder, "datarepo"))
-    folder = repo.get(label=Resultset, tag="unseen").last().path
+    resultset = repo.get(label=Resultset, tag="unseen").last()
+    print(f"embed_and_prepare: {resultset.entry.uid}")
+    folder = resultset.path
     labels_path = os.path.join(working_folder, "labels.json")
     if os.path.exists(labels_path):
         with open(labels_path) as f:
@@ -40,59 +45,114 @@ def embed_and_prepare(source: AnnfluxSource, show=False, compute_performance=Fal
     else:
         annotations = {}
     data: pandas.DataFrame = read_table_pandas(f"{folder}/results.csv")
+    extra_predictions_path = f"{folder}/predictions.csv"
+    out_path = os.path.join(working_folder, "annflux.csv")
+
+    acc_test = embed_and_prepare_func(
+        annotations,
+        compute_performance,
+        data,
+        extra_predictions_path,
+        show,
+        f"{folder}/last_full.npz",
+        out_path,
+        os.path.join(working_folder, "split.json"),
+    )
+    # write_performance(
+    #     acc_test,
+    #     len(annotations) - len(labeled_test_uids),
+    #     len(true_test),
+    #     working_folder,
+    # ) # TODO
+
+
+def embed_and_prepare_func(
+    annotations,
+    compute_performance,
+    data,
+    extra_predictions_path,
+    show,
+    features_path,
+    out_path,
+    split_path,
+):
     data.label_predicted = data.label_predicted.astype(str)
     data.uid = data.uid.astype(str)
-    extra_predictions_path = f"{folder}/predictions.csv"
-    if os.path.exists(extra_predictions_path):
+    if extra_predictions_path is not None and os.path.exists(extra_predictions_path):
         extra_predictions_ = pandas.read_csv(extra_predictions_path)
         data = pandas.merge(data, extra_predictions_, on="uid")
         data["label_predicted"] = data["prediction"]
     #
-    with open(os.path.join(working_folder, "split.json")) as f:
-        test_uids = set(json.load(f)["test"])
+    if split_path is not None:
+        with open(split_path) as f:
+            test_uids = set(json.load(f)["test"])
+    else:
+        test_uids = set()
     labeled_test_uids = test_uids.intersection(set(annotations.keys()))
     labeled_test_data = data[data.uid.isin(labeled_test_uids)]
     true_test = [annotations[uid_].split(",") for uid_ in labeled_test_data.uid]
     binarizer = MultiLabelBinarizer()
     binarizer.fit(true_test)
+    acc_test = None
     if compute_performance:
         acc_test = accuracy_score(
             binarizer.transform(true_test),
             binarizer.transform(
-                [x_.split(",") if not pandas.isna(x_) else [] for x_ in labeled_test_data.label_predicted]
+                [
+                    x_.split(",") if not pandas.isna(x_) else []
+                    for x_ in labeled_test_data.label_predicted
+                ]
             ),
         )
-        write_performance(
-            acc_test,
-            len(annotations) - len(labeled_test_uids),
-            len(true_test),
-            working_folder,
-        )
-    npz_path = f"{folder}/custom.npz"
-    npy_path = f"{folder}/custom.npy"
-    if os.path.exists(npz_path):
-        features = numpy_load(npz_path, "arr_0")
-    elif os.path.exists(npy_path):
-        features = np.load(npy_path)
+    if "last_full" in features_path:
+        npz_path = features_path.replace("last_full", "custom")
+        npy_path = features_path.replace("last_full.npz", "custom.npy")
+        if os.path.exists(npz_path):
+            features = numpy_load(npz_path, "arr_0")
+        elif os.path.exists(npy_path):
+            features = np.load(npy_path)
+        else:
+            features = numpy_load(features_path, "lastFull")
     else:
-        features = numpy_load(f"{folder}/last_full.npz", "lastFull")
+        features = numpy_load(features_path, "lastFull")
+    print("embedding", len(features))
     embedding = compute_tsne(features)
     embedding -= np.min(embedding, axis=0, keepdims=True)
     embedding /= np.max(embedding, axis=0, keepdims=True)
     embedding *= 40
     embedding -= 20
-    import matplotlib.pyplot as plt
-    sel = np.arange(
-        len(embedding)
-    )
+
+    sel = np.arange(len(embedding))
     data = data.iloc[sel]
     data["e_0"] = embedding[sel, 0]
     data["e_1"] = embedding[sel, 1]
     data["uid"] = data["uid"].apply(lambda x_: x_)
     data["in_test"] = data["uid"].apply(lambda x_: int(x_ in test_uids))
     color_and_label(data, annotations)
-    data.to_csv(os.path.join(working_folder, "annflux.csv"), index=False)
+
+    data.to_csv(out_path, index=False)
     if show:
+        import matplotlib.pyplot as plt
+
         plt.scatter(embedding[sel, 0], embedding[sel, 1], c=data.score_predicted)
         plt.show()
+    return acc_test
 
+
+if __name__ == "__main__":
+    annflux_path = (
+        "/home/laurens/Documents/data/ami_oh2_hour/annflux/group0_annflux.csv"
+    )
+    data = pandas.read_csv(annflux_path)
+    data["uid"] = data.group_id
+    data.score_predicted = data.score_predicted.apply(lambda x_: x_ / 100.0)
+    embed_and_prepare_func(
+        {},
+        False,
+        data,
+        None,
+        True,
+        "/home/laurens/Documents/data/ami_oh2_hour/annflux/group0_features.npz",
+        annflux_path,
+        None,
+    )

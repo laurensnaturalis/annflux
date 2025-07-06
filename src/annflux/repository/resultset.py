@@ -122,6 +122,10 @@ class Resultset(RepositoryObject):
             "property_size", lambda: len(pandas.read_csv(self.predictions_path))
         )
 
+    @property
+    def per_class_results_path(self) -> Path:
+        return Path(self.analysis_directory) / "analyze_results_combined.csv"
+
     def get_cached_stats_value(
         self, name: str, type_conversion=str, custom_specifier=None
     ):
@@ -133,7 +137,7 @@ class Resultset(RepositoryObject):
         :return: value if found in cache, else "N/A
         """
         if custom_specifier is not None:
-            self.set_analysis_directory()
+            self.set_analysis_directory(custom_specifier)
             print("self.analysisDirectory", self.analysis_directory)
         stats_path = os.path.join(self.analysis_directory, "basic_stats.csv")
         if not os.path.exists(stats_path):
@@ -146,7 +150,7 @@ class Resultset(RepositoryObject):
         else:
             result = "N/A"
 
-        self.set_analysis_directory()
+        self.set_analysis_directory(None)
 
         return result
 

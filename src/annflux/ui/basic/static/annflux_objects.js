@@ -20,6 +20,7 @@ function Map2D($container) {
   this.filters = [];
   this.x = null;
   this.y = null;
+  let localData = null;
 
   // Initialize the map
   this.init = function (goldenContainer, elementId_, mode_) {
@@ -68,7 +69,13 @@ function Map2D($container) {
   this.handleZoom = function (e) {
     transform = d3.zoomTransform(this);
     d3Group.attr("transform", transform);
-    zoomControl(elementId, transform, lastZoomUpdate, numUpdatesActive);
+    zoomControl(
+      elementId,
+      transform,
+      lastZoomUpdate,
+      numUpdatesActive,
+      localData
+    );
   };
 
   this.setFilter = function (filters_) {
@@ -76,22 +83,34 @@ function Map2D($container) {
   };
 
   this.setData = function (data) {
-    console.log("setData", elementId, mode);
+    console.log("setData 2", elementId, mode);
     if (data !== undefined) {
       this.data = data;
     } else {
       data = this.data;
     }
-    this.x = d3.scaleLinear().domain([-20, 20]).range([0, width]);
-    this.y = d3.scaleLinear().domain([-20, 20]).range([height, 0]);
+    localData = data;
+    //
+    this.xName = "e_0";
+    this.yName = "e_1";
     if (mode == "tiles") {
-      this.x = d3.scaleLinear().domain([0, 4000]).range([0, width]); // TODO: from data
-      this.y = d3.scaleLinear().domain([0, 4000]).range([0, width]); // TODO: different aspect ratios
+      this.xName = "predicted_x";
+      this.yName = "true_x";
+    }
+    //
+    this.xDomain = getDomain(this.xName, localData);
+    this.yDomain = getDomain(this.yName, localData);
+    //
+    this.x = d3.scaleLinear().domain(this.xDomain).range([0, width]);
+    this.y = d3.scaleLinear().domain(this.yDomain).range([height, 0]);
+    if (mode == "tiles") {
+      this.x = d3.scaleLinear().domain(this.xDomain).range([0, width]);
+      this.y = d3.scaleLinear().domain(this.yDomain).range([0, height]); // TODO: different aspect ratios
     }
 
-    this.render(data, x, y, mode);
+    this.render(localData, x, y, mode);
     //TODO(refactor): addTimeline(data, transform, width, height);
-    console.log("setData", elementId, this.images, dots);
+    // console.log("setData", elementId, this.images, dots, localData.length);
     uiObject = this;
 
     zoom = d3
@@ -101,7 +120,14 @@ function Map2D($container) {
       })
       .on("zoom", this.handleZoom)
       .on("end", function () {
-        zoomControl(elementId, transform, lastZoomUpdate, numUpdatesActive);
+        console.log("blorg", localData);
+        zoomControl(
+          elementId,
+          transform,
+          lastZoomUpdate,
+          numUpdatesActive,
+          localData
+        );
         console.log("zoom this", this);
         this.prevTransform = transform;
       });
@@ -322,7 +348,7 @@ function Map2D($container) {
         this.filters
       );
       //
-      console.log("embedding, images")
+      console.log("embedding, images");
       this.images = addImages(
         data,
         this.x,
@@ -332,9 +358,9 @@ function Map2D($container) {
         height,
         d3Group,
         imagesId,
-        this.filters,    
-        "e_0",
-        "e_1",
+        this.filters,
+        this.xName,
+        this.yName,
         50,
         2 // in embedding space
       );
@@ -349,8 +375,8 @@ function Map2D($container) {
         d3Group,
         imagesId,
         this.filters,
-        "patch_x",
-        "patch_y"
+        this.xName,
+        this.yName
       );
       console.log("blaat", this, this.images);
       console.log(
@@ -359,9 +385,23 @@ function Map2D($container) {
       );
     }
   };
+
+  function getDomain(name, data_) {
+    let xs = new Set();
+    data_.forEach((el) => xs.add(parseInt(el[name])));
+    const sortedX = Array.from(xs).sort((a, b) => a > b);
+    const xDomain = [sortedX[0], sortedX[sortedX.length - 1]];
+    return xDomain;
+  }
 }
 
-function zoomControl(elementId, transform, lastZoomUpdate, numUpdatesActive) {
+function zoomControl(
+  elementId,
+  transform,
+  lastZoomUpdate,
+  numUpdatesActive,
+  data
+) {
   if (!transform) {
     return null;
   }
@@ -371,6 +411,7 @@ function zoomControl(elementId, transform, lastZoomUpdate, numUpdatesActive) {
     if (numUpdatesActive == 0) {
       numUpdatesActive++;
       setTimeout(function () {
+        console.log(gReferences);
         console.log("zoomControl", elementId, gReferences.get(elementId));
         gReferences.get(elementId).render(data, x, y);
         lastZoomUpdate = now;
