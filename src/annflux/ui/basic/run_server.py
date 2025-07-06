@@ -11,14 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+
+from annflux.tools.io import generate_thumbnail
+from annflux.tools.progress_learn import estimate_duration
+
+from annflux.tools.visualization import most_contrasting_gray, brighten_hex_color
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import json
 import logging
 import os
 import sys
 import threading
 import time
+import tomllib
 from datetime import datetime
 from functools import update_wrapper, wraps
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import flask
@@ -39,7 +49,7 @@ from annflux.tools.data import (
     get_group_images_path,
     get_failed_images_path,
 )
-from annflux.tools.mixed import get_logger, str2bool
+from annflux.tools.mixed import get_logger, str2bool, get_version
 from annflux.training.annflux.quick import quick_reclassification, group_classification
 from annflux.training.tensorflow.tf_backend import linear_retraining
 
@@ -339,21 +349,6 @@ def label_defs_add():
 @app.route("/version")
 def version_endpoint():
     return g_version
-
-
-def get_version():
-    """
-    Get version of annflux
-    """
-    below_root = Path(os.path.dirname(annflux.__file__)) / ".." / ".."
-    is_package = "pyproject.toml" not in os.listdir(below_root)
-    return {
-        "version": version("annflux")
-        if is_package
-        else tomllib.load(open(below_root / "pyproject.toml", "rb"))["project"][
-            "version"
-        ]
-    }
 
 
 g_version = get_version()
