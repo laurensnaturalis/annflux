@@ -34,6 +34,7 @@ from transformers import CLIPModel, CLIPProcessor
 
 from annflux.repository.model import Model
 from annflux.tools.data import canon_
+from annflux.tools.io import basename_no_extension
 from annflux.tools.mixed import get_basic_logger
 from annflux.training.annflux.clip_shared import Image_dataset
 from annflux.training.annflux.feature_extractor import (
@@ -302,6 +303,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         batch_size=512,
         feature_cache_path: str = None,
         flush=True,
+        other_feature_cache_path: str = None,
     ) -> (np.array, np.array):
         """
         Compute features, probability tensors for `dataset`
@@ -316,6 +318,19 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         #     # traceback.print_exc()
         #     ov_model = None
         # TODO: implement skip_positions with batching
+        other_filenames = None
+        other_features = None
+        print("other_feature_cache_path", other_feature_cache_path)
+        if other_feature_cache_path is not None:
+            other_feature_cache = zarr.open_group(other_feature_cache_path)
+            other_filenames = np.array(
+                [
+                    basename_no_extension(x_)
+                    for x_ in other_feature_cache.get("filenames")[:]
+                ]
+            )
+            other_features = other_feature_cache.get("features")
+
         do_batched = True
         if ov_model:
             features = self.compute_ov_features(dataset, ov_model)
@@ -368,6 +383,26 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                             print(list(zip(cache_filenames, filenames[start:end]))[:10])
                             print("Filename mismatch with cache, aborting")
                             exit(1)
+                    elif other_features is not None:
+                        indices = np.array(
+                            [
+                                int(np.where(other_filenames == item)[0][0])
+                                if np.any(other_filenames == item)
+                                else -1
+                                for item in [
+                                    basename_no_extension(x_)
+                                    for x_ in filenames[start:end]
+                                ]
+                            ]
+                        )
+                        if np.all(indices > -1):
+                            print(
+                                f"Features already in other cache, skipping batch {batch_i=}"
+                            )
+                            features_per_batch[batch_i] = other_features[indices]
+                            batch_i += 1
+                            continue
+
                     else:
                         # no cache yet
                         pass
