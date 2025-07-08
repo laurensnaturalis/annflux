@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # coding=utf-8
+from __future__ import annotations
+
 import json
 import os
 import shutil
 from abc import abstractmethod
 
 import matplotlib
+import pandas
 
 from .dataset import Dataset
 from ..tools.io import file_hash
@@ -40,6 +43,7 @@ class Model(object):
         :param path_or_entry:
         :param class_to_label_path:
         """
+        self.index_to_class_name: dict[int, str] | None = None
         if isinstance(path_or_entry, str):
             self._path = path_or_entry
             self.source_path = self._path
@@ -72,6 +76,14 @@ class Model(object):
     @property
     def dataset(self) -> Dataset:
         return Repository.get_ancestors(self.entry, "dataset", Dataset)
+
+    @property
+    def index_to_class(self) -> dict[int, str]:
+        if self.index_to_class_name is None:
+            tmp_ = pandas.read_csv(self.class_to_label_path)
+            self.index_to_class_name = dict(zip(tmp_["index"], tmp_["class_name"]))
+        return self.index_to_class_name
+
 
 
 class ClipModel(Model):
@@ -110,6 +122,9 @@ class ClipModel(Model):
         shutil.copytree(self.adapter_folder, os.path.join(out_folder, "adapter"))
         with open(os.path.join(out_folder, "description.json"), "w") as f:
             json.dump({"entry": self.entry.to_json()}, f)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.path})"
 
 
 class KerasModel(Model):

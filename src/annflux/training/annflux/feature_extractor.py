@@ -62,7 +62,7 @@ class BaseFeatureExtractor(abc.ABC):
         pass
 
     def compute_features(
-        self, dataset: Dataset, multi=False, batch_size=32
+        self, dataset: Dataset, classes_: list[str], multi=False, batch_size=32
     ) -> np.array:
         pass
 
@@ -83,3 +83,15 @@ class PeftTrainableMixin(abc.ABC):
 class OpenVinoMixin(abc.ABC):
     def convert_model(self):
         pass
+
+
+def batched(iterable, n):
+    """Yield successive n-sized chunks from iterable."""
+    batch = []
+    for item in iterable:
+        batch.append(item)
+        if len(batch) == n:
+            yield batch
+            batch = []
+    if batch:
+        yield batch

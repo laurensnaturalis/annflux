@@ -15,16 +15,20 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import datetime
 import glob
+import json
 import os
 import shutil
 import subprocess
 from argparse import ArgumentParser, _HelpAction
+from collections import defaultdict
 from http.client import RemoteDisconnected
 from time import sleep
 from typing import Optional
 
+import duckdb
 import pandas
 import requests
 from tqdm import tqdm
@@ -32,6 +36,7 @@ from urllib3.exceptions import ProtocolError
 
 from annflux.repo_results_to_embedding import embed_and_prepare
 from annflux.repository.model import ClipModel
+from annflux.scripts.extract_video_frames import frame_capture
 from annflux.scripts.tile_images import tile_and_save
 from annflux.shared import AnnfluxSource
 from annflux.tools.api_sdk import is_port_open, call_predict
@@ -168,7 +173,46 @@ def execute(arg_list: list[str] | None = None, al_selection_fraction: float = 0.
     elif args.command == "data":
         source = AnnfluxSource(folder)
         if args.subcommand == "stream":
-            stream(al_selection_fraction, args.data_input, source)
+            stream(
+                al_selection_fraction, args.data_input, source, subsample=args.subsample
+            )
+
+
+def rreplace(s, old, new, occurrence):
+    li = s.rsplit(old, occurrence)
+    return new.join(li)
+
+
+def write_table(table: pandas.DataFrame, out_path: str):
+    tmp_file = out_path + ".tmp"
+    # TODO: write to Parquet if env variable is set
+    table.to_csv(tmp_file, index=False)
+
+    old_path = out_path + ".old"
+    if os.path.exists(out_path):
+        shutil.move(out_path, old_path)
+    shutil.move(tmp_file, out_path)
+    if os.path.exists(old_path):
+        os.remove(old_path)
+
+
+def read_table(path: str, dtype=None):
+    if path.endswith(".csv"):
+        pq_path = rreplace(path, ".csv", ".pq", 1)
+        if not os.path.exists(pq_path):
+            table = pandas.read_csv(path, dtype=dtype)
+            print(f"Converting {path} to parquet {pq_path}")
+            table.to_parquet(pq_path)
+        else:
+            raise RuntimeError(f"Both {pq_path} and {path} exist, cannot continue")
+        path = pq_path
+    return pandas.read_parquet(path)
+
+
+stream_pipeline_steps = {
+    "extract_video_frames": frame_capture,
+    "tile": tile_and_save,
+}
 
 
 def stream(
@@ -177,98 +221,92 @@ def stream(
     source: AnnfluxSource,
     update_when_model_changed=False,
     use_webserver=False,
-    tile_prefix="${subfolder}",
+    subsample=None,
+    sort_stream=True,
 ):
-    stream_process_path = os.path.join(source.working_folder, "stream_process.csv")
-    stream_process_table = None
-    existing_original_image_paths = set()
-    if os.path.exists(stream_process_path):
-        stream_process_table = pandas.read_csv(
-            stream_process_path, dtype={"original_image_id": str}
-        )
-        existing_original_image_paths = set(stream_process_table.original_image_path)
-        print(f"{len(stream_process_table)=}")
-    # TODO: store tile info in project
-    print(list(existing_original_image_paths)[:10])
-    print(f"{data_input=}")
-    input_paths = set(glob.glob(data_input + "/**/*") + glob.glob(data_input + "/*"))
-    print(list(input_paths)[:10])
-    original_image_paths = input_paths - existing_original_image_paths
-    print(f"{len(input_paths)=}")
-    new_table = tile_and_save(
-        file_paths=original_image_paths,
-        output_folder=os.path.join(source.working_folder, "stream_preprocess"),
-        prefix=tile_prefix,
-        skip_existing=True,
-    )
-    if stream_process_table is not None:
-        if len(new_table) > 0:
-            stream_process_table = pandas.merge(
-                stream_process_table,
-                new_table,
-                how="outer",
-                on=(
-                    "original_image_path",
-                    "original_image_id",
-                    "image_id",
-                    "patch_x",
-                    "patch_y",
-                    "datetime",
-                    "patch_path",
-                ),
-                suffixes=("", "_new"),
-            )
-        del new_table
-        logger.info(f"len(stream_process_table)={len(stream_process_table)}")
+    stream_logger = get_logger("stream_process.log", "a")
+    stream_process_config_path = os.path.join(source.working_folder, "stream.json")
+    if os.path.exists(stream_process_config_path):
+        stream_process_config = json.load(open(stream_process_config_path))
     else:
-        stream_process_table = new_table
-        stream_process_table["label_possible"] = None
-        stream_process_table["label_probability"] = None
-    if "model_version" not in stream_process_table:
-        stream_process_table["model_version"] = None
+        stream_process_config = {"pipeline": []}
 
-    stream_process_table.to_csv(stream_process_path, index=False)
+    stream_process_path = os.path.join(source.working_folder, "stream_process.csv")
+
+    # preprocess raw data
+    previous_output_folder = None
+    num_steps = len(stream_process_config["pipeline"])
+    for s, step in enumerate(stream_process_config["pipeline"]):
+        is_last_step = s == num_steps - 1
+        action = step["action"]
+        existing_original_paths = set()
+        # TODO: this means there can be only one step with the same action
+        stream_step_path = os.path.join(
+            source.working_folder, f"stream_process_{action}.csv"
+        )
+        stream_step_table = None
+        if os.path.exists(stream_step_path):
+            stream_step_table = pandas.read_csv(
+                stream_step_path, dtype={"original_image_id": str}
+            )
+            existing_original_paths = set(stream_step_table.original_path)
+            print(f"{len(stream_step_table)=}")
+        input_folder = step.get(
+            "input_folder", data_input if s == 0 else previous_output_folder
+        )
+        output_folder = os.path.join(source.folder, step.get("output_folder"))
+        os.makedirs(output_folder, exist_ok=True)
+        kwargs = copy.deepcopy(step)
+        del kwargs["output_folder"]
+        del kwargs["action"]
+        if "input_folder" in kwargs:
+            del kwargs["input_folder"]
+        new_table = stream_pipeline_steps[action](
+            input_folder, output_folder, existing_original_paths, **kwargs
+        )
+        #
+        if stream_step_table is not None:
+            if len(new_table) > 0:
+                stream_step_table = pandas.merge(
+                    stream_step_table,
+                    new_table,
+                    how="outer",
+                    on=list(
+                        set(stream_step_table.columns)
+                        - {"label_possible", "label_probability", "model_version"}
+                    ),
+                    suffixes=("", "_new"),
+                )
+            # drop duplicate columns
+            stream_step_table = stream_step_table.loc[
+                :, ~stream_step_table.columns.duplicated()
+            ].copy()
+            for column in stream_step_table.columns:
+                if "_new" in column:
+                    del stream_step_table[column]
+            del new_table
+            logger.info(f"{len(stream_step_table)=}")
+        else:
+            stream_step_table = new_table
+            if is_last_step:
+                stream_step_table["label_possible"] = None
+                stream_step_table["label_probability"] = None
+                if "model_version" not in stream_step_table:
+                    stream_step_table["model_version"] = None
+
+                if sort_stream:
+                    stream_step_table.sort_values(by="image_id", inplace=True)
+                    stream_step_table.reset_index(drop=True, inplace=True)
+        write_table(stream_step_table, stream_step_path)
+        #
+
+        previous_output_folder = output_folder
 
     if use_webserver:
-        # columns: ['original_image_path', 'original_image_id', 'image_id', 'patch_x',
-        #        'patch_y', 'datetime', 'label', 'patch_path']
-        # - Run table against edge server
-        port = 8008
-        # TODO: check model version on running server is same as requested model
-        webservice_running = is_port_open("localhost", port)  # TODO
-        if not webservice_running:
-            logfile_path = "edge_service.log"
-            model_package_root_folder = os.path.join(source.folder, "model_package")
-            # TODO: use object repo
-            # TODO: make model version CLI configurable
-            model_package_folder = sorted(glob.glob(model_package_root_folder + "/*"))[
-                -1
-            ]
-            model_version = os.path.split(model_package_folder)[-1].split("-")[-1]
-            logger.info(f"Using {model_package_folder}")
-            with open(logfile_path, "w") as log_file:
-                process = subprocess.Popen(
-                    "python clip_server.py .",
-                    stdout=log_file,
-                    stderr=log_file,
-                    cwd=model_package_folder,  # TODO(other locations)
-                    shell=True,
-                )
+        model_version, port = start_webservice(source)
 
-            print(f"Web service started with PID {process.pid}")
-            print("waiting for service to start")
-            sleep(10)
-        else:
-            # TODO: get version from running server
-            raise NotImplementedError("get version from running server")
-            print(f"(some) service already running at {port}")
-    # TMP
-    # stream_process_table[
-    #     ~pandas.isna(stream_process_table.label_possible)
-    #     & pandas.isna(stream_process_table.model_version)
-    # ]["model_version"] = model_version
-    # exit(0)
     #
+    stream_process_table = stream_step_table
     print(f"{len(stream_process_table)=}")
     table_to_predict = stream_process_table[
         pandas.isna(stream_process_table.label_possible)
@@ -277,6 +315,16 @@ def stream(
             and (stream_process_table.model_version != model_version)
         )
     ]
+    # - subsample for time-based streams
+    if subsample:
+        subsample_seconds = time_string_to_seconds(subsample)
+        if subsample_seconds % 3600 == 0:
+            table_to_predict = subsample_hour(subsample, table_to_predict)
+        elif subsample_seconds % 60 == 0:
+            table_to_predict = subsample_minute(subsample, table_to_predict)
+        else:
+            raise NotImplementedError  # TODO
+    #
     print(f"{len(table_to_predict)=}")
     tmp_path = stream_process_path + ".tmp.csv"
     if os.path.exists(tmp_path):
@@ -288,19 +336,39 @@ def stream(
         )
     else:
         table_to_predict["filename"] = table_to_predict.patch_path
-        train_then_features(
+        features, probs, model = train_then_features(
             source,
             table_to_predict,
             "clip",
             train_model=False,
             cache_name=f"stream_{len(table_to_predict)}",  # TODO: not fail-safe
         )
+        import numpy as np
 
-    stream_process_table.to_csv(stream_process_path, index=False)
+        max_probs = np.max(probs, axis=1)
+        max_class = np.argmax(probs, axis=1)
+        i_ = 0
+        model_uid = model.entry.uid
+        index_to_class_map = model.index_to_class
+        for r, row_ in tqdm(
+            table_to_predict.iterrows(),
+            desc="writing predictions",
+            total=len(table_to_predict),
+        ):
+            stream_process_table.at[r, "label_possible"] = index_to_class_map[
+                max_class[i_]
+            ]  # TODO: this actually does multiclass right now, not multilabel
+            stream_process_table.at[r, "label_probability"] = max_probs[i_]
+            stream_process_table.at[r, "model_version"] = model_uid
+            i_ += 1
+
+    # stream_process_table.to_csv(stream_process_path, index=False)
+    write_table(stream_process_table, stream_process_path)
     # - Select data using AL
     if al_selection_fraction < 1.0:
         image_level = (
-            stream_process_table.groupby(by="original_image_id")
+            stream_process_table[~pandas.isna(stream_process_table.label_probability)]
+            .groupby(by="original_id")
             .mean("label_probability")
             .reset_index()
         )
@@ -311,42 +379,166 @@ def stream(
         weights = np.array(1 - image_level.label_probability**3).copy()
         weights /= weights.sum()
         to_include = np.random.choice(
-            image_level.original_image_id,
+            image_level["original_id"],
             int(al_selection_fraction * len(image_level)),
             p=weights,
             replace=False,
         )
-        al_selection = image_level[
-            image_level.original_image_id.isin(set(to_include))
-        ].original_image_id
+        al_selection = image_level[image_level["original_id"].isin(set(to_include))][
+            "original_id"
+        ]
         print(al_selection)
     else:
         image_level = (
-            stream_process_table.groupby(by="original_image_id").size().reset_index()
+            stream_process_table.groupby(by="original_id").size().reset_index()
         )
 
-        al_selection = image_level.original_image_id
+        al_selection = image_level["original_id"]
 
     data_to_add = stream_process_table[
-        stream_process_table.original_image_id.isin(al_selection)
+        stream_process_table["original_id"].isin(al_selection)
     ]
     # - Run 'data add'
     # TODO: make atomic operation
     stream_process_table["date_to_project"] = None
     for r, row in data_to_add.iterrows():
         shutil.copy(row.patch_path, source.images_folder)
+        stream_logger.info(f"Adding {row.patch_path} to project")
         stream_process_table.loc[r, "date_to_project"] = (
             datetime.datetime.now().isoformat()
         )
-    if os.path.exists(source.data_path):
-        images = pandas.read_csv(source.data_path)
-        images = pandas.concat([images, data_to_add], ignore_index=True)
-    else:
-        images = data_to_add
-    images.to_csv(source.data_path, index=False)
+    write_table(stream_process_table, stream_process_path)
+    print("run init with --refresh_media")
+    # if os.path.exists(source.data_path):
+    #     images = pandas.read_csv(source.data_path)
+    #     images = pandas.concat([images, data_to_add], ignore_index=True)
+    # else:
+    #     images = data_to_add
+    # images.to_csv(source.data_path, index=False)
     # TODO: modify stream_process_path when image has been added
     # - Run 'train_then_features'
     # - Run 'embed'
+
+
+def subsample_minute(subsample, table_to_predict):
+    # minutes
+    # assume uid in format `white_20250410032936_x2048_y512 # TODO: gen
+    time_part_length = len("202504100329")
+    # print(table_to_predict.columns)
+    time_unit = "minute"
+    table_to_predict[time_unit] = table_to_predict.image_id.apply(
+        lambda x_: int(x_.split("_")[1][:time_part_length])
+    )
+    table_to_predict = subsample_time_unit(subsample, table_to_predict, time_unit)
+    return table_to_predict
+
+
+def subsample_hour(subsample, table_to_predict):
+    # assume uid in format `white_20250410032936_x2048_y512 # TODO: gen
+
+    time_part_length = len("2025041003")
+    time_unit = "hour"
+    table_to_predict[time_unit] = table_to_predict.image_id.apply(
+        lambda x_: int(x_.split("_")[1][:time_part_length])
+    )
+    table_to_predict = subsample_time_unit(subsample, table_to_predict, time_unit)
+    return table_to_predict
+
+
+def subsample_time_unit(subsample, table_to_predict, time_unit_name):
+    import numpy as np
+
+    indices_to_use = []
+    seen_time_units = set()
+    if not np.all(sorted(table_to_predict.image_id) == table_to_predict.image_id):
+        # TODO: assumes data is sorted
+        raise NotImplementedError
+    original_to_instance_indices = get_original_to_instance_indices(table_to_predict)
+    # TODO: screen should not be added here but during data import
+    table_to_predict["screen"] = table_to_predict.original_image_path.apply(
+        lambda x_: "white" if "white" in x_ else "yellow"
+    )
+    for r_, row_ in tqdm(
+        table_to_predict.iterrows(),
+        desc=f"subsampling using {subsample}",
+        total=len(table_to_predict),
+    ):
+        time_unit = row_[time_unit_name]
+        screen = row_["screen"]
+        if (time_unit, screen) not in seen_time_units:
+            seen_time_units.add((time_unit, screen))
+            # make sure to add all instances
+            indices_to_use.extend(original_to_instance_indices[row_.original_image_id])
+    del table_to_predict[time_unit_name]
+    print(
+        f"{len(table_to_predict)=}, {indices_to_use[:10]}, {table_to_predict.index.values[:10]=}"
+    )
+    table_to_predict = table_to_predict.loc[indices_to_use]
+    print(f"{len(table_to_predict)=}")
+    return table_to_predict
+
+
+def get_original_to_instance_indices(table_to_predict: pandas.DataFrame):
+    original_to_instance_indices: dict[str, list[int]] = defaultdict(lambda: [])
+    # for r_, row_ in tqdm(table_to_predict.iterrows(), desc="mapping original to instances", total=len(table_to_predict)):
+    #     original_to_instance_indices[row_.original_image_id].append(r_)
+    group_result = duckdb.sql("""WITH indexed_images AS (
+                SELECT
+                    original_image_id,
+                    ROW_NUMBER() OVER () AS row_index
+                FROM
+                    table_to_predict
+            )
+            SELECT
+                original_image_id,
+                ARRAY_AGG(row_index) AS row_indices,
+                COUNT(*) AS group_count
+            FROM
+                indexed_images
+            GROUP BY
+                original_image_id;
+
+            """).fetchall()
+    table_indices = table_to_predict.index.values
+    for row_ in group_result:
+        original_to_instance_indices[row_[0]] = table_indices[
+            [x_ - 1 for x_ in row_[1]]  # duckdb uses 1-based indices
+        ]
+    return original_to_instance_indices
+
+
+def start_webservice(source):
+    # columns: ['original_image_path', 'original_image_id', 'image_id', 'patch_x',
+    #        'patch_y', 'datetime', 'label', 'patch_path']
+    # - Run table against edge server
+    port = 8008
+    # TODO: check model version on running server is same as requested model
+    webservice_running = is_port_open("localhost", port)  # TODO
+    if not webservice_running:
+        logfile_path = "edge_service.log"
+        model_package_root_folder = os.path.join(source.folder, "model_package")
+        # TODO: use object repo
+        # TODO: make model version CLI configurable
+        model_package_folder = sorted(glob.glob(model_package_root_folder + "/*"))[-1]
+        model_version = os.path.split(model_package_folder)[-1].split("-")[-1]
+        logger.info(f"Using {model_package_folder}")
+        with open(logfile_path, "w") as log_file:
+            process = subprocess.Popen(
+                "python clip_server.py .",
+                stdout=log_file,
+                stderr=log_file,
+                cwd=model_package_folder,  # TODO(other locations)
+                shell=True,
+            )
+
+        print(f"Web service started with PID {process.pid}")
+        print("waiting for service to start")
+        sleep(10)
+    else:
+        # TODO: get version from running server
+        raise NotImplementedError("get version from running server")
+        print(f"(some) service already running at {port}")
+    return model_version, port
 
 
 def inference_edge_server(
@@ -512,6 +704,7 @@ def make_data_parser(subparsers, parents: list[ArgumentParser]):
         help="TODO",
         default=1.0,  # TODO: min, max
     )
+    parser.add_argument("--subsample", type=str, help="TODO", default=None)
 
 
 def add_parent_actions(parents, parser, ignore_dest=None):

@@ -24,8 +24,6 @@ from annflux.shared import AnnfluxSource
 from annflux.training.annflux.feature_extractor import (
     make_resultset,
     TrainParameters,
-    AttentionMapMixin,
-    # AttentionMapMixin,
 )
 
 
@@ -82,8 +80,8 @@ def get_model_folder(
             )
         model = model_type(str(tmp_dir))
         pandas.DataFrame(
-            data=list(zip(range(1000), range(1000))),
-            columns=["class_index", "taxon_id"],
+            data=list(zip(range(2), ["foo", "bar"])),
+            columns=["index", "class_name"],
         ).to_csv(model.class_to_label_path, index=False)
         repo.commit(model, tag="untrained")
         shutil.rmtree(tmp_dir)
@@ -101,8 +99,10 @@ def train_then_features(
     train_model=True,
     model_variant="wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M",
     cache_name: str = None,
-    feature_cache: str = None,
-):
+) -> (np.array, np.array, Model):
+    """
+    Returns (features, probs) of `dataset`
+    """
     if dataset is None:
         dataset = source.repository.get(label=Dataset, tag="unseen").last()
     if isinstance(dataset, Dataset):
@@ -170,7 +170,7 @@ def train_then_features(
             else:
                 raise ValueError  # TODO
         #
-        if isinstance(extractor, AttentionMapMixin):
+        if False and isinstance(extractor, AttentionMapMixin):
             output_folder = "/mnt/big/indeed/diopsis-hazehorst-apr5-6-gem/attention"  # TODO(generalize)
             os.makedirs(output_folder, exist_ok=True)
             features = extractor.compute_features_and_attention_map(
@@ -180,7 +180,7 @@ def train_then_features(
         else:
             feature_size = extractor.get_feature_size()
             os.makedirs(source.feature_cache_folder, exist_ok=True)
-            print(type(data), dataset)
+            # print(type(data), dataset)
             cache_name = (
                 dataset.entry.uid if isinstance(dataset, Dataset) else cache_name
             )
@@ -200,17 +200,29 @@ def train_then_features(
                     dtype="float",
                     name="features",
                 )
+                num_classes = len(model.index_to_class)
+                print(f"{len(model.index_to_class)=}")
+                feature_cache.create_array(
+                    shape=(len(dataset), num_classes),
+                    chunks=(
+                        1000,
+                        num_classes
+                    ),
+                    dtype="float",
+                    name="probs",
+                )
                 feature_cache.create_array(
                     shape=(len(dataset),), chunks=(1000,), dtype=str, name="filenames"
                 )
                 # TODO: load existing zarr with possibly different size
-            features = extractor.compute_features(
-                data, feature_cache_path=feature_cache_path, other_feature_cache_path=feature_cache
+            features, probs = extractor.compute_features(
+                data, list(model.index_to_class.values()), feature_cache_path=feature_cache_path
             )
         if isinstance(dataset, Dataset):
             make_resultset(dataset, features, repo)
         else:
             print(f"{type(dataset)=} is not a Dataset, skipping make_resultset")
+    return features, probs, model
 
 
 def add_annotations_and_set(data: pandas.DataFrame, source):
@@ -242,8 +254,8 @@ def get_untrained_model(repo: Repository, architecture="efficientnetb0"):
             )
         model = KerasModel(str(tmp_dir))
         pandas.DataFrame(
-            data=list(zip(range(1000), range(1000))),
-            columns=["class_index", "taxon_id"],
+            data=list(zip(range(2), ["foo", "bar"])),
+            columns=["index", "class_name"],
         ).to_csv(model.class_to_label_path, index=False)
         repo.commit(model, tag="untrained")
         shutil.rmtree(tmp_dir)

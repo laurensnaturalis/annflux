@@ -34,8 +34,6 @@ def tile_and_save_image_with_padding(
     """
     basename = os.path.splitext(os.path.basename(img_path))[0]
 
-    first_patch_name = f"{prefix}{basename}_x0_y0.jpg"
-
     PIL.Image.MAX_IMAGE_PIXELS = 259341992 * 2  # for things such as orthophotos
     img = Image.open(img_path)
     width, height = img.size
@@ -85,10 +83,10 @@ def tile_and_save_image_with_padding(
                     patch_basename,
                     x,
                     y,
-                    datetime_.isoformat() if datetime_ is not None else "n/a",
+                    # datetime_.isoformat() if datetime_ is not None else "n/a",
                     "0,1",
                     patch_path,
-                    original_label,
+                    # original_label,
                 )
             )
             # print(f"Saved {filename}")
@@ -96,15 +94,15 @@ def tile_and_save_image_with_padding(
 
 
 def tile_and_save(
-    output_folder="patches",
-    file_paths=None,
+    input_folder: str,
+    output_folder: str,
+    existing_original_paths: set[str],
     prefix="",
     skip_existing=1,
-    patch_size=512,
+    tile_size=512,
     original_label: dict[str, str] = None,
 ) -> pandas.DataFrame:
-    if file_paths is None:
-        file_paths = []
+    file_paths = sorted(set(glob.glob(os.path.join(input_folder, "*.jpg"))) - existing_original_paths)
     if original_label is None:
         original_label = {}
     patch_tuples = []
@@ -116,7 +114,7 @@ def tile_and_save(
                 tile_and_save_image_with_padding(
                     img_path=fn,
                     output_dir=output_folder,
-                    patch_size=patch_size,
+                    patch_size=tile_size,
                     overlap=0,
                     pad_color=(0, 0, 0),  # Black padding
                     prefix=prefix,
@@ -130,19 +128,20 @@ def tile_and_save(
     result = pandas.DataFrame(
         data=patch_tuples,
         columns=(
-            "original_image_path",
-            "original_image_id",
+            "original_path",
+            "original_id",
             "image_id",
             "patch_x",
             "patch_y",
-            "datetime",
+            # "datetime",
             "label",
             "patch_path",
-            "label_original",
+            # "label_original",
         ),
     )
-    result["record_id"] = result.original_image_id
+    result["record_id"] = result["original_id"]
     return result
+
 
 def execute(
     folder,
@@ -165,7 +164,7 @@ def execute(
     table = tile_and_save(
         output_folder=output_folder,
         file_paths=file_paths,
-        patch_size=patch_size,
+        tile_size=patch_size,
         original_label=original_label,
         skip_existing=2,
     )
@@ -190,12 +189,7 @@ if __name__ == "__main__":
         help="Path to original data CSV",
         default=None,
     )
-    parser.add_argument(
-        "--patch_size",
-        help="TODO",
-        default=512,
-        type=int
-    )
+    parser.add_argument("--patch_size", help="TODO", default=512, type=int)
     args = parser.parse_args()
 
     execute(args.folder, args.output_folder, patch_size=args.patch_size)
