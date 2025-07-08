@@ -359,8 +359,10 @@ def retrain_job(state: AnnFluxState):
 
     state.trained_for_version_pre = len(state.labeled_indices)
     #
+    state.g_quick_status = "computing density peak"
     fast_density_peak_clustering(state.data_folder)
     peak_merge(state.data_folder)
+    state.g_quick_status = "quicker classification"
     #
     quick_reclassification(state, logger=logger)
     print("done", state.trained_for_version)
