@@ -128,10 +128,6 @@ def train_then_features(
             )
         elif architecture == "clip":
             from annflux.training.annflux.clip import ClipFeatureExtractor as Extractor
-        elif architecture == "gem":
-            from annflux.training.annflux.gem_model import (
-                GemFeatureExtractor as Extractor,
-            )
         else:
             raise ValueError(
                 f"{architecture} unknown. Choices are {['clip', 'bioclip']}"
@@ -192,6 +188,12 @@ def train_then_features(
                 source.feature_cache_folder,
                 f"model_{extractor.repo_model.entry.uid}_dataset_{cache_name}.zarr",
             )
+            # TODO: not fool-proof
+            existing_feature_cache_path = sorted(glob.glob(os.path.join(
+                source.feature_cache_folder,
+                f"model_{extractor.repo_model.entry.uid}_dataset_stream_*.zarr",
+            )))[0]
+            print(f"{existing_feature_cache_path=}")
             if not os.path.exists(feature_cache_path):
                 feature_cache = zarr.create_group(store=feature_cache_path)
                 feature_cache.create_array(
@@ -201,13 +203,9 @@ def train_then_features(
                     name="features",
                 )
                 num_classes = len(model.index_to_class)
-                print(f"{len(model.index_to_class)=}")
                 feature_cache.create_array(
                     shape=(len(dataset), num_classes),
-                    chunks=(
-                        1000,
-                        num_classes
-                    ),
+                    chunks=(1000, num_classes),
                     dtype="float",
                     name="probs",
                 )
@@ -216,7 +214,10 @@ def train_then_features(
                 )
                 # TODO: load existing zarr with possibly different size
             features, probs = extractor.compute_features(
-                data, list(model.index_to_class.values()), feature_cache_path=feature_cache_path
+                data,
+                list(model.index_to_class.values()),
+                feature_cache_path=feature_cache_path,
+                other_feature_cache_path=existing_feature_cache_path,
             )
         if isinstance(dataset, Dataset):
             make_resultset(dataset, features, repo)

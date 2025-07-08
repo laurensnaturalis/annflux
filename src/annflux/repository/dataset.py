@@ -118,3 +118,6 @@ class Dataset(RepositoryObject):
         species_map = pandas.read_csv(self.species_mapping_path, dtype=str)
         class_name_by_id = dict(list(zip(species_map.taxon_id, species_map.taxon_name)))
         return [label_to_name_func(class_, class_name_by_id) for class_ in self.classes]
+
+    def __len__(self):
+        return len(self.as_dataframe())

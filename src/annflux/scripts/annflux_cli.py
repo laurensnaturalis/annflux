@@ -91,10 +91,10 @@ def execute(arg_list: list[str] | None = None, al_selection_fraction: float = 0.
         subparsers, parser
     )
 
-    architectures = ["clip", "bioclip", "gem"]
+    architectures = ["clip", "bioclip"]
     clip_variants = [
-        "openai/clip-vit-base-patch32",
         "wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M",
+        "openai/clip-vit-base-patch32",
     ]
 
     features_parser = make_features_parser(subparsers, architectures, clip_variants)

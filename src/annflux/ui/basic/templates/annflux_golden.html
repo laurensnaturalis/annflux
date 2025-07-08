@@ -225,7 +225,10 @@ limitations under the License.
         .html(function (d) {
           return `${d}`;
         })
-        .attr("class", class_)
+        .attr("class", function (d) {
+          return `${class_} label_${d.replace(" ", "_")}`;
+        })
+        // .attr("class", class_)
         .attr("onclick", function (d) {
           return `labelInGallery('${imageId}', '${d}', false)`;
         })
@@ -353,9 +356,80 @@ limitations under the License.
     });
   }
 
-  function toggleMapImageDisplay() {
-    d3.selectAll("image").style("visibility", "hidden");
-    console.log(d3.selectAll("image").style("visibility"));
+  function toggleMapImageDisplay(elementId) {
+    console.log(
+      "toggleMapImageDisplay",
+      d3.select(elementId).selectAll("image")
+    );
+    const visibility = d3
+      .select(elementId)
+      .selectAll("image")
+      .style("visibility");
+    d3.select(elementId)
+      .selectAll("image")
+      .style("visibility", visibility == "hidden" ? "visible" : "hidden");
+    // console.log(d3.selectAll("image").style("visibility"));
+  }
+
+  function gridArrangeImages(elementId) {
+    images = d3.select(elementId).selectAll("image");
+    console.log("gridArrangeImages", images);
+    const mapObject = gReferences.get(elementId);
+    console.log("References", gReferences.get(elementId));
+    let originalCoordinates = [];
+    images.each((img) =>
+      originalCoordinates.push([img[mapObject.xName], img[mapObject.yName]])
+    );
+    // console.log(originalCoordinates);
+    console.log("originalCoordinates", originalCoordinates);
+    // in the domain space solve the linear assignment problem
+    const xDomainWidth = mapObject.xDomain[1] - mapObject.xDomain[0];
+    const yDomainWidth = mapObject.yDomain[1] - mapObject.yDomain[0];
+
+    const xRangeWidth = mapObject.x(mapObject.xDomain[1]) - mapObject.x(mapObject.xDomain[0]);
+    const yRangeWidth = mapObject.y(mapObject.xDomain[1]) - mapObject.y(mapObject.xDomain[0]);
+
+    const aspectRatio = xDomainWidth / yDomainWidth;
+
+    const numX = Math.ceil(Math.sqrt(aspectRatio * originalCoordinates.length));
+    const numY = Math.ceil(numX / aspectRatio);
+
+    const thumbSizeX = xRangeWidth / numX;
+    const thumbSizeY = yRangeWidth / numY;
+
+    let gridCoordinates = [];
+    for (let i = 0; i < originalCoordinates.length; i++) {
+      let indexX = i % (numX + 1);
+      let indexY = Math.floor(i / (numX + 1));
+
+      gridCoordinates.push([
+        mapObject.xDomain[0] + (indexX / (numX + 1)) * xDomainWidth,
+        mapObject.yDomain[0] + (indexY / (numY + 1)) * xDomainWidth,
+      ]);
+    }
+    console.log("gridCoordinates", gridCoordinates);
+
+    function cost_(i, j) {
+      return Math.sqrt(
+        (originalCoordinates[i][0] - gridCoordinates[j][0]) ** 2 +
+          (originalCoordinates[i][1] - gridCoordinates[j][1]) ** 2
+      );
+    }
+
+    result = lap(originalCoordinates.length, cost_);
+    console.log(result);
+    images.each((img, i) => {
+      const imgD3 = d3.select("#map-" + img.uid);
+      // console.log(img);
+      const gridCoordinate = gridCoordinates[result.row[i], result.col[i]];
+      imgD3.attr("x", mapObject.x(gridCoordinate[0]));
+      imgD3.attr("y", mapObject.y(gridCoordinate[1]));
+      console.log("thumbSizeX", [thumbSizeX, thumbSizeY]);
+      imgD3.attr("width", thumbSizeX);
+      imgD3.attr("height", thumbSizeY);
+
+      // console.log("aspect", imgD3.attr("width") / imgD3.attr("height"), imgD3.attr("width"), imgD3.attr("height"));
+    });
   }
 
   function selectImage(event) {
@@ -499,15 +573,29 @@ limitations under the License.
     const img = $(`#gallery-${event.uid} img`);
     let curLayer = img.attr("data-curLayer");
     console.log("img", img, curLayer);
-    if (curLayer === undefined || curLayer == "masked") {
-      curLayer = "original";
-      img.attr("src", `/images/original/thumbnail/${event.uid}`);
-    } else if (curLayer == "original") {
-      curLayer = "mask";
-      img.attr("src", `/images/mask/thumbnail/${event.uid}`);
-    } else if (curLayer == "mask") {
-      curLayer = "masked";
-      img.attr("src", `/images/thumbnail/${event.uid}`);
+    if (gLayout == "instanceQuality") {
+      if (curLayer === undefined || curLayer == "masked") {
+        curLayer = "original";
+        img.attr("src", `/images/original/thumbnail/${event.uid}`);
+      } else if (curLayer == "original") {
+        curLayer = "mask";
+        img.attr("src", `/images/mask/thumbnail/${event.uid}`);
+      } else if (curLayer == "mask") {
+        curLayer = "masked";
+        img.attr("src", `/images/thumbnail/${event.uid}`);
+      }
+    } else if (gLayout == "tileLabel") {
+      // alert(event.uid);
+      fullImageTileMap.setFilter(
+        new Array([
+          "record_id",
+          "equals",
+          // d3.select(`#gallery-${event.uid}`).data()[0]["record_id"],
+          event.uid,
+        ])
+      );
+      fullImageTileMap.setData();
+      console.log("altImageAction", img);
     }
     img.attr("data-curLayer", curLayer);
     selectImageGallery(event);
@@ -787,9 +875,9 @@ limitations under the License.
         for (const char of label[0].toLocaleLowerCase()) {
           if (
             !shortcuts.has(char) &&
-            char != " " 
-            // && char != "d" 
-            // && char != "i"
+            char != " "
+            // char != "d" &&
+            // char != "i"
           ) {
             shortcuts.set(char, label[0]);
             break;
@@ -1243,310 +1331,24 @@ limitations under the License.
       }
     }
 
-    // set the dimensions and margins of the graph
-    var margin = { top: 0, right: 30, bottom: 30, left: 0 };
-    width = mapContainer.width;
-    height = mapContainer.height;
-    x = d3.scaleLinear().domain([-20, 20]).range([0, width]);
-    y = d3.scaleLinear().domain([-20, 20]).range([height, 0]);
-    time_x = d3.scaleLinear().domain([0, 900]).range([0, width]);
-    time_y = d3.scaleLinear().domain([-20, 20]).range([height, 0]);
-
-    console.log(width, height);
-    let prevTransform = Object();
-    prevTransform.k = 1;
-    prevTransform.x = 0;
-    prevTransform.y = 0;
-    let zooming = false;
-    let transform = null;
-    const color_by = urlParams.get("color_map");
-
-    // append the svg object to the body of the page
-    svg = d3
-      .select("#my_dataviz")
-      .append("svg")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom);
-    g = svg
-      .append("g")
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    gallery = d3.select("#gallery").append("div");
+    const embeddingMap = new Map2D();
+    embeddingMap.init(mapContainer, "#my_dataviz");
+    logUI(gLayout);
+    if (gLayout === "tileLabel") {
+      fullImageTileMap = new Map2D();
+      fullImageTileMap.init(mapContainer, "#fullImageTiled", "tiles"); //TODO
+      fullImageEmbeddingMap = new Map2D();
+      fullImageEmbeddingMap.init(embeddingMapContainer, "#fullImageMap");
+    }
 
     d3.csv("/data", function (data_p) {
       data = data_p;
       console.log("|data|", data.length);
-      var x = d3.scaleLinear().domain([-20, 20]).range([0, width]);
-      var y = d3.scaleLinear().domain([-20, 20]).range([height, 0]);
 
-      addDots(data, x, y, color_by, transform, width, height);
-      //addTimeline(data, transform, width, height);
-
-      //addImages(data, x, y);
-
-      zoom = d3
-        .zoom()
-        .filter(function filter(event) {
-          return !d3.event.ctrlKey && !d3.event.button;
-        })
-        .on("zoom", handleZoom)
-        .on("end", function () {
-          zoomControl(true);
-        });
-
-      function handleZoom(e) {
-        transform = d3.zoomTransform(this);
-        // console.log("handleZoom", transform);
-        // console.log(this);
-        g.attr("transform", transform);
-        zoomControl(false);
+      embeddingMap.setData(data);
+      if (gLayout === "tileLabel") {
+        fullImageTileMap.setData(data);
       }
-
-      function zoomControl(updatePrev) {
-        // console.log("zoomControl");
-        if (!transform) {
-          return null;
-        }
-        // alert("here");
-
-        const now = new Date().getTime() / 1000;
-        if (now - lastZoomUpdate > 0.1) {
-          // if (translation > 3.0 || transform.k != prevTransform.k) {
-          if (numUpdatesActive == 0) {
-            numUpdatesActive++;
-            setTimeout(function () {
-              d3.select("#dots").remove();
-              addDots(data, x, y, color_by, transform, width, height);
-              clearImages();
-              addImages(data, x, y, transform, width, height);
-              lastZoomUpdate = now;
-              numUpdatesActive--;
-              console.log(
-                "update took",
-                new Date().getTime() / 1000 - now,
-                numUpdatesActive
-              );
-            }, 0);
-          }
-        } else {
-          console.log("too fast");
-        }
-
-        if (updatePrev) {
-          prevTransform = transform;
-        }
-      }
-
-      function initZoom() {
-        d3.select("svg").call(zoom);
-      }
-
-      initZoom();
-
-      let coords = [];
-      const lineGenerator = d3.line();
-
-      const pointInPolygon = function (point, vs) {
-        // console.log(point, vs);
-        // ray-casting algorithm based on
-        // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html/pnpoly.html
-
-        var x = point[0],
-          y = point[1];
-
-        var inside = false;
-        for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-          var xi = vs[i][0],
-            yi = vs[i][1];
-          var xj = vs[j][0],
-            yj = vs[j][1];
-
-          var intersect =
-            yi > y != yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-          if (intersect) inside = !inside;
-        }
-
-        return inside;
-      };
-
-      function drawPath() {
-        d3.select("#lasso")
-          .style("stroke", "white")
-          .style("stroke-width", 2)
-          .style("fill", "#00000054")
-          .attr("d", lineGenerator(coords));
-      }
-
-      function dragStart() {
-        console.log("dragStart");
-        coords = [];
-        dots.attr("fill", "steelblue");
-        d3.select("#lasso").remove();
-        d3.select("#my_dataviz g").append("path").attr("id", "lasso");
-      }
-
-      function dragMove(event) {
-        let mouseX = d3.event.x;
-        let mouseY = d3.event.y;
-        let k = 1;
-        let Tx = 1;
-        let Ty = 1;
-        if (transform !== undefined && transform) {
-          k = transform.k;
-          Tx = transform.x;
-          Ty = transform.y;
-        }
-        mouseX = (mouseX - Tx) / k;
-        mouseY = (mouseY - Ty) / k;
-        coords.push([mouseX, mouseY]);
-        drawPath();
-      }
-
-      function dragEnd() {
-        let selectedDots = [];
-        dots.each((d, i) => {
-          let point = [x(d.e_0), y(d.e_1)];
-          if (pointInPolygon(point, coords)) {
-            d3.select("#dot-" + d.uid).attr("fill", "red");
-            selectedDots.push(d.uid);
-          }
-        });
-        // console.log(`select: ${selectedDots}`);
-        //
-        let show_data = [];
-        for (const d of data) {
-          if (selectedDots.includes(d.uid)) {
-            show_data.push(d);
-          }
-        }
-        drawGallery(show_data);
-      }
-      // auto suggestion
-      let as_ranking_column = urlParams.get("as_ranking_column");
-      console.log("as_ranking_column", as_ranking_column);
-      if (as_ranking_column == null) {
-        as_ranking_column = "most_needed";
-      }
-      let show_labeled = urlParams.get("show_labeled");
-      if (show_labeled == null) {
-        show_labeled = "unlabeled";
-      }
-      let show_data2 = [];
-      let show_data_test = [];
-      if (as_ranking_column == "score_true") {
-        show_labeled = "labeled";
-      }
-      let [show_data_start, tmp_] = filterData(
-        data,
-        data.length,
-        transform,
-        width,
-        height
-      );
-      let num_in_gallery = urlParams.get("num_in_gallery");
-      if (num_in_gallery == null) {
-        num_in_gallery = 10;
-      }
-      // console.log("foekoezoe", show_data_start);
-      if (
-        as_ranking_column == "score_predicted" ||
-        as_ranking_column == "score_true" ||
-        as_ranking_column == "fre" ||
-        as_ranking_column == "most_needed" ||
-        as_ranking_column == "incorrect_score" ||
-        as_ranking_column == "certain_incorrect"
-      ) {
-        show_data2 = show_data_start.filter(
-          (row) => row.labeled == (show_labeled == "unlabeled" ? 0 : 1) //&& row.in_test == 1
-        );
-        if (show_labeled == "labeled") {
-          console.log(
-            "ignore_double_checked",
-            urlParams.get("ignore_double_checked")
-          );
-          show_data2 = show_data2.filter(
-            (row) =>
-              row.double_checked == 0 ||
-              row.label_undetermined.length > 0 ||
-              urlParams.get("ignore_double_checked") == "on"
-          );
-        }
-        const rank_modifier = urlParams.get("invert_ranking") == "on" ? -1 : +1;
-        show_data2 = show_data2.sort(
-          (a, b) =>
-            rank_modifier * (a[as_ranking_column] - b[as_ranking_column])
-        );
-        show_data2 = show_data2.slice(
-          0,
-          show_labeled == "unlabeled" ? num_in_gallery - 1 : num_in_gallery
-        );
-        console.log("show_data2", show_data2);
-      } else if (as_ranking_column == "high_label_entropy") {
-        for (const row of data) {
-          if (row.al_measure == 0 && row.in_test == 0) {
-            show_data2.push(row);
-          }
-        }
-      }
-      if (show_labeled == "unlabeled") {
-        for (const row of data) {
-          if (row.in_test == 1 && row.labeled == 0) {
-            show_data_test.push(row);
-          }
-        }
-        console.log(show_data2.length, "show_data2");
-        console.log(
-          show_data_test.length,
-          "show_data_test",
-          Math.ceil(0.1 * show_data2.length)
-        );
-        show_data_test = _.sample(
-          show_data_test,
-          Math.ceil(0.1 * show_data2.length)
-        );
-        console.log(show_data_test.length, "show_data_test");
-        if (as_ranking_column != "score_true") {
-          for (const row of show_data_test) {
-            console.log("test", row.uid);
-            show_data2.push(row);
-          }
-        }
-      }
-      for (const row of show_data2) {
-        d3.select("#dot-" + row.uid)
-          .style("stroke", "#ff0000")
-          .style("stroke-width", 2);
-      }
-      // TODO: skip the above logic when labeled is in local storage
-      console.log("oegma", localStorage.getItem("labeled"));
-      if (localStorage.getItem("labeled")) {
-        const labelsFromStorage = JSON.parse(localStorage.getItem("labeled"));
-        const uidsFromStorage = Object.keys(labelsFromStorage);
-        let numRestored = 0;
-        show_data2 = new Array();
-        for (const row of data) {
-          if (uidsFromStorage.indexOf(row.uid) > -1) {
-            numRestored++;
-            show_data2.push(row);
-          }
-        }
-        logUI(`Restored ${numRestored} labeled UIDs from local storage`, 1);
-      }
-      //
-      drawGallery(show_data2);
-      console.log(show_data2.length, "show_data2");
-      //
-
-      const drag = d3
-        .drag()
-        .filter(function filter(event) {
-          return d3.event.ctrlKey && !d3.event.button;
-        })
-        .on("start", dragStart)
-        .on("drag", dragMove)
-        .on("end", dragEnd);
-
-      d3.select("#my_dataviz").call(drag);
 
       $("body").on("keypress", function (eventData) {
         const key = eventData.originalEvent.key;
@@ -1555,6 +1357,14 @@ limitations under the License.
           $("#help").toggle();
         }
       });
+    });
+    //
+    d3.csv("/data/group", function (data_p) {
+      group_data = data_p;
+      console.log("|group_data|", group_data.length);
+
+      fullImageEmbeddingMap.setData(group_data);
+      //fullImageTileMap.setData(data);
     });
   });
 </script>

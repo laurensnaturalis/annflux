@@ -15,7 +15,6 @@ import os
 
 from annflux.tools.io import generate_thumbnail
 from annflux.tools.progress_learn import estimate_duration
-
 from annflux.tools.visualization import most_contrasting_gray, brighten_hex_color
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -25,10 +24,8 @@ import os
 import sys
 import threading
 import time
-import tomllib
 from datetime import datetime
 from functools import update_wrapper, wraps
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import flask
@@ -39,7 +36,6 @@ from flask_httpauth import HTTPBasicAuth
 from tensorflow.python.keras.callbacks import Callback
 from werkzeug.security import check_password_hash
 
-import annflux
 from annflux.algorithms.embeddings import compute_tsne
 from annflux.tools.core import AnnFluxState
 from annflux.tools.data import (
