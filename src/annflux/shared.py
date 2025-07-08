@@ -38,6 +38,7 @@ class AnnfluxSource(object):
             self.data_path_ = str(folder / "images.csv")
             self.images_path_ = str(folder / "images")
             self.working_folder_ = str(folder / "annflux")
+            self.folder = folder
 
     @property
     def data_path(self):

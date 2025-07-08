@@ -38,7 +38,7 @@ def get_logger_by_name(name: str, mode: str = "a", level=logging.INFO):
     return get_logger(os.path.join(os.getenv("LOG_FOLDER", "."), f"{name}.log"), mode, level)
 
 
-def get_logger(filename: str, mode: str = "a", level=logging.INFO) -> logging.Logger:
+def get_logger(filename: str, mode: str = "a", level=logging.INFO, name="") -> logging.Logger:
     """
     Enable file and console logging to 'filename'
     :param filename:
