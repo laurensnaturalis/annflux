@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import shutil
 
 from annflux.tools.io import generate_thumbnail
 from annflux.tools.progress_learn import estimate_duration
@@ -221,11 +222,12 @@ def data_group_get():
 @app.route("/images/thumbnail/<uid>")
 def thumbnail(uid):
     """ """
-    if uid.startswith("R"):  # TODO: hack
-        thumb_path = os.path.join(group_images_path, f"{uid}.jpg")
-    else:
-        thumb_path = os.path.join(images_path, f"{uid}.jpg")
+    # if uid.startswith("R"):  # TODO: hack
+    #     thumb_path = os.path.join(group_images_path, f"{uid}.jpg")
+    # else:
+    thumb_path = os.path.join(images_path, f"{uid}.jpg")
     if not os.path.exists(thumb_path):
+        print(f"Cannot find {thumb_path=}")
         failed_thumb_path = os.path.join(failed_images_path, f"{uid}.jpg")
         if not os.path.exists(failed_thumb_path):
             generate_thumbnail(uid).save(failed_thumb_path)
@@ -508,7 +510,7 @@ def retrain_job(state: AnnFluxState):
 @app.route("/status", methods=["POST"])
 def status():
     label_update = request.get_json(force=True)
-    auto_linear_train_idle_time = int(os.getenv("AUTO_LINEAR_TRAIN_IDLE_TIME", 120))
+    auto_linear_train_idle_time = int(os.getenv("AUTO_LINEAR_TRAIN_IDLE_TIME", 18000))
     if label_update["idleTime"] > auto_linear_train_idle_time:
         if g_state.train_thread is None or not g_state.train_thread.is_alive():
             if g_state.labeled_indices is not None:

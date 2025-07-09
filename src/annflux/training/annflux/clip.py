@@ -320,6 +320,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         # TODO: implement skip_positions with batching
         other_filenames = None
         other_features = None
+        other_probs = None
         print("other_feature_cache_path", other_feature_cache_path)
         if other_feature_cache_path is not None:
             other_feature_cache = zarr.open_group(other_feature_cache_path)
@@ -330,6 +331,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                 ]
             )
             other_features = other_feature_cache.get("features")
+            other_probs = other_feature_cache.get("probs")
 
         do_batched = True
         if ov_model:
@@ -375,7 +377,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                                 features_per_batch[batch_i] = cache_batch_features
                                 probs_per_batch[batch_i] = feature_cache.get("probs")[
                                     start:end
-                                ]
+                                ][:, :2]  # TODO(BUG)
 
                                 batch_i += 1
                                 continue
@@ -397,9 +399,10 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                         )
                         if np.all(indices > -1):
                             print(
-                                f"Features already in other cache, skipping batch {batch_i=}"
+                                f"Features already in other cache, skipping batch {batch_i=}, {other_features[indices].shape=}, {other_probs[indices].shape=}"
                             )
                             features_per_batch[batch_i] = other_features[indices]
+                            probs_per_batch[batch_i] = other_probs[indices]
                             batch_i += 1
                             continue
 
@@ -541,6 +544,11 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         data["caption"] = data["label_true"].apply(
             lambda x_: x_.replace(" ", "_").replace(",", " ")
         )
+        print(data["caption"])
+        for x_ in data["caption"].values:
+            print(x_.split())
+            print([val_ for val_ in x_.split() if "?" not in val_])
+            print(canon_([val_ for val_ in x_.split() if "?" not in val_]))
         data["caption"] = data["caption"].apply(
             lambda x_: canon_([val_ for val_ in x_.split() if "?" not in val_]).replace(
                 ",", " "

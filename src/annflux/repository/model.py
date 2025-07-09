@@ -80,10 +80,9 @@ class Model(object):
     @property
     def index_to_class(self) -> dict[int, str]:
         if self.index_to_class_name is None:
-            tmp_ = pandas.read_csv(self.class_to_label_path)
+            tmp_ = pandas.read_csv(self.class_to_label_path, dtype={"class_name": str})
             self.index_to_class_name = dict(zip(tmp_["index"], tmp_["class_name"]))
         return self.index_to_class_name
-
 
 
 class ClipModel(Model):
