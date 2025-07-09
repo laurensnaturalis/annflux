@@ -42,6 +42,9 @@ class AnnfluxSource(object):
 
     @property
     def data_path(self):
+        """
+        Path containing input data (images.csv)
+        """
         return (
             os.path.join(base_data_path, self.data_path_)
             if base_data_path is not None
@@ -58,6 +61,9 @@ class AnnfluxSource(object):
 
     @property
     def images_folder(self):
+        """
+        Folder where images are located
+        """
         return (
             os.path.join(base_data_path, self.images_path_)
             if base_data_path is not None
@@ -71,6 +77,9 @@ class AnnfluxSource(object):
 
     @property
     def working_folder(self):
+        """
+        'annflux' folder in the project folder
+        """
         return (
             os.path.join(base_data_path, self.working_folder_)
             if base_data_path is not None
@@ -91,6 +100,13 @@ class AnnfluxSource(object):
     @property
     def exclusivity_path(self):
         return os.path.join(self.working_folder, "exclusivity.csv")
+
+    @property
+    def data_state_path(self):
+        """
+        Data state (annflux.csv)
+        """
+        return os.path.join(self.working_folder, "annflux.csv")
 
     @property
     def split_path(self):

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 Naturalis Biodiversity Center
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 function addDots(
   data,
   x,
@@ -18,7 +33,7 @@ function addDots(
     transform,
     width,
     height,
-    filters,
+  filters,
     "e_0",
     "e_1"
   );
@@ -44,9 +59,9 @@ function addDots(
     .style("fill", function (d) {
       return color_by ? d[color_by] : d.color_class;
     })
-    .style("stroke", function (d) {
-      return d.color_prob;
-    })
+    //.style("stroke", function (d) {
+    //  return d.color_prob;
+    //})
     .style("stroke-width", function (d) {
       return (d.labeled == 0 ? 2 * (1 - d.score_predicted) : 0) / k;
     });
@@ -196,7 +211,7 @@ function addImages(
     transform,
     width,
     height,
-    filters,
+  filters,
     xName,
     yName
   );
@@ -331,13 +346,19 @@ controlHtml = `<div id="map_control">
             <a href="/detailed_performance">Performance</a>
           </td>
           <td>
-            <span id="test_performance"></span>
+            <span id="test_performance"></span> Avg. precision = <span id="average_precision"></span> % - Avg. recall <span id="average_recall"></span> %
           </td>
         </tr>
         <tr>
-          <td>Space covered</td>
+          <td>Space covered </td>
           <td>
             <span id="percentage_near_labeled"></span> %
+          </td>
+        </tr>
+        <tr>
+          <td>Likely certain</td>
+          <td>
+            <span id="likely_certain_perc"></span> %
           </td>
         </tr>
         <tr>
@@ -427,6 +448,7 @@ controlHtml = `<div id="map_control">
               </option>
               <option value="color_prob">Probability</option>
               <option value="color_fre">FRE</option>
+              <option value="dp_cluster_color">Density peak cluster</option>
             </select>
           </td>
         </tr>

@@ -150,73 +150,44 @@ def quick_reclassification_instance(knn_type, state):
     )
     logger.info(f"|labeled_test_indices|={len(state.labeled_test_indices)}")
     logger.info(f"instant_reclassification 5={time.time() - start_time}")
-    k = 110  # the magic number that should be investigated
+
+    # print("labeled_indices", labeled_indices)
+    state.all_distances, state.all_indices = compute_knn(
+        state.features,
+        state.features,
+        110,
+        result_set.get_path_for("knn_results.npz"),
+        state,
+        logger,
+    )
+
+    has_dp_cluster = "dp_cluster" in data.columns
+    dp_most_needed_idx: np.array = None
+    if has_dp_cluster:
+        dp_most_needed_idx = data[
+            data["dp_most_needed"] < data["dp_most_needed"].max()
+        ].index.values
+        assert len(dp_most_needed_idx) == int(
+            data["dp_most_needed"].max()
+        )  # includes 0
+        dp_distances, dp_indices = compute_knn(
+            state.features[dp_most_needed_idx],
+            state.features,
+            1,  # nearest cluster center (cf. "mean")
+            result_set.get_path_for("knn_results_dp.npz"),
+            state,
+            logger,
+        )
+        print("has_dp_cluster", dp_distances.shape)
+
     state.cache_for = result_set.entry.uid
     state.version_for_recompute = (
-        result_set.entry.uid + "_" + str(state.trained_for_version_previous)
+        result_set.entry.uid + "_" + str(state.trained_for_version_pre)
     )
-    if recompute:
-        knn_results_cache_path = os.path.join(
-            state.working_folder,
-            f"{state.version_for_recompute}.npz",
-        )
-        if not os.path.exists(knn_results_cache_path) or not str2bool(
-            os.getenv("USE_KNN_CACHE", False)
-        ):
-            state.g_quick_status = "computing knn index"
-            knn_index = faiss.index_factory(
-                state.features.shape[1],
-                "Flat",
-                {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
-            )
-            state.features *= 1 - 1e-2 * np.random.rand(
-                state.features.shape[0], state.features.shape[1]
-            )
 
-            # TODO(improvement): use the many features of FAISS to speed up
-
-            knn_index.train(state.features)
-            knn_index.add(state.features)
-
-            state.all_distances, state.all_indices = knn_index.search(
-                state.features, k=k
-            )
-
-            np.savez(
-                knn_results_cache_path,
-                all_distances=state.all_distances,
-                all_indices=state.all_indices,
-            )
-            logger.info(f"Cached to {knn_results_cache_path}")
-
-            del knn_index  # make sure we do not accidentally re-use it
-        else:
-            cache_ = np.load(knn_results_cache_path)
-            state.all_distances = cache_["all_distances"]
-            state.all_indices = cache_["all_indices"]
-            logger.info(
-                f"Loaded from {knn_results_cache_path}, {state.all_distances.shape=}"
-            )
     time_start = time.time()
 
-    if knn_type == "standard":
-        knn_index_train = faiss.index_factory(
-            state.features.shape[1],
-            "Flat",
-            {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
-        )
-        features_train = state.features[state.labeled_indices]
-        logger.info(f"standard, |features_train|={len(features_train)}")
-
-        knn_index_train.train(features_train)
-        knn_index_train.add(features_train)
-
-        state.all_distances, state.all_indices = knn_index_train.search(
-            state.features, k=30
-        )
-
-        state.label_array = state.label_array[state.labeled_indices]
-    logger.info(f"knn labeled={time.time() - time_start}")
+    print("knn labeled", time.time() - time_start)
     distances, indices = (
         state.all_distances[state.labeled_indices],
         state.all_indices[state.labeled_indices],
@@ -240,8 +211,6 @@ def quick_reclassification_instance(knn_type, state):
         new_labeled_nn_idx = set(state.all_indices[new_labeled_idx].flatten())
         logger.info(f"new_labeled_nn_idx={len(new_labeled_nn_idx)}")
         new_labeled_nn_uids = data[data.index.isin(new_labeled_nn_idx)].uid
-    #
-    # optimize_weight_exponent_func(state, annotations, data, distances, indices)
     #
     if quicker_updates:
         if "score_possible" not in data:
@@ -280,7 +249,7 @@ def quick_reclassification_instance(knn_type, state):
         labeled_indices_.extend(test_indices)
         logger.info(f"quicker_updates: labeled_indices_={len(labeled_indices_)}")
     state.g_quick_status = "predicting labeled"
-    make_predictions(
+    distance_to_probability = make_predictions(
         annotations,
         data,
         indices_,
@@ -291,6 +260,15 @@ def quick_reclassification_instance(knn_type, state):
         skip_first=True,
         knn_rank_exponent=state.knn_rank_exponent,
     )
+    debug = False
+    if debug:
+        print(distance_to_probability[:10])
+        import matplotlib.pyplot as plt
+
+        plt.scatter(*zip(*distance_to_probability))
+        plt.savefig("distance_to_probability.png")
+
+    #
     prev_near_labeled_perc = get_performance_key_val(
         state.performance_path, "percentage_near_labeled", -1.0
     )
@@ -360,7 +338,58 @@ def quick_reclassification_instance(knn_type, state):
         data.at[most_needed_i, "most_needed"] = i_
         if i_ > 500:  # TODO(improvement): based on actual page size
             break
-    del most_needed_first
+    #
+    if "dp_most_needed" in data.columns:
+        logger.info("Using dp_most_needed for most needed")
+        data["direct_most_needed"] = data["most_needed"]
+        data["most_needed"] = data["dp_most_needed"]
+
+        data_ = data[data["dp_most_needed"] < data["dp_most_needed"].max()]
+        near_labeled_perc = len(data_[data["labeled"]==1]) / len(data_)
+
+        # counts_per_cluster = (
+        #     data.groupby("dp_cluster").size().reset_index(name="counts")
+        # )
+        # counts_per_cluster = {
+        #     row_.dp_cluster: row_.counts for _, row_ in counts_per_cluster.iterrows()
+        # }
+        # for _, row in data.sort_values("dp_most_needed").iterrows():
+        #     print(f"{counts_per_cluster[row['dp_cluster']] / len(data)=}")
+        #     if row["labeled"] == 1 and row["dp_cluster"] < len(counts_per_cluster):
+        #         near_labeled_perc += counts_per_cluster[row["dp_cluster"]] / len(data)
+        #     print(f"{near_labeled_perc=}")
+        #     if near_labeled_perc > 1.0:
+        #         near_labeled_perc = 1.0
+        #         break
+        write_performance_key_val(
+            state.performance_path, "percentage_near_labeled", near_labeled_perc
+        )
+    #
+    # use DP cluster to predict unpredicted
+    if has_dp_cluster and len(annotations) > 0:
+        state.g_quick_status = "computing predictions for unpredicted using DP cluster"
+        unpredicted_idx = data[
+            pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
+        ].index.values
+        print(f"{len(unpredicted_idx)=} before make_predictions")
+        print(f"{state.label_array[dp_most_needed_idx]=}")
+        make_predictions(
+            annotations,
+            data,
+            dp_indices[unpredicted_idx],
+            dp_distances[unpredicted_idx],
+            state.label_array[dp_most_needed_idx],
+            unpredicted_idx,
+            None,
+            test_indices,
+            None,
+            knn_rank_exponent=state.knn_rank_exponent,
+            value_for_debug=1
+        )
+        unpredicted_idx = data[
+            pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
+        ].index.values
+        print(f"{len(unpredicted_idx)=} after make_predictions")
     #
     state.g_quick_status = "computing performance"
     compute_performance(predicted_test, true_test, state, annotations, data)
@@ -389,6 +418,45 @@ def quick_reclassification_instance(knn_type, state):
     ).to_csv(os.path.join(state.data_folder, "annflux", "class_to_color.csv"))
     state.g_quick_status = "idle"
 
+def compute_knn(
+    features_train: np.array,
+    features_test: np.array,
+    k,
+    knn_results_path,
+    state,
+    logger,
+):
+    if not os.path.exists(knn_results_path):
+        state.g_quick_status = "computing knn index"
+        knn_index = faiss.index_factory(
+            features_train.shape[1],
+            "Flat",
+            {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
+        )
+        features_train *= 1 - 1e-2 * np.random.rand(
+            features_train.shape[0], features_train.shape[1]
+        )
+        print(features_train.shape)
+
+        knn_index.train(features_train)
+        knn_index.add(features_train)
+
+        # state.all_distances, state.all_indices = knn_index.search(state.features, k=k)
+        all_distances, all_indices = knn_index.search(features_test, k=k)
+
+        np.savez(
+            knn_results_path,
+            all_distances=all_distances,
+            all_indices=all_indices,
+        )
+    else:
+        logger.info(f"Loading kNN results from {knn_results_path}")
+        knn_results = np.load(knn_results_path)
+        all_distances, all_indices = (
+            knn_results["all_distances"],
+            knn_results["all_indices"],
+        )
+    return all_distances, all_indices
 
 def quick_reclassification_group(knn_type, state):
     """
@@ -548,6 +616,7 @@ def make_predictions(
     test_indices: list[int],
     skip_first=False,
     knn_rank_exponent=0.5,
+    value_for_debug: int | None = None,
 ) -> (list[list[str]], list[list[str]]):
     """
     The predictions are made for the knn results in (`indices`, `distances`) which correspond to the indices in data defined
@@ -559,31 +628,53 @@ def make_predictions(
     :param distances: matrix with rows corresponding to predicted samples and columns to distances to neighbors in knn
     training set
     :param train_labels: array with labels of knn training set
-    :param data_indices: indices of (indices, distances) in `data`
-    :param test_indices: test_indices in `data`
-    :param skip_first:
+    :param org_map: maps index of (indices, distances) to original index
+    :param predicted_test_out:
+    :param test_indices: test_indices in original dataset
+    :param true_test_out:
+    :param skip_first: skip first neighbor for computing predictions, typically used when making predictions on labelled data
     :param knn_rank_exponent:
-    :return:
+    :return: a list of (distance, probability) tuples for labeled non-test data
     """
-    tmp_counter = 0
     predicted_test = []
     true_test = []
+    distance_to_probability: list[tuple[float, float]] = []
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
         org_index = data_indices[i]
+        is_labeled = (
+            data.at[org_index, "uid"] in annotations and org_index not in test_indices
+        )
         probabilities = defaultdict(lambda: 0)
+        # knn class histogram
         max_mass = 0
         for i2, multilabel_ in enumerate(train_labels[indices_for_i]):
             if skip_first and i2 == 0:
                 continue
+            # if value_for_debug == 1:
+            #     print(f"{train_labels[indices_for_i]=}")
             if multilabel_ is not None:
                 distance_weight = distances[i][i2] ** knn_rank_exponent
+                if distance_weight < 1e-8:
+                    distance_weight = 1e-8
                 for label_ in multilabel_:
                     probabilities[label_] += 1 / distance_weight
+                    # get data for estimating relation between distance and probability
+                    if is_labeled:
+                        true_labels = annotations[data.at[org_index, "uid"]].split(",")
+                        for label2_ in probabilities:
+                            if label2_ in true_labels:
+                                running_prob = (1 / distance_weight) / (
+                                    max_mass + (1 / distance_weight)
+                                )
+                                distance_to_probability.append(
+                                    (distances[i][i2], running_prob)
+                                )
+                    #
                 if len(multilabel_) > 0:
                     max_mass += 1 / distance_weight
+        # knn class probability
         for label_ in probabilities:
             probabilities[label_] /= max_mass
-        tmp_counter += org_index in test_indices
         if len(probabilities) > 0:
             max_labels = [
                 label_ for label_, prob_ in probabilities.items() if prob_ > 0.5
@@ -613,14 +704,13 @@ def make_predictions(
                 # entropy
                 p = np.array(list(probabilities.values()))
                 data.at[org_index, "entropy"] = -1 * (p * np.log2(p)).sum()
-                #
-
-                if org_index in test_indices and predicted_test is not None:
+                # test data
+                if org_index in test_indices and predicted_test_out is not None:
                     test_uid = data.at[org_index, "uid"]
                     if test_uid in annotations.keys():
-                        predicted_test.append(max_labels)
-                        true_test.append(annotations[test_uid].split(","))
-                elif data.at[org_index, "uid"] in annotations:
+                        predicted_test_out.append(max_labels)
+                        true_test_out.append(annotations[test_uid].split(","))
+                elif is_labeled:  # labelled data
                     data.at[org_index, "score_true"] = probabilities.get(
                         annotations[data.at[org_index, "uid"]], -1
                     )
@@ -628,5 +718,4 @@ def make_predictions(
                 data.at[org_index, "label_predicted"] = None
                 data.at[org_index, "score_predicted"] = 0
                 data.at[org_index, "scores_predicted"] = None
-
-    return predicted_test, true_test
+    return predicted_test, true_test, distance_to_probability
