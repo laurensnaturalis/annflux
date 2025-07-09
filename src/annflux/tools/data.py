@@ -29,15 +29,23 @@ from annflux.tools.mixed import get_basic_logger
 
 
 @lru_cache
-def canon_(s_: str | list[str]) -> str | None:
+def canon_(
+    multilabel_string: str, remove_unknown=False, output_separator=","
+) -> str | None:
     """
     Canonizes a multilabel string separated by comma's
     """
     return (
-        ",".join(sorted(s_.split(",")))
-        if isinstance(s_, str)
-        else ",".join(sorted(s_))
-        if s_ is not None and not pandas.isna(s_)
+        output_separator.join(
+            sorted(
+                [
+                    x_
+                    for x_ in multilabel_string.split(",")
+                    if "?" not in x_ or not remove_unknown
+                ]
+            )
+        )
+        if multilabel_string is not None and not pandas.isna(multilabel_string)
         else None
     )
 
@@ -123,7 +131,9 @@ def color_and_label(
             k: rgb2hex(cmap(float(k / num_clusters))) for k in range(num_clusters + 1)
         }
         data_to_update["dp_cluster_color"] = data_to_update.apply(
-            lambda x_: cluster_to_color[int(x_["dp_cluster"])] if not pandas.isna(x_["dp_cluster"]) else "#800080",
+            lambda x_: cluster_to_color[int(x_["dp_cluster"])]
+            if not pandas.isna(x_["dp_cluster"])
+            else "#800080",
             axis=1,
         )
         logger.info(f"coloring dp_cluster took={time.time() - start_time}")
@@ -161,7 +171,10 @@ def color_and_label(
     )
     logger.info(f"color_class took={time.time() - start_time}")
     #
-    if "label_possible" in data_to_update.columns and "score_possible" in data_to_update.columns:
+    if (
+        "label_possible" in data_to_update.columns
+        and "score_possible" in data_to_update.columns
+    ):
         data_to_update["incorrect_score"] = 0.0
         for r, row in data_to_update.iterrows():
             if (
@@ -216,7 +229,9 @@ def color_and_label(
                     data.at[r, "predicted_x"] = (
                         label_to_index[row.label_predicted] * 2 + np.random.rand()
                     )
-                    data.at[r, "true_x"] = label_to_index[row.label_true] * 2 + np.random.rand()
+                    data.at[r, "true_x"] = (
+                        label_to_index[row.label_true] * 2 + np.random.rand()
+                    )
     #
     logger.info(f"label_possible took={time.time() - start_time}")
     logger.info(f"coloring took={time.time() - time_start}")
@@ -242,8 +257,6 @@ def remove_uids_from_double_check(
         json.dump(j_doublecheck, f, indent=2)
 
 
-
-
 def get_images_path() -> str:
     """
     Get default path for images
@@ -251,12 +264,14 @@ def get_images_path() -> str:
     """
     return os.path.join(get_project_root(), "images")
 
+
 def get_group_images_path() -> str:
     """
     Get default path for images
     :return:
     """
     return os.path.join(get_project_root(), "images_group")
+
 
 def get_failed_images_path() -> str:
     return os.path.join(get_project_root(), "images_failed")

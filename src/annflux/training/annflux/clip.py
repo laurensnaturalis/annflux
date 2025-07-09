@@ -26,6 +26,7 @@ import torch
 import zarr
 from openvino.runtime import properties
 from PIL import Image
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -241,7 +242,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         repo_model: Model,
         logger: logging.Logger,
     ):
-        self.device = "cuda:0"
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.logger = logger
         self.folder = repo_model.path
         self.repo_model = repo_model
@@ -544,15 +545,8 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         data["caption"] = data["label_true"].apply(
             lambda x_: x_.replace(" ", "_").replace(",", " ")
         )
-        print(data["caption"])
-        for x_ in data["caption"].values:
-            print(x_.split())
-            print([val_ for val_ in x_.split() if "?" not in val_])
-            print(canon_([val_ for val_ in x_.split() if "?" not in val_]))
         data["caption"] = data["caption"].apply(
-            lambda x_: canon_([val_ for val_ in x_.split() if "?" not in val_]).replace(
-                ",", " "
-            )
+            lambda x_: canon_(x_, remove_unknown=True, output_separator=" ")
         )
         print(f"{data.caption=}")
         counts = data[data.subset != "test"].groupby("caption").size().to_frame(name="count").reset_index()
@@ -643,9 +637,9 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
             print("Sample {} shape ".format(key), inputs[key].shape)
 
         model.eval()
-        test(
-            model, test_loader, test_set, unique_labels, self.device
-        )
+        # test(
+        #     model, test_loader, test_set, unique_labels, self.device
+        # )
 
         from peft import LoraConfig, get_peft_model
 
@@ -677,22 +671,22 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         )
         model.save_pretrained(out_folder / "adapter")
         model.eval()
-        acc, predictions, probs, hier_probs = test(
-            model, test_loader, test_set, unique_labels
-        )
+        # acc, predictions, probs, hier_probs = test(
+        #     model, test_loader, test_set, unique_labels
+        # )
         print("perf", acc)
         print(accuracy_score(predictions, test_true_vals))
         data_test["predictions"] = predictions
         data_test["probability"] = probs
-        for level in range(6):
-            data_test[f"level_{level}"] = [
-                hier_prob.get(level)[0] if hier_prob.get(level) else None
-                for hier_prob in hier_probs
-            ]
-            data_test[f"level_{level}_probability"] = [
-                hier_prob.get(level)[1] if hier_prob.get(level) else None
-                for hier_prob in hier_probs
-            ]
+        # for level in range(6):
+        #     data_test[f"level_{level}"] = [
+        #         hier_prob.get(level)[0] if hier_prob.get(level) else None
+        #         for hier_prob in hier_probs
+        #     ]
+        #     data_test[f"level_{level}_probability"] = [
+        #         hier_prob.get(level)[1] if hier_prob.get(level) else None
+        #         for hier_prob in hier_probs
+        #     ]
 
         data_test.to_csv(out_folder / "predicted.csv")
 
