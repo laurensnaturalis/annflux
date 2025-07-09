@@ -105,12 +105,13 @@ def color_and_label(
 
     time_start = time.time()
     prob_to_color = {k: rgb2hex(cmap(k / 100)) for k in range(101)}
-    data_to_update["color_prob"] = data_to_update.apply(
-        lambda x_: prob_to_color[int(x_.score_predicted * 100)]
-        if not x_.labeled
-        else "#800080",
-        axis=1,
-    )
+    # TODO(critical)
+    # data_to_update["color_prob"] = data_to_update.apply(
+    #     lambda x_: prob_to_color[int(x_.score_predicted * 100)]
+    #     if not x_.labeled
+    #     else "#800080",
+    #     axis=1,
+    # )
     logger.info(f"color_prob took={time.time() - start_time}")
     if "fre" in data_to_update.columns:
         q5, q95 = np.percentile(data_to_update.fre, [1, 99])
