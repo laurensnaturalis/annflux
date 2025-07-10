@@ -123,6 +123,9 @@ class Resultset(RepositoryObject):
             "property_size", lambda: len(pandas.read_csv(self.predictions_path))
         )
 
+    def __repr__(self):
+        return f"{self.path}"
+
     @property
     def per_class_results_path(self) -> Path:
         return Path(self.analysis_directory) / "analyze_results_combined.csv"

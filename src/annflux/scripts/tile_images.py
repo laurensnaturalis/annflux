@@ -102,7 +102,9 @@ def tile_and_save(
     tile_size=512,
     original_label: dict[str, str] = None,
 ) -> pandas.DataFrame:
-    file_paths = sorted(set(glob.glob(os.path.join(input_folder, "*.jpg"))) - existing_original_paths)
+    file_paths = sorted(
+        set(glob.glob(os.path.join(input_folder, "*.jpg"))) - existing_original_paths
+    )
     if original_label is None:
         original_label = {}
     patch_tuples = []
@@ -140,6 +142,44 @@ def tile_and_save(
         ),
     )
     result["record_id"] = result["original_id"]
+    return result
+
+
+def link_files(
+    input_folder: str,
+    output_folder: str,
+    existing_original_paths: set[str],
+    target_pattern=None,  # {subfolder}_{basename}
+) -> pandas.DataFrame:
+    file_paths = glob.glob(os.path.join(input_folder, "*.jpg"))
+    if target_pattern == "{subfolder}_{basename}":
+        file_paths = glob.glob(os.path.join(input_folder, "**", "*.jpg"))
+    file_paths = sorted(set(file_paths) - existing_original_paths)
+    rows = []
+    for fn in tqdm(file_paths, desc="linking images", total=len(file_paths)):
+        if os.path.isdir(fn):
+            continue
+        target_fn = os.path.join(output_folder, os.path.basename(fn))
+        if target_pattern is not None:
+            if target_pattern == "{subfolder}_{basename}":
+                target_fn = os.path.join(
+                    output_folder,
+                    target_pattern.format(
+                        subfolder=os.path.dirname(fn).split(os.path.sep)[-1], basename=os.path.basename(fn)
+                    ),
+                )
+
+        os.symlink(os.path.abspath(fn), target_fn)
+        rows.append((os.path.abspath(fn), basename_no_extension(fn), target_fn, basename_no_extension(target_fn)))
+    result = pandas.DataFrame(
+        data=rows,
+        columns=(
+            "original_path",
+            "original_id",
+            "path",
+            "image_id",
+        ),
+    )
     return result
 
 

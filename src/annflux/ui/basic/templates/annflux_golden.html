@@ -688,8 +688,8 @@ limitations under the License.
     );
     //
     setLabeledGlobal();
-    console.log(gLabeled);
-    console.log("here", JSON.stringify(Object.fromEntries(gLabeled)));
+    // console.log(gLabeled);
+    // console.log("here", JSON.stringify(Object.fromEntries(gLabeled)));
     localStorage.setItem(
       "labeled",
       JSON.stringify(Object.fromEntries(gLabeled))
@@ -1115,7 +1115,7 @@ limitations under the License.
     // $("#fullscreen").center();
     $("#help").center();
     //
-    $.post("/status", JSON.stringify({ idleTime: idleTime }))
+    $.post("/status", JSON.stringify({ idleTime: 0, first: true }))
       .done(function (data) {
         $("#status").attr("title", JSON.stringify(data, null, " "));
         $("#status").html(data["status"]);
@@ -1168,11 +1168,15 @@ limitations under the License.
   function statusPoll(forceIdleTime) {
     // if (urlParams.get("linear_auto_train") == "on") {
     idleTime++;
-    // logUI(`idleTime = ${idleTime}`);
+    logUI(`idleTime = ${idleTime}`);
     // }
     const idleTimeForPost =
       forceIdleTime !== undefined ? forceIdleTime : idleTime;
-    $.post("/status", JSON.stringify({ idleTime: idleTimeForPost * 1 })).done(
+    if (idleTimeForPost > 1000) {
+      console.log(`idleTimeForPost = ${idleTimeForPost}, forceIdleTime = ${forceIdleTime}, idleTime = ${idleTime}`);
+    }
+    console.log(`idleTimeForPost = ${idleTimeForPost}`);
+    $.post("/status", JSON.stringify({ idleTime: idleTimeForPost })).done(
       function (data) {
         $("#status").attr("title", JSON.stringify(data, null, " "));
         $("#status").html(data["status"]);
@@ -1363,19 +1367,19 @@ limitations under the License.
 
       $("body").on("keypress", function (eventData) {
         const key = eventData.originalEvent.key;
-        if (key == "?") {
+        if (key === "?") {
           // alert("gg");
           $("#help").toggle();
         }
       });
     });
     //
-    d3.csv("/data/group", function (data_p) {
-      group_data = data_p;
-      console.log("|group_data|", group_data.length);
-
-      fullImageEmbeddingMap.setData(group_data);
-      //fullImageTileMap.setData(data);
-    });
+    // d3.csv("/data/group", function (data_p) {
+    //   group_data = data_p;
+    //   console.log("|group_data|", group_data.length);
+    //
+    //   fullImageEmbeddingMap.setData(group_data);
+    //   //fullImageTileMap.setData(data);
+    // });
   });
 </script>
