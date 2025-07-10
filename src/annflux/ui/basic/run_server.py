@@ -218,7 +218,7 @@ def data_group_get():
         annflux_data_path,
         mimetype="text_csv",
         as_attachment=False,
-    )
+    ) if os.path.exists(annflux_data_path) else {}
 
 
 @app.route("/images/thumbnail/<uid>")
@@ -480,9 +480,9 @@ def retrain_job(state: AnnFluxState):
         os.path.join(state.working_folder, state.version_for_recompute + ".weights.h5"),
     )
     #
-    state.g_quick_status = "computing TSNE"
+    state.g_quick_status = "computing embedding"
     embedding = compute_tsne(state.features)
-    state.g_quick_status = "computing TSNE done"
+    state.g_quick_status = "computing embedding done"
     data = pandas.read_csv(
         state.annflux_path,
         dtype={"label_predicted": str, "score_true": float},
@@ -499,18 +499,19 @@ def retrain_job(state: AnnFluxState):
     #
     quick_reclassification(state)
     #
-    record_features, accuracy_group, record_table = group_classification(
-        g_state.features, pandas.read_csv(g_state.annflux_path)
-    )
-    print(record_features.shape, accuracy_group, len(record_table))
-    record_table.to_csv(
-        os.path.join(g_state.working_folder, "group0_annflux.csv"), index=False
-    )
-    np.savez(
-        os.path.join(g_state.working_folder, "group0_features.npz"),
-        lastFull=record_features,
-    )
-    #
+    # TODO(restore)
+    # record_features, accuracy_group, record_table = group_classification(
+    #     g_state.features, pandas.read_csv(g_state.annflux_path)
+    # )
+    # print(record_features.shape, accuracy_group, len(record_table))
+    # record_table.to_csv(
+    #     os.path.join(g_state.working_folder, "group0_annflux.csv"), index=False
+    # )
+    # np.savez(
+    #     os.path.join(g_state.working_folder, "group0_features.npz"),
+    #     lastFull=record_features,
+    # )
+    # #
     logger.info(f"retrain_job: done - {state.trained_for_version}")
     state.trained_for_version = len(state.labeled_indices)
 
@@ -518,7 +519,8 @@ def retrain_job(state: AnnFluxState):
 @app.route("/status", methods=["POST"])
 def status():
     label_update = request.get_json(force=True)
-    auto_linear_train_idle_time = int(os.getenv("AUTO_LINEAR_TRAIN_IDLE_TIME", 18000))
+    # print(f"{label_update=}")
+    auto_linear_train_idle_time = int(os.getenv("AUTO_LINEAR_TRAIN_IDLE_TIME", 1800))
     if label_update["idleTime"] > auto_linear_train_idle_time:
         if g_state.train_thread is None or not g_state.train_thread.is_alive():
             if g_state.labeled_indices is not None:

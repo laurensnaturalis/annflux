@@ -17,11 +17,12 @@ import logging
 import os
 import time
 from collections import defaultdict
-from typing import Set, Dict, List
+from typing import Set, Dict
 
 import faiss
 import numpy as np
 import pandas
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from annflux.repository.repository import Repository
@@ -36,7 +37,7 @@ from annflux.performance.basic import (
 from annflux.tools.core import AnnFluxState
 from annflux.tools.data import canon_, color_and_label
 from annflux.tools.io import numpy_load
-from annflux.tools.mixed import remove_sys, str2bool
+from annflux.tools.mixed import remove_sys
 from annflux.training.annflux.group_classifier_cnn import classify
 
 min_prev_near_labeled_perc = 0.99  # TODO: configurable
@@ -182,7 +183,7 @@ def quick_reclassification_instance(knn_type, state):
 
     state.cache_for = result_set.entry.uid
     state.version_for_recompute = (
-        result_set.entry.uid + "_" + str(state.trained_for_version_pre)
+        result_set.entry.uid + "_" + str(state.trained_for_version_previous)
     )
 
     time_start = time.time()
@@ -312,10 +313,8 @@ def quick_reclassification_instance(knn_type, state):
         distances_ = distances_[idx_sel]
         near_labeled_indices_ = np.array(near_labeled_indices)[idx_sel].tolist()
         near_labeled_indices_.extend(test_indices)
-    predicted_test = []
-    true_test = []
     state.g_quick_status = "computing predictions"
-    make_predictions(
+    predicted_test, true_test, _ = make_predictions(
         annotations,
         data,
         indices_,
@@ -345,7 +344,7 @@ def quick_reclassification_instance(knn_type, state):
         data["most_needed"] = data["dp_most_needed"]
 
         data_ = data[data["dp_most_needed"] < data["dp_most_needed"].max()]
-        near_labeled_perc = len(data_[data["labeled"]==1]) / len(data_)
+        near_labeled_perc = len(data_[data["labeled"] == 1]) / len(data_)
 
         # counts_per_cluster = (
         #     data.groupby("dp_cluster").size().reset_index(name="counts")
@@ -381,10 +380,8 @@ def quick_reclassification_instance(knn_type, state):
             state.label_array[dp_most_needed_idx],
             unpredicted_idx,
             None,
-            test_indices,
-            None,
             knn_rank_exponent=state.knn_rank_exponent,
-            value_for_debug=1
+            value_for_debug=1,
         )
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
@@ -392,6 +389,7 @@ def quick_reclassification_instance(knn_type, state):
         print(f"{len(unpredicted_idx)=} after make_predictions")
     #
     state.g_quick_status = "computing performance"
+    print(f"{predicted_test=}, {true_test=}")
     compute_performance(predicted_test, true_test, state, annotations, data)
     state.g_quick_status = "coloring and labelling"
     class_to_color = color_and_label(
@@ -417,6 +415,7 @@ def quick_reclassification_instance(knn_type, state):
         columns=("class", "color"),
     ).to_csv(os.path.join(state.data_folder, "annflux", "class_to_color.csv"))
     state.g_quick_status = "idle"
+
 
 def compute_knn(
     features_train: np.array,
@@ -457,6 +456,7 @@ def compute_knn(
             knn_results["all_indices"],
         )
     return all_distances, all_indices
+
 
 def quick_reclassification_group(knn_type, state):
     """
@@ -556,7 +556,7 @@ def quick_reclassification_group(knn_type, state):
     near_labeled_indices_ = near_labeled_indices
 
     state.g_quick_status = "computing predictions"
-    out_predicted_test, out_true_test = make_predictions(
+    out_predicted_test, out_true_test, _ = make_predictions(
         annotations,
         data,
         indices_,
@@ -571,7 +571,7 @@ def quick_reclassification_group(knn_type, state):
     data.label_predicted = data.label_predicted.apply(lambda x_: canon_(x_))
     data.label_true = data.label_true.apply(lambda x_: canon_(x_))
     #
-    # compute_performance(predicted_test, true_test, state, annotations, data)
+    compute_performance(out_predicted_test, out_true_test, state, annotations, data)
     state.g_quick_status = "coloring and labelling"
     class_to_color = color_and_label(
         data,
@@ -613,7 +613,7 @@ def make_predictions(
     distances: np.array,
     train_labels: list[list[str]],
     data_indices: list[int],
-    test_indices: list[int],
+    test_indices: list[int] | None,
     skip_first=False,
     knn_rank_exponent=0.5,
     value_for_debug: int | None = None,
@@ -628,10 +628,8 @@ def make_predictions(
     :param distances: matrix with rows corresponding to predicted samples and columns to distances to neighbors in knn
     training set
     :param train_labels: array with labels of knn training set
-    :param org_map: maps index of (indices, distances) to original index
-    :param predicted_test_out:
+    :param data_indices: maps index of (indices, distances) to original index
     :param test_indices: test_indices in original dataset
-    :param true_test_out:
     :param skip_first: skip first neighbor for computing predictions, typically used when making predictions on labelled data
     :param knn_rank_exponent:
     :return: a list of (distance, probability) tuples for labeled non-test data
@@ -642,7 +640,8 @@ def make_predictions(
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
         org_index = data_indices[i]
         is_labeled = (
-            data.at[org_index, "uid"] in annotations and org_index not in test_indices
+            data.at[org_index, "uid"] in annotations
+            and (test_indices is None or org_index not in test_indices)  # TODO: check
         )
         probabilities = defaultdict(lambda: 0)
         # knn class histogram
@@ -705,11 +704,11 @@ def make_predictions(
                 p = np.array(list(probabilities.values()))
                 data.at[org_index, "entropy"] = -1 * (p * np.log2(p)).sum()
                 # test data
-                if org_index in test_indices and predicted_test_out is not None:
+                if test_indices is not None and org_index in test_indices:
                     test_uid = data.at[org_index, "uid"]
                     if test_uid in annotations.keys():
-                        predicted_test_out.append(max_labels)
-                        true_test_out.append(annotations[test_uid].split(","))
+                        predicted_test.append(max_labels)
+                        true_test.append(annotations[test_uid].split(","))
                 elif is_labeled:  # labelled data
                     data.at[org_index, "score_true"] = probabilities.get(
                         annotations[data.at[org_index, "uid"]], -1

@@ -39,7 +39,7 @@ def embed_and_prepare(source: AnnfluxSource, show=False, compute_performance=Fal
     working_folder = source.working_folder
     repo = Repository(os.path.join(working_folder, "datarepo"))
     resultset = repo.get(label=Resultset, tag="unseen").last()
-    print(f"embed_and_prepare: {resultset.entry.uid}")
+    print(f"embed_and_prepare: {resultset}")
     folder = resultset.path
     labels_path = os.path.join(working_folder, "labels.json")
     if os.path.exists(labels_path):
@@ -47,14 +47,14 @@ def embed_and_prepare(source: AnnfluxSource, show=False, compute_performance=Fal
             annotations = json.load(f)
     else:
         annotations = {}
-    data: pandas.DataFrame = read_table_pandas(f"{folder}/results.csv")
     extra_predictions_path = f"{folder}/predictions.csv"
     out_path = os.path.join(working_folder, "annflux.csv")
 
     acc_test = embed_and_prepare_func(
+        source,
         annotations,
         compute_performance,
-        data,
+        read_table_pandas(f"{folder}/results.csv"),
         extra_predictions_path,
         show,
         f"{folder}/last_full.npz",
@@ -70,6 +70,7 @@ def embed_and_prepare(source: AnnfluxSource, show=False, compute_performance=Fal
 
 
 def embed_and_prepare_func(
+    source,
     annotations,
     compute_performance,
     data,

@@ -64,7 +64,7 @@ def get_model_folder(
     model = repo.get(
         label=model_type,  # TODO: generalize
         tag=tag,
-    ).first()
+    ).last()
     print(f"{model=}")
     if model is None:
         tmp_dir = Path("tmp")
@@ -99,6 +99,7 @@ def train_then_features(
     train_model=True,
     model_variant="wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M",
     cache_name: str = None,
+    feature_cache: str = None, # TODO(implement)
 ) -> (np.array, np.array, Model):
     """
     Returns (features, probs) of `dataset`
@@ -159,7 +160,7 @@ def train_then_features(
                 repo.commit(
                     repo_model,
                     ancestors=[dataset],
-                    tag="trained",
+                    tag=model_variant,
                     allow_mixed_tags=True,
                 )
                 shutil.rmtree(model_out_folder)
@@ -189,10 +190,18 @@ def train_then_features(
                 f"model_{extractor.repo_model.entry.uid}_dataset_{cache_name}.zarr",
             )
             # TODO: not fool-proof
-            existing_feature_cache_path = sorted(glob.glob(os.path.join(
-                source.feature_cache_folder,
-                f"model_{extractor.repo_model.entry.uid}_dataset_stream_*.zarr",
-            )))[0]
+            existing_feature_cache_path = sorted(
+                glob.glob(
+                    os.path.join(
+                        source.feature_cache_folder,
+                        f"model_{extractor.repo_model.entry.uid}_dataset_stream_*.zarr",
+                    )
+                )
+            )
+            if len(existing_feature_cache_path) > 0:
+                existing_feature_cache_path = existing_feature_cache_path[0]
+            else:
+                existing_feature_cache_path = None
             print(f"{existing_feature_cache_path=}")
             if not os.path.exists(feature_cache_path):
                 feature_cache = zarr.create_group(store=feature_cache_path)

@@ -37,7 +37,7 @@ from urllib3.exceptions import ProtocolError
 from annflux.repo_results_to_embedding import embed_and_prepare
 from annflux.repository.model import ClipModel
 from annflux.scripts.extract_video_frames import frame_capture
-from annflux.scripts.tile_images import tile_and_save
+from annflux.scripts.tile_images import tile_and_save, link_files
 from annflux.shared import AnnfluxSource
 from annflux.tools.api_sdk import is_port_open, call_predict
 from annflux.tools.mixed import get_logger
@@ -82,7 +82,7 @@ def export_model_package(source: AnnfluxSource, out_folder: Optional[str]):
         f.write(usage)
 
 
-def execute(arg_list: list[str] | None = None, al_selection_fraction: float = 0.1):
+def execute(arg_list: list[str] | None = None, al_selection_fraction: float = 0.05):
     # Create the main parser
     parser = argparse.ArgumentParser(description="AnnFlux command", add_help=False)
     subparsers = parser.add_subparsers(dest="command")
@@ -212,6 +212,7 @@ def read_table(path: str, dtype=None):
 stream_pipeline_steps = {
     "extract_video_frames": frame_capture,
     "tile": tile_and_save,
+    "link_files": link_files,
 }
 
 
@@ -335,7 +336,7 @@ def stream(
             model_version, port, stream_process_table, table_to_predict, tmp_path
         )
     else:
-        table_to_predict["filename"] = table_to_predict.patch_path
+        table_to_predict["filename"] = table_to_predict["path"] # TODO: patch_path --> path
         features, probs, model = train_then_features(
             source,
             table_to_predict,
@@ -376,7 +377,7 @@ def stream(
         print(len(image_level))
         import numpy as np
 
-        weights = np.array(1 - image_level.label_probability**3).copy()
+        weights = np.array(1 - image_level["label_probability"] ** 3).copy()
         weights /= weights.sum()
         to_include = np.random.choice(
             image_level["original_id"],
@@ -400,6 +401,7 @@ def stream(
     ]
     # - Run 'data add'
     # TODO: make atomic operation
+    os.makedirs(source.images_folder, exist_ok=True)
     stream_process_table["date_to_project"] = None
     for r, row in data_to_add.iterrows():
         shutil.copy(row.patch_path, source.images_folder)

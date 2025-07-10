@@ -362,7 +362,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                         feature_cache = zarr.open_group(feature_cache_path)
                     cache_filenames = feature_cache.get("filenames")[start:end]
                     if cache_filenames[0] != "0":
-                        if np.all(cache_filenames == filenames[start:end]):
+                        if len(cache_filenames) == len(filenames[start:end]) and np.all(cache_filenames == filenames[start:end]):
                             cache_batch_features = feature_cache.get("features")[
                                 start:end
                             ]
@@ -414,6 +414,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                 for filename in batch:
                     try:
                         image = Image.open(filename)
+                        image.load()
                     except:  # noqa
                         print(f"Failed to read {filename}")
                         image = Image.new("RGB", (299, 299))
@@ -674,11 +675,11 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         # acc, predictions, probs, hier_probs = test(
         #     model, test_loader, test_set, unique_labels
         # )
-        print("perf", acc)
-        print(accuracy_score(predictions, test_true_vals))
-        data_test["predictions"] = predictions
-        data_test["probability"] = probs
-        # for level in range(6):
+        # print("perf", acc)
+        # print(accuracy_score(predictions, test_true_vals))
+        # data_test["predictions"] = predictions
+        # data_test["probability"] = probs
+        # # for level in range(6):
         #     data_test[f"level_{level}"] = [
         #         hier_prob.get(level)[0] if hier_prob.get(level) else None
         #         for hier_prob in hier_probs
@@ -688,7 +689,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         #         for hier_prob in hier_probs
         #     ]
 
-        data_test.to_csv(out_folder / "predicted.csv")
+        # data_test.to_csv(out_folder / "predicted.csv")
 
         self.model.config.torchscript = True
 
