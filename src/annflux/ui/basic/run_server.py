@@ -30,7 +30,6 @@ from functools import update_wrapper, wraps
 from typing import Dict, List, Optional, Tuple
 
 import flask
-import numpy as np
 import pandas
 from flask import make_response, render_template, request, send_file, Response
 from flask_httpauth import HTTPBasicAuth
@@ -49,7 +48,7 @@ from annflux.tools.data import (
     get_failed_images_path,
 )
 from annflux.tools.mixed import get_logger, str2bool, get_version
-from annflux.training.annflux.quick import quick_reclassification, group_classification
+from annflux.training.annflux.quick import quick_reclassification
 from annflux.training.tensorflow.tf_backend import linear_retraining
 
 project_root: Optional[str] = None
@@ -210,24 +209,38 @@ def data_group_get():
     """
     TODO
     """
-    annflux_data_path = os.path.join(
-        g_state.data_folder, "annflux", "group0_annflux.csv"
+    group_data_path = os.path.join(g_state.data_folder, "annflux", "group0_annflux.csv")
+    logger.info(f"annflux_data_path = {group_data_path}")
+    return (
+        send_file(
+            group_data_path,
+            mimetype="text_csv",
+            as_attachment=False,
+        )
+        if os.path.exists(group_data_path)
+        else {}
     )
-    logger.info(f"annflux_data_path = {annflux_data_path}")
-    return send_file(
-        annflux_data_path,
-        mimetype="text_csv",
-        as_attachment=False,
-    ) if os.path.exists(annflux_data_path) else {}
+
+
+group_uids = set()
+
+
+def get_group_uids() -> set[str]:
+    global group_uids
+    group_data_path = os.path.join(g_state.data_folder, "annflux", "group0_annflux.csv")
+
+    if os.path.exists(group_data_path):
+        group_uids = set(pandas.read_csv(group_data_path)["uid"])
+    return group_uids
 
 
 @app.route("/images/thumbnail/<uid>")
 def thumbnail(uid):
     """ """
-    # if uid.startswith("R"):  # TODO: hack
-    #     thumb_path = os.path.join(group_images_path, f"{uid}.jpg")
-    # else:
-    thumb_path = os.path.join(images_path, f"{uid}.jpg")
+    if uid in get_group_uids():
+        thumb_path = os.path.join(group_images_path, f"{uid}.jpg")
+    else:
+        thumb_path = os.path.join(images_path, f"{uid}.jpg")
     if not os.path.exists(thumb_path):
         print(f"Cannot find {thumb_path=}")
         failed_thumb_path = os.path.join(failed_images_path, f"{uid}.jpg")
@@ -545,7 +558,7 @@ def status():
                     len(g_state.features),
                     len(g_state.labeled_indices),
                 ),
-                logger
+                logger,
             )
         except ValueError:
             estimated_duration_s = 0
@@ -566,8 +579,13 @@ def status():
     if os.path.exists(detailed_performance_path):
         detailed_performance_ = pandas.read_csv(detailed_performance_path)
         if len(detailed_performance_) > 0:
-            num_unlabeled_certain = int(detailed_performance_.num_predicted_certain.sum())
-            perc_likely_certain = detailed_performance_.num_predicted_certain.sum() / (detailed_performance_.num_predicted_uncertain.sum() + num_unlabeled_certain)
+            num_unlabeled_certain = int(
+                detailed_performance_.num_predicted_certain.sum()
+            )
+            perc_likely_certain = detailed_performance_.num_predicted_certain.sum() / (
+                detailed_performance_.num_predicted_uncertain.sum()
+                + num_unlabeled_certain
+            )
             average_recall = detailed_performance_.recall.mean()
             average_precision = detailed_performance_.precision.mean()
 
