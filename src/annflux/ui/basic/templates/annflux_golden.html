@@ -183,6 +183,7 @@ limitations under the License.
   let lastZoomUpdate = new Date().getTime() / 1000;
   let numUpdatesActive = 0;
   let data = null;
+  let group_data = null;
   let gallery = null;
   let galleryImages = null;
   let shortcuts = new Map();
@@ -245,7 +246,9 @@ limitations under the License.
     show_data = show_data.sort(
       (a, b) => rank_modifier * (a[as_ranking_column] - b[as_ranking_column])
     );
-    console.log("drawGallery", show_data);
+    if (localStorage.getItem("debug") === "2") {
+      console.log("drawGallery", show_data);
+    }
     gallery.selectAll("div.gallery").remove();
     let galleryImageWidth = "300px";
     galleryImages = gallery
@@ -323,7 +326,6 @@ limitations under the License.
         // .style("flex-basis", "200px")
         .attr("id", "labels-" + d.uid);
     });
-    console.log("galleryImages.node().label_possible");
     // predicted (possible) labels
     try {
       galleryImages.each((d2, i) => {
@@ -570,6 +572,7 @@ limitations under the License.
 
   function altImageAction(event) {
     //TODO: re-add sound
+    logUI(gLayout);
     const img = $(`#gallery-${event.uid} img`);
     let curLayer = img.attr("data-curLayer");
     console.log("img", img, curLayer);
@@ -584,8 +587,10 @@ limitations under the License.
         curLayer = "masked";
         img.attr("src", `/images/thumbnail/${event.uid}`);
       }
-    } else if (gLayout == "tileLabel") {
+    } else if (gLayout === "tileLabel") {
       // alert(event.uid);
+      const record_id = d3.select(`#gallery-${event.uid}`).data()[0]["record_id"];
+      console.log(record_id);
       fullImageTileMap.setFilter(
         new Array([
           "record_id",
@@ -866,12 +871,16 @@ limitations under the License.
           }
           exclusivity.get(x.right).push(x.left);
         });
-        console.log("exclusivity", exclusivity);
+        if (localStorage.getItem("debug") === "2") {
+          console.log("exclusivity", exclusivity);
+        }
         //
         for (const [left, right] of exclusivity) {
           excludeDescendants(left, right, parentToChildren, exclusivity);
         }
-        console.log("exclusivity", exclusivity);
+        if (localStorage.getItem("debug") === "2") {
+          console.log("exclusivity", exclusivity);
+        }
       });
       //
 
@@ -925,11 +934,15 @@ limitations under the License.
         this.parentNode.insertBefore(t, this.nextSibling);
       });
       //
-      console.log(g_labels);
+      if (localStorage.getItem("debug") === "1") {
+        console.log(g_labels);
+      }
       let no_sys_labels = g_labels.filter(
         (label_) => label_[0].indexOf("sys:") == -1
       );
-      console.log(no_sys_labels);
+      if (localStorage.getItem("debug") === "1") {
+        console.log(no_sys_labels);
+      }
       //
       d3.select("#label_predicted")
         .selectAll("option")
@@ -1175,7 +1188,7 @@ limitations under the License.
     if (idleTimeForPost > 1000) {
       console.log(`idleTimeForPost = ${idleTimeForPost}, forceIdleTime = ${forceIdleTime}, idleTime = ${idleTime}`);
     }
-    console.log(`idleTimeForPost = ${idleTimeForPost}`);
+    // console.log(`idleTimeForPost = ${idleTimeForPost}`);
     $.post("/status", JSON.stringify({ idleTime: idleTimeForPost })).done(
       function (data) {
         $("#status").attr("title", JSON.stringify(data, null, " "));
@@ -1358,11 +1371,13 @@ limitations under the License.
 
     d3.csv("/data", function (data_p) {
       data = data_p;
-      console.log("|data|", data.length);
+      if (localStorage.getItem("debug") === "1") {
+        console.log("|data|", data.length);
+      }
 
       embeddingMap.setData(data);
       if (gLayout === "tileLabel") {
-        fullImageTileMap.setData(data);
+        fullImageTileMap.setData(data, false);
       }
 
       $("body").on("keypress", function (eventData) {
@@ -1374,12 +1389,14 @@ limitations under the License.
       });
     });
     //
-    // d3.csv("/data/group", function (data_p) {
-    //   group_data = data_p;
-    //   console.log("|group_data|", group_data.length);
-    //
-    //   fullImageEmbeddingMap.setData(group_data);
-    //   //fullImageTileMap.setData(data);
-    // });
+    d3.csv("/data/group", function (data_p) {
+      group_data = data_p;
+      if (localStorage.getItem("debug") === "1") {
+        console.log("|group_data|", group_data.length);
+      }
+
+      fullImageEmbeddingMap.setData(group_data);
+      // fullImageTileMap.setData(data);
+    });
   });
 </script>

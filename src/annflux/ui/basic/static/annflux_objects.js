@@ -33,7 +33,9 @@ function Map2D($container) {
       //TODO: check mode in known values
       mode = mode_;
     }
-    console.log("init", elementId_, elementId, mode, mode_);
+    if (localStorage.getItem("debug") === "1") {
+      console.log("init", elementId_, elementId, mode, mode_);
+    }
 
     //
     // set the dimensions and margins of the graph
@@ -82,8 +84,13 @@ function Map2D($container) {
     this.filters = filters_;
   };
 
-  this.setData = function (data) {
-    console.log("setData 2", elementId, mode);
+  this.setData = function (data, doRender) {
+    if (localStorage.getItem("debug") === "1") {
+      console.log("setData 2", elementId, mode);
+    }
+    if (doRender === undefined) {
+      doRender = true;
+    }
     if (data !== undefined) {
       this.data = data;
     } else {
@@ -93,9 +100,9 @@ function Map2D($container) {
     //
     this.xName = "e_0";
     this.yName = "e_1";
-    if (mode == "tiles") {
-      this.xName = "predicted_x";
-      this.yName = "true_x";
+    if (mode === "tiles") {
+      this.xName = "patch_x"; //"predicted_x";
+      this.yName = "patch_y"; //"true_x";
     }
     //
     this.xDomain = getDomain(this.xName, localData);
@@ -103,12 +110,14 @@ function Map2D($container) {
     //
     this.x = d3.scaleLinear().domain(this.xDomain).range([0, width]);
     this.y = d3.scaleLinear().domain(this.yDomain).range([height, 0]);
-    if (mode == "tiles") {
+    if (mode === "tiles") {
       this.x = d3.scaleLinear().domain(this.xDomain).range([0, width]);
       this.y = d3.scaleLinear().domain(this.yDomain).range([0, height]); // TODO: different aspect ratios
     }
 
-    this.render(localData, x, y, mode);
+    if (doRender) {
+      this.render(localData, x, y, mode);
+    }
     //TODO(refactor): addTimeline(data, transform, width, height);
     // console.log("setData", elementId, this.images, dots, localData.length);
     uiObject = this;
@@ -120,7 +129,7 @@ function Map2D($container) {
       })
       .on("zoom", this.handleZoom)
       .on("end", function () {
-        console.log("blorg", localData);
+        // console.log("blorg", localData);
         zoomControl(
           elementId,
           transform,
@@ -211,7 +220,9 @@ function Map2D($container) {
     if (mode == "embedding") {
       // auto suggestion
       let as_ranking_column = urlParams.get("as_ranking_column");
-      console.log("as_ranking_column", as_ranking_column);
+      if (localStorage.getItem("debug") === "2") {
+        console.log("as_ranking_column", as_ranking_column);
+      }
       if (as_ranking_column == null) {
         as_ranking_column = "most_needed";
       }
@@ -273,7 +284,9 @@ function Map2D($container) {
           0,
           show_labeled == "unlabeled" ? num_in_gallery - 1 : num_in_gallery
         );
-        console.log("show_data2", show_data2);
+        if (localStorage.getItem("debug") === "2") {
+          console.log("show_data2", show_data2);
+        }
       } else if (as_ranking_column == "high_label_entropy") {
         for (const row of data) {
           if (row.al_measure == 0 && row.in_test == 0) {
@@ -287,20 +300,23 @@ function Map2D($container) {
             show_data_test.push(row);
           }
         }
-        console.log(show_data2.length, "show_data2");
-        console.log(
-          show_data_test.length,
-          "show_data_test",
-          Math.ceil(0.1 * show_data2.length)
-        );
+        if (localStorage.getItem("debug") === "2") {
+          console.log(show_data2.length, "show_data2");
+          console.log(
+              show_data_test.length,
+              "show_data_test",
+              Math.ceil(0.1 * show_data2.length)
+          );
+        }
         show_data_test = _.sample(
           show_data_test,
           Math.ceil(0.1 * show_data2.length)
         );
-        console.log(show_data_test.length, "show_data_test");
+        if (localStorage.getItem("debug") === "1") {
+          console.log(show_data_test.length, "show_data_test");
+        }
         if (as_ranking_column != "score_true") {
           for (const row of show_data_test) {
-            console.log("test", row.uid);
             show_data2.push(row);
           }
         }
@@ -311,7 +327,9 @@ function Map2D($container) {
           .style("stroke-width", 2);
       }
       drawGallery(show_data2);
-      console.log(show_data2.length, "show_data2");
+      if (localStorage.getItem("debug") === "1") {
+        console.log(show_data2.length, "show_data2");
+      }
     }
     //
 
@@ -333,8 +351,10 @@ function Map2D($container) {
     d3.select(`#${dotsId}`).remove();
     d3.select(`#${imagesId}`).remove();
 
-    console.log("render", elementId, data.length);
-    if (mode == "embedding") {
+    if (localStorage.getItem("debug") === "1") {
+      console.log("render", elementId, data.length);
+    }
+    if (mode === "embedding") {
       dots = addDots(
         data,
         this.x,
@@ -348,7 +368,6 @@ function Map2D($container) {
         this.filters
       );
       //
-      console.log("embedding, images");
       this.images = addImages(
         data,
         this.x,
@@ -364,7 +383,7 @@ function Map2D($container) {
         50,
         2 // in embedding space
       );
-    } else if (mode == "tiles") {
+    } else if (mode === "tiles") {
       this.images = addImages(
         data,
         this.x,
@@ -378,9 +397,9 @@ function Map2D($container) {
         this.xName,
         this.yName
       );
-      console.log("blaat", this, this.images);
+      // console.log("blaat", this, this.images);
       console.log(
-        "|images|",
+        "render |tiles|",
         d3.select(`#${imagesId}`).selectAll("images").size()
       );
     }
@@ -411,8 +430,10 @@ function zoomControl(
     if (numUpdatesActive == 0) {
       numUpdatesActive++;
       setTimeout(function () {
-        console.log(gReferences);
-        console.log("zoomControl", elementId, gReferences.get(elementId));
+        if (localStorage.getItem("debug") === "2") {
+          console.log(gReferences);
+          console.log("zoomControl", elementId, gReferences.get(elementId));
+        }
         gReferences.get(elementId).render(data, x, y);
         lastZoomUpdate = now;
         numUpdatesActive--;
