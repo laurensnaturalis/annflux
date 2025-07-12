@@ -24,7 +24,6 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from annflux.algorithms.embeddings import compute_tsne, normalize_and_scale
 from annflux.algorithms.fastdpeak import fast_density_peak_clustering
 from annflux.algorithms.fastdpeak_merge import peak_merge
-from annflux.performance.basic import write_performance
 from annflux.shared import AnnfluxSource
 from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
@@ -53,13 +52,12 @@ def embed_and_prepare(source: AnnfluxSource, show=False, compute_performance=Fal
     acc_test = embed_and_prepare_func(
         source,
         annotations,
-        compute_performance,
         read_table_pandas(f"{folder}/results.csv"),
-        extra_predictions_path,
-        show,
         f"{folder}/last_full.npz",
-        out_path,
         os.path.join(working_folder, "split.json"),
+        extra_predictions_path,
+        compute_performance,
+        show=show,
     )
     # write_performance(
     #     acc_test,
@@ -70,16 +68,22 @@ def embed_and_prepare(source: AnnfluxSource, show=False, compute_performance=Fal
 
 
 def embed_and_prepare_func(
-    source,
-    annotations,
-    compute_performance,
-    data,
-    extra_predictions_path,
-    show,
+    source_or_data_state_path: AnnfluxSource | str,
+    annotations: dict[str, str],
+    data: pandas.DataFrame,
     features_path,
-    out_path,
     split_path,
+    extra_predictions_path=None,
+    compute_performance: bool = False,
+    show=False,
 ):
+    source = None
+    if isinstance(source, AnnfluxSource):
+        data_state_path = source.data_state_path
+        source = source_or_data_state_path
+    else:
+        data_state_path = source_or_data_state_path
+
     data.label_predicted = data.label_predicted.astype(str)
     data.uid = data.uid.astype(str)
     if extra_predictions_path is not None and os.path.exists(extra_predictions_path):
@@ -128,33 +132,36 @@ def embed_and_prepare_func(
     data["e_0"] = embedding[sel, 0]
     data["e_1"] = embedding[sel, 1]
     data["in_test"] = data["uid"].apply(lambda x_: int(x_ in test_uids))
-    data.to_csv(source.data_state_path, index=False)
-    fast_density_peak_clustering(source) # TODO: return data and don't save in function
-    peak_merge(source) # TODO: return data and don't save in function
-    data = pandas.read_csv(source.data_state_path)
+    data.to_csv(data_state_path, index=False)
+    if source is not None:
+        fast_density_peak_clustering(
+            source
+        )  # TODO: return data and don't save in function
+        peak_merge(source)  # TODO: return data and don't save in function
+    data = pandas.read_csv(data_state_path)
     color_and_label(data, annotations)
-    data.to_csv(source.data_state_path, index=False)
+    data.to_csv(data_state_path, index=False)
     if show:
         import matplotlib.pyplot as plt
+
         plt.scatter(embedding[sel, 0], embedding[sel, 1], c=data.score_predicted)
         plt.show()
     return acc_test
 
 
 if __name__ == "__main__":
-    annflux_path = (
-        "/home/laurens/Documents/data/ami_oh2_hour/annflux/group0_annflux.csv"
-    )
-    data = pandas.read_csv(annflux_path)
-    data["uid"] = data.group_id
-    data.score_predicted = data.score_predicted.apply(lambda x_: x_ / 100.0)
+    source_ = AnnfluxSource(sys.argv[1])
+    data_ = pandas.read_csv(source_.group_flux_data_path())
+    if "group_id" in data_: # TODO: let group classifier output the right format
+        data_["uid"] = data_.group_id
+        data_.score_predicted = data_.score_predicted.apply(lambda x_: x_ / 100.0)
+        del data_["group_id"]
     embed_and_prepare_func(
-        {},
+        source_.group_flux_data_path(),
+        json.load(open(source_.labels_path)),
+        data_,
+        source_.group_features_path(),
+        None,
+        None,
         False,
-        data,
-        None,
-        True,
-        "/home/laurens/Documents/data/ami_oh2_hour/annflux/group0_features.npz",
-        annflux_path,
-        None,
     )
