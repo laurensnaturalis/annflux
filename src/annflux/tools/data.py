@@ -26,6 +26,7 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import rgb2hex
 
 from annflux.tools.mixed import get_basic_logger
+from annflux.training.annflux.group_classifier_cnn import get_labels
 
 
 @lru_cache

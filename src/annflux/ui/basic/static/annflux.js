@@ -133,7 +133,7 @@ function filterData(
 
     //
     for ([field, operator, value] of filters) {
-        if (operator == "equals") {
+        if (operator === "equals") {
             const sizeData = show_data_start.length;
             show_data_start = show_data_start.filter((a) => a[field] == value);
             console.log(
@@ -229,19 +229,20 @@ function addImages(
         yName
     );
     let tileSizeX, tileSizeY = null;
+    let renderTiles = false;
     // console.log("show_data[xName]", show_data[xName], xName);
     if (tileSize === undefined) {
         tileSizeX = x(getSpacing(show_data, xName));
         tileSizeY = y(getSpacing(show_data, yName));
+        renderTiles = true; // TODO: this is counter-intuitive
     } else {
-        tileSizeX = (x(tileSize) - x(0)) / Math.sqrt(k);
-        tileSizeY = (y(tileSize) - y(0)) / Math.sqrt(k);
+        tileSizeX = Math.abs(x(tileSize) - x(0)) / Math.sqrt(k);
+        tileSizeY = Math.abs(y(tileSize) - y(0)) / Math.sqrt(k);
     }
     // tileSizeY = tileSizeX;
     if (localStorage.getItem("debug") === "2") {
         console.log(imagesId, "addImages", filters, tileSize, tileSizeX, tileSizeY, k, x(1) - x(0));
     }
-
     images = d3Element
         .append("g")
         .attr("id", imagesId)
@@ -253,7 +254,7 @@ function addImages(
             return x(d[xName]);
         })
         .attr("y", function (d) {
-            return y(d[yName]) * (tileSizeX / tileSizeY); //TODO: think about this
+            return y(d[yName]) * (renderTiles ? (tileSizeX / tileSizeY) : 1); //TODO: think about this
         })
         .attr("width", function (d) {
             return tileSizeX;

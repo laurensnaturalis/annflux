@@ -55,6 +55,13 @@ class AnnfluxSource(object):
     def flux_data_path(self):
         return os.path.join(self.working_folder_, "annflux.csv")
 
+    def group_flux_data_path(self, group=0):
+        return os.path.join(self.working_folder_, f"group{group}_annflux.csv")
+
+    def group_features_path(self, group=0):
+        return os.path.join(self.working_folder_, f"group{group}_features.npz")
+
+
     @property
     def stream_data_path(self):
         return os.path.join(self.working_folder_, "stream_process.csv")

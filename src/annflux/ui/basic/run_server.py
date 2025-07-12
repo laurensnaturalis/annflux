@@ -48,7 +48,7 @@ from annflux.tools.data import (
     get_failed_images_path,
 )
 from annflux.tools.mixed import get_logger, str2bool, get_version
-from annflux.training.annflux.quick import quick_reclassification
+from annflux.training.annflux.quick import quick_reclassification, group_classification
 from annflux.training.tensorflow.tf_backend import linear_retraining
 
 project_root: Optional[str] = None
@@ -513,17 +513,18 @@ def retrain_job(state: AnnFluxState):
     quick_reclassification(state)
     #
     # TODO(restore)
-    # record_features, accuracy_group, record_table = group_classification(
-    #     g_state.features, pandas.read_csv(g_state.annflux_path)
-    # )
-    # print(record_features.shape, accuracy_group, len(record_table))
-    # record_table.to_csv(
-    #     os.path.join(g_state.working_folder, "group0_annflux.csv"), index=False
-    # )
-    # np.savez(
-    #     os.path.join(g_state.working_folder, "group0_features.npz"),
-    #     lastFull=record_features,
-    # )
+    record_features, accuracy_group, record_table = group_classification(
+        g_state.features, pandas.read_csv(g_state.annflux_path)
+    )
+    print(record_features.shape, accuracy_group, len(record_table))
+    record_table.to_csv(
+        os.path.join(g_state.working_folder, "group0_annflux.csv"), index=False
+    )
+    import numpy as np
+    np.savez(
+        os.path.join(g_state.working_folder, "group0_features.npz"),
+        lastFull=record_features,
+    )
     # #
     logger.info(f"retrain_job: done - {state.trained_for_version}")
     state.trained_for_version = len(state.labeled_indices)
