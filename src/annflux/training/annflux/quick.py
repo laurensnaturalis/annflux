@@ -22,8 +22,10 @@ from typing import Set, Dict
 import faiss
 import numpy as np
 import pandas
+from numpy._typing import NDArray
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+from zarr.core.buffer import NDArrayLike
 
 from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
@@ -250,6 +252,28 @@ def quick_reclassification_instance(knn_type, state):
         labeled_indices_.extend(test_indices)
         logger.info(f"quicker_updates: labeled_indices_={len(labeled_indices_)}")
     state.g_quick_status = "predicting labeled"
+    dump_input = True
+    if dump_input:
+        import pickle
+
+        objects_to_pickle = {
+            "annotations": annotations,
+            "data": data,
+            "indices_": indices_,
+            "distances_": distances_,
+            "label_array": state.label_array,
+            "near_labeled_indices_": labeled_indices_,
+            "test_indices": test_indices,
+            "knn_rank_exponent": state.knn_rank_exponent,
+        }
+
+        # Specify the file name where you want to save the pickled objects
+        pickle_file = "make_predictions_input2.pkl"
+
+        # Pickle the dictionary and save it to a file
+        with open(pickle_file, "wb") as file:
+            pickle.dump(objects_to_pickle, file)
+    logger.info(f"make_predictions: labeled_indices_={len(labeled_indices_)}")
     distance_to_probability = make_predictions(
         annotations,
         data,
@@ -257,7 +281,7 @@ def quick_reclassification_instance(knn_type, state):
         distances_,
         state.label_array,
         labeled_indices_,
-        test_indices,
+        list(test_indices),
         skip_first=True,
         knn_rank_exponent=state.knn_rank_exponent,
     )
@@ -314,6 +338,7 @@ def quick_reclassification_instance(knn_type, state):
         near_labeled_indices_ = np.array(near_labeled_indices)[idx_sel].tolist()
         near_labeled_indices_.extend(test_indices)
     state.g_quick_status = "computing predictions"
+    logger.info(f"make_predictions: near_labeled_indices_={len(near_labeled_indices_)}")
     predicted_test, true_test, _ = make_predictions(
         annotations,
         data,
@@ -321,9 +346,30 @@ def quick_reclassification_instance(knn_type, state):
         distances_,
         state.label_array,
         near_labeled_indices_,
-        test_indices,
+        list(test_indices),
         knn_rank_exponent=state.knn_rank_exponent,
     )
+    dump_input = True
+    if dump_input:
+        import pickle
+        objects_to_pickle = {
+            "annotations": annotations,
+            "data": data,
+            "indices_": indices_,
+            "distances_": distances_,
+            "label_array": state.label_array,
+            "near_labeled_indices_": near_labeled_indices_,
+            "test_indices": test_indices,
+            "knn_rank_exponent": state.knn_rank_exponent,
+        }
+
+        # Specify the file name where you want to save the pickled objects
+        pickle_file = "make_predictions_input.pkl"
+
+        # Pickle the dictionary and save it to a file
+        with open(pickle_file, "wb") as file:
+            pickle.dump(objects_to_pickle, file)
+        print(f"Input objects have been pickled and saved to {pickle_file}")
     logger.info(f"|predicted_test|={len(predicted_test)}")
     logger.info(f"make_predictions end={time.time()}")
     data.label_predicted = data.label_predicted.apply(lambda x_: canon_(x_))
@@ -365,12 +411,13 @@ def quick_reclassification_instance(knn_type, state):
         )
     #
     # use DP cluster to predict unpredicted
-    if has_dp_cluster and len(annotations) > 0:
+    if has_dp_cluster and len(annotations) > 0 and False: # TODO(CRITICAL)
         state.g_quick_status = "computing predictions for unpredicted using DP cluster"
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
-        ].index.values
+        ].index.values.tolist()
         print(f"{len(unpredicted_idx)=} before make_predictions")
+        print(f"{len(dp_most_needed_idx)=}")
         print(f"{state.label_array[dp_most_needed_idx]=}")
         make_predictions(
             annotations,
@@ -611,7 +658,7 @@ def make_predictions(
     data: pandas.DataFrame,
     indices: np.array,
     distances: np.array,
-    train_labels: list[list[str]],
+    train_labels: NDArray,
     data_indices: list[int],
     test_indices: list[int] | None,
     skip_first=False,
@@ -639,10 +686,11 @@ def make_predictions(
     distance_to_probability: list[tuple[float, float]] = []
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
         org_index = data_indices[i]
-        is_labeled = (
-            data.at[org_index, "uid"] in annotations
-            and (test_indices is None or org_index not in test_indices)  # TODO: check
-        )
+        # is_labeled = (
+        #     data.at[org_index, "uid"] in annotations
+        #     and (test_indices is None or org_index not in test_indices)  # TODO: check
+        # )
+        is_labeled = False
         probabilities = defaultdict(lambda: 0)
         # knn class histogram
         max_mass = 0

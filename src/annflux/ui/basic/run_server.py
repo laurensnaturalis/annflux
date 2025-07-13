@@ -14,6 +14,8 @@
 import os
 import shutil
 
+from werkzeug.middleware.profiler import ProfilerMiddleware
+
 from annflux.tools.io import generate_thumbnail
 from annflux.tools.progress_learn import estimate_duration
 from annflux.tools.visualization import most_contrasting_gray, brighten_hex_color
@@ -133,6 +135,7 @@ app = flask.Flask(
     __name__,
     static_url_path=os.getenv("STATIC_URL", "/static"),
 )
+app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir="prof", restrictions=["quick.py",])
 
 
 def get_app():
