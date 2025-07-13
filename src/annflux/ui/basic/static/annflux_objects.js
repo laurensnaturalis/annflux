@@ -398,10 +398,12 @@ function Map2D($container) {
         this.yName
       );
       // console.log("blaat", this, this.images);
-      console.log(
-        "render |tiles|",
-        d3.select(`#${imagesId}`).selectAll("images").size()
-      );
+      if (localStorage.getItem("debug") === "2") {
+        console.log(
+            "render |tiles|",
+            d3.select(`#${imagesId}`).selectAll("images").size()
+        );
+      }
     }
   };
 
@@ -437,11 +439,13 @@ function zoomControl(
         gReferences.get(elementId).render(data, x, y);
         lastZoomUpdate = now;
         numUpdatesActive--;
-        console.log(
-          "update took",
-          new Date().getTime() / 1000 - now,
-          numUpdatesActive
-        );
+        if (localStorage.getItem("debug") === "2") {
+          console.log(
+              "update took",
+              new Date().getTime() / 1000 - now,
+              numUpdatesActive
+          );
+        }
       }, 0);
     }
   } else {

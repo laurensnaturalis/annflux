@@ -114,19 +114,16 @@ function filterData(
     height,
     filters,
     xName,
-    yName
+    yName,
+    spatialFilterMargin
 ) {
-    let k = 1;
-    let Tx = 1;
-    let Ty = 1;
     if (localStorage.getItem("debug") === "2") {
         console.log("filterData: transform", transform);
     }
-    if (transform !== undefined && transform) {
-        k = transform.k;
-        Tx = transform.x;
-        Ty = transform.y;
-    }
+    let hasTransform = transform !== undefined && transform;
+    const k = hasTransform ? transform.k : 1;
+    const Tx = hasTransform ? transform.x : 1;
+    const Ty = hasTransform ? transform.y : 1;
     let show_data_start = [...data];
     //
     show_data_start.sort((a, b) => a.display_order - b.display_order);
@@ -136,13 +133,15 @@ function filterData(
         if (operator === "equals") {
             const sizeData = show_data_start.length;
             show_data_start = show_data_start.filter((a) => a[field] == value);
-            console.log(
-                `|data| = ${sizeData} -> ${[field, operator, value]} -> ${
-                    show_data_start.length
-                }`
-            );
+            if (localStorage.getItem("debug") === "2") {
+                console.log(
+                    `|data| = ${sizeData} -> ${[field, operator, value]} -> ${
+                        show_data_start.length
+                    }`
+                );
+            }
         } else {
-            alert(`unkown operator ${operator}`);
+            alert(`unknown operator ${operator}`);
         }
     }
 
@@ -172,11 +171,14 @@ function filterData(
     }
     let show_data = [];
     // alert(width, height);
+    if (spatialFilterMargin === undefined) {
+        spatialFilterMargin = 0;
+    }
     for (const d of show_data_start) {
         const tX = x(d[xName]) * k + Tx;
         const tY = y(d[yName]) * k + Ty;
         // console.log(tX, tY);
-        if (tX > 0 && tX < width && tY > 0 && tY < height) {
+        if (tX > spatialFilterMargin && tX < width && tY > spatialFilterMargin && tY < height) {
             show_data.push(d);
         }
         if (show_data.length >= max_n) {
@@ -213,10 +215,12 @@ function addImages(
     numberToRender,
     tileSize
 ) {
-    if (numberToRender === undefined) {
-        numberToRender = 500;
-    }
-    const [show_data, k] = filterData(
+    numberToRender = numberToRender ?? 500;
+
+    let tileSizeX, tileSizeY = null;
+    let isTileRendering = tileSize === undefined;
+    // console.log("show_data[xName]", show_data[xName], xName);
+    let [show_data, k] = filterData(
         data,
         x,
         y,
@@ -228,17 +232,27 @@ function addImages(
         xName,
         yName
     );
-    let tileSizeX, tileSizeY = null;
-    let renderTiles = false;
-    // console.log("show_data[xName]", show_data[xName], xName);
-    if (tileSize === undefined) {
+    if (isTileRendering) {
         tileSizeX = x(getSpacing(show_data, xName));
         tileSizeY = y(getSpacing(show_data, yName));
-        renderTiles = true; // TODO: this is counter-intuitive
     } else {
         tileSizeX = Math.abs(x(tileSize) - x(0)) / Math.sqrt(k);
         tileSizeY = Math.abs(y(tileSize) - y(0)) / Math.sqrt(k);
     }
+    //
+    [show_data, k] = filterData(
+        data,
+        x,
+        y,
+        numberToRender,
+        transform,
+        width,
+        height,
+        filters,
+        xName,
+        yName,
+        isTileRendering ? -tileSizeX : 0,
+    );
     // tileSizeY = tileSizeX;
     if (localStorage.getItem("debug") === "2") {
         console.log(imagesId, "addImages", filters, tileSize, tileSizeX, tileSizeY, k, x(1) - x(0));
@@ -254,7 +268,7 @@ function addImages(
             return x(d[xName]);
         })
         .attr("y", function (d) {
-            return y(d[yName]) * (renderTiles ? (tileSizeX / tileSizeY) : 1); //TODO: think about this
+            return y(d[yName]) * (isTileRendering ? (tileSizeX / tileSizeY) : 1); //TODO: think about this
         })
         .attr("width", function (d) {
             return tileSizeX;
