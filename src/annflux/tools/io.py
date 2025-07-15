@@ -127,28 +127,26 @@ def file_hash(path):
             buf = f.read(block_size)
     return hasher.hexdigest()
 
+
 def basename_no_extension(path: str):
     return os.path.splitext(os.path.basename(path))[0]
 
-def generate_thumbnail(uid, size=(224, 224)) -> PIL.Image:
-    # Create a blank image with white background
-    image = Image.new('RGB', size, 'white')
+
+def generate_missing_thumbnail(uid, size=(224, 224)) -> PIL.Image:
+    image = Image.new("RGB", size, "white")
     draw = ImageDraw.Draw(image)
 
-    # Use a basic font
     try:
         font = ImageFont.truetype("arial.ttf", 40)
     except:
         font = ImageFont.load_default()
 
-    # Calculate the position to center the text
     bbox = draw.textbbox((0, 0), uid, font=font)
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
     x = (size[0] - text_width) / 2
     y = (size[1] - text_height) / 2
 
-    # Draw the text
-    draw.text((x, y), uid, font=font, fill='black')
+    draw.text((x, y), uid, font=font, fill="black")
 
     return image

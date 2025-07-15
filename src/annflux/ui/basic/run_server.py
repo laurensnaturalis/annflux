@@ -11,12 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import csv
 import os
 import shutil
 
-from werkzeug.middleware.profiler import ProfilerMiddleware
+from PIL import Image
+from pyarrow._fs import LocalFileSystem
 
-from annflux.tools.io import generate_thumbnail
+from annflux.tools.io import generate_missing_thumbnail
 from annflux.tools.progress_learn import estimate_duration
 from annflux.tools.visualization import most_contrasting_gray, brighten_hex_color
 
@@ -48,13 +50,16 @@ from annflux.tools.data import (
     remove_uids_from_double_check,
     get_group_images_path,
     get_failed_images_path,
+    get_thumb_path,
 )
 from annflux.tools.mixed import get_logger, str2bool, get_version
+from annflux.tools.io import file_hash
 from annflux.training.annflux.quick import quick_reclassification, group_classification
 from annflux.training.tensorflow.tf_backend import linear_retraining
 
 project_root: Optional[str] = None
 images_path: Optional[str] = None
+thumb_path_: Optional[str] = None
 failed_images_path: Optional[str] = None
 group_images_path: Optional[str] = None
 working_folder: Optional[str] = None
@@ -82,7 +87,8 @@ def _init():
         label_definitions_path, \
         g_layout, \
         group_images_path, \
-        failed_images_path
+        failed_images_path, \
+        thumb_path_
 
     global logger
     project_root = os.getenv("PROJECT_ROOT", None)
@@ -90,6 +96,7 @@ def _init():
         raise RuntimeError("You should set PROJECT_ROOT environment variable")
     else:
         images_path = get_images_path()
+        thumb_path_ = get_thumb_path()
         group_images_path = get_group_images_path()
         failed_images_path = get_failed_images_path()
         working_folder = os.path.join(project_root, "annflux")
@@ -191,6 +198,45 @@ def annflux_endpoint():
     )
 
 
+def to_js_arrow(annflux_data_path, annflux_pq_cache_path):
+    from pyarrow import csv as pyarrow_csv
+    import pyarrow as pa
+    # table = csv.read_csv(annflux_data_path)
+    # local = LocalFileSystem()
+    # with local.open_output_stream(annflux_pq_cache_path) as file:
+    #     with pa.RecordBatchStreamWriter(file, table.schema) as writer:
+    #         writer.write_table(table, 10000)
+
+    # Open the CSV file and prepare to write to Arrow file
+    with open(annflux_data_path, mode="r") as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+        table_for_schema = pyarrow_csv.read_csv(annflux_data_path)
+
+        # Open a RecordBatchStreamWriter for the Arrow file
+        with pa.OSFile(annflux_pq_cache_path, "wb") as arrow_file:
+            with pa.ipc.RecordBatchStreamWriter(arrow_file, table_for_schema.schema) as writer:
+                batch = []
+                for row in csv_reader:
+                    # Convert each row to match the schema
+                    batch.append(
+                        {
+                            "id": int(row["id"]),
+                            "name": row["name"],
+                            "age": int(row["age"]),
+                        }
+                    )
+
+                    # Optionally, write batches of records at a time
+                    if len(batch) >= 10000:
+                        record_batch = pa.RecordBatch.from_pylist(batch, schema=table_for_schema.schema)
+                        writer.write_batch(record_batch)
+                        batch = []
+
+                # Write any remaining records in the batch
+                if batch:
+                    record_batch = pa.RecordBatch.from_pylist(batch, schema=schema)
+                    writer.write_batch(record_batch)
+
 @app.route("/data")
 @nocache
 def data_get():
@@ -198,10 +244,20 @@ def data_get():
     TODO
     """
     annflux_data_path = os.path.join(g_state.data_folder, "annflux", "annflux.csv")
-    logger.info(f"annflux_data_path = {annflux_data_path}")
+    # time_start = time.time()
+    # hash_ = file_hash(annflux_data_path)
+    # print(f"{annflux_data_path} took {(time.time() - time_start) * 1000} ms")
+    # annflux_pq_cache_path = os.path.join(
+    #     g_state.data_folder, "annflux", f"annflux_{hash_}.arrow"
+    # )
+    #
+    # if not os.path.exists(annflux_pq_cache_path):
+    #     to_js_arrow(annflux_data_path, annflux_pq_cache_path)
+    #
+    # logger.info(f"annflux_data_path = {annflux_data_path}")
     return send_file(
         annflux_data_path,
-        mimetype="text_csv",
+        mimetype="text/csv",
         as_attachment=False,
     )
 
@@ -241,15 +297,21 @@ def get_group_uids() -> set[str]:
 def thumbnail(uid):
     """ """
     if uid in get_group_uids():
-        thumb_path = os.path.join(group_images_path, f"{uid}.jpg")
+        image_path = os.path.join(group_images_path, f"{uid}.jpg")
     else:
-        thumb_path = os.path.join(images_path, f"{uid}.jpg")
-    if not os.path.exists(thumb_path):
-        print(f"Cannot find {thumb_path=}")
+        image_path = os.path.join(images_path, f"{uid}.jpg")
+    # TODO: this puts both instance and group thumbs in one folder
+    os.makedirs(thumb_path_, exist_ok=True)
+    thumb_path = os.path.join(thumb_path_, f"{uid}.jpg")
+    if not os.path.exists(image_path):
         failed_thumb_path = os.path.join(failed_images_path, f"{uid}.jpg")
         if not os.path.exists(failed_thumb_path):
-            generate_thumbnail(uid).save(failed_thumb_path)
+            generate_missing_thumbnail(uid).save(failed_thumb_path)
         thumb_path = failed_thumb_path
+    else:
+        with Image.open(image_path) as img:
+            img.thumbnail((256, 256))  # TODO: configurable
+            img.save(thumb_path)
 
     return send_file(thumb_path, mimetype="image/jpg", as_attachment=False)
 
@@ -524,6 +586,7 @@ def retrain_job(state: AnnFluxState):
         os.path.join(g_state.working_folder, "group0_annflux.csv"), index=False
     )
     import numpy as np
+
     np.savez(
         os.path.join(g_state.working_folder, "group0_features.npz"),
         lastFull=record_features,
