@@ -129,7 +129,6 @@ function Map2D($container) {
       })
       .on("zoom", this.handleZoom)
       .on("end", function () {
-        // console.log("blorg", localData);
         zoomControl(
           elementId,
           transform,
@@ -137,7 +136,6 @@ function Map2D($container) {
           numUpdatesActive,
           localData
         );
-        console.log("zoom this", this);
         this.prevTransform = transform;
       });
 
@@ -439,7 +437,7 @@ function zoomControl(
         gReferences.get(elementId).render(data, x, y);
         lastZoomUpdate = now;
         numUpdatesActive--;
-        if (localStorage.getItem("debug") === "2") {
+        if (localStorage.getItem("debug") === "1") {
           console.log(
               "update took",
               new Date().getTime() / 1000 - now,

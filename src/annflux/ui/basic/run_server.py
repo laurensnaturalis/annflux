@@ -135,7 +135,7 @@ app = flask.Flask(
     __name__,
     static_url_path=os.getenv("STATIC_URL", "/static"),
 )
-app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir="prof", restrictions=["quick.py",])
+# app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir="prof") #, restrictions="^(?!quick\.py$).*$")
 
 
 def get_app():
@@ -388,7 +388,7 @@ def label():
         j_doublecheck = {"checked": []}
     is_group = False
     for uid in label_update:
-        is_group |= uid.startswith("R")  # TODO
+        # is_group |= uid.startswith("R")  # TODO
         if uid in j_labels:
             print(f"Adding {uid} to double check")
             j_doublecheck["checked"].append(uid)
