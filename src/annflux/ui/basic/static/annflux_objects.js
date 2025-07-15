@@ -426,7 +426,7 @@ function zoomControl(
   }
 
   const now = new Date().getTime() / 1000;
-  if (now - lastZoomUpdate > 0.1) {
+  if (now - lastZoomUpdate > 0.5) {
     if (numUpdatesActive == 0) {
       numUpdatesActive++;
       setTimeout(function () {

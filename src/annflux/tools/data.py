@@ -265,6 +265,13 @@ def get_images_path() -> str:
     """
     return os.path.join(get_project_root(), "images")
 
+def get_thumb_path() -> str:
+    """
+    Get default path for thumbnails
+    :return:
+    """
+    return os.path.join(get_project_root(), "thumbnails")
+
 
 def get_group_images_path() -> str:
     """

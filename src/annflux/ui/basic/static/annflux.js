@@ -126,9 +126,6 @@ function filterData(
     const Ty = hasTransform ? transform.y : 1;
     let show_data_start = [...data];
     //
-    show_data_start.sort((a, b) => a.display_order - b.display_order);
-
-    //
     for ([field, operator, value] of filters) {
         if (operator === "equals") {
             const sizeData = show_data_start.length;
@@ -562,3 +559,18 @@ const mapHtml = `<div id="my_dataviz" tabindex="0"></div>
           <td><span id="package_version"></span></td>
         </tr>
       </table></div>`;
+
+
+async function loadParquetFile(url) {
+    const response = await fetch(url);
+    const reader = await Arrow.RecordBatchReader.from(response);
+    await reader.open();
+    let data = new Arrow.Table(reader.schema);
+    for await (const recordBatch of reader) {
+        data = data.concat(recordBatch);
+    }
+    console.log(data.length);
+
+    return data;
+}
+
