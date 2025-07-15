@@ -17,7 +17,7 @@ import logging
 import os
 import time
 from collections import defaultdict
-from typing import Set, Dict
+from typing import Set, Dict, Any, Tuple
 
 import faiss
 import numpy as np
@@ -25,7 +25,6 @@ import pandas
 from numpy._typing import NDArray
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from zarr.core.buffer import NDArrayLike
 
 from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
@@ -68,7 +67,7 @@ def quick_reclassification_instance(knn_type, state):
     folder = result_set.path
     data = pandas.read_csv(
         os.path.join(state.data_folder, "annflux", "annflux.csv"),
-        dtype={"label_predicted": str, "score_true": float, "uid": str},
+        dtype={"label_predicted": str, "score_true": float, "uid": str, "score_possible": str},
     )
     data.reset_index(drop=True, inplace=True)
     logger.info(f"instant_reclassification 2={time.time() - start_time}")
@@ -252,7 +251,7 @@ def quick_reclassification_instance(knn_type, state):
         labeled_indices_.extend(test_indices)
         logger.info(f"quicker_updates: labeled_indices_={len(labeled_indices_)}")
     state.g_quick_status = "predicting labeled"
-    dump_input = True
+    dump_input = False
     if dump_input:
         import pickle
 
@@ -349,9 +348,9 @@ def quick_reclassification_instance(knn_type, state):
         list(test_indices),
         knn_rank_exponent=state.knn_rank_exponent,
     )
-    dump_input = True
     if dump_input:
         import pickle
+
         objects_to_pickle = {
             "annotations": annotations,
             "data": data,
@@ -411,7 +410,7 @@ def quick_reclassification_instance(knn_type, state):
         )
     #
     # use DP cluster to predict unpredicted
-    if has_dp_cluster and len(annotations) > 0 and False: # TODO(CRITICAL)
+    if has_dp_cluster and len(annotations) > 0 and False:  # TODO(CRITICAL)
         state.g_quick_status = "computing predictions for unpredicted using DP cluster"
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
@@ -684,10 +683,22 @@ def make_predictions(
     predicted_test = []
     true_test = []
     distance_to_probability: list[tuple[float, float]] = []
+    update: dict[str, list[Tuple[int, Any]]] = {}  # key -> [(data_index, value), ...]
+    for key in [
+        "score_possible",
+        "label_possible",
+        "label_predicted",
+        "score_predicted",
+        "scores_predicted",
+        "entropy",
+        "score_true",
+    ]:
+        update[key] = []
+
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
         org_index = data_indices[i]
         # is_labeled = (
-        #     data.at[org_index, "uid"] in annotations
+        #     update["uid"][org_index] in annotations
         #     and (test_indices is None or org_index not in test_indices)  # TODO: check
         # )
         is_labeled = False
@@ -707,7 +718,7 @@ def make_predictions(
                     probabilities[label_] += 1 / distance_weight
                     # get data for estimating relation between distance and probability
                     if is_labeled:
-                        true_labels = annotations[data.at[org_index, "uid"]].split(",")
+                        true_labels = annotations[update["uid"][org_index]].split(",")
                         for label2_ in probabilities:
                             if label2_ in true_labels:
                                 running_prob = (1 / distance_weight) / (
@@ -736,33 +747,62 @@ def make_predictions(
                 )
                 if 0.01 < prob_ < 0.50
             ]
-            data.at[org_index, "score_possible"] = ",".join(
-                [f"{probabilities[label_]:.2f}" for label_ in possible_labels]
+            update["score_possible"].append(
+                (
+                    org_index,
+                    ",".join(
+                        [f"{probabilities[label_]:.2f}" for label_ in possible_labels]
+                    ),
+                )
             )
-            data.at[org_index, "label_possible"] = ",".join(possible_labels)
+            update["label_possible"].append((org_index, ",".join(possible_labels)))
             if len(max_labels) > 0:
-                data.at[org_index, "label_predicted"] = ",".join(max_labels)
-                data.at[org_index, "score_predicted"] = min(
-                    [probabilities[label_] for label_ in max_labels]
+                update["label_predicted"].append((org_index, ",".join(max_labels)))
+                update["score_predicted"].append(
+                    (org_index, min([probabilities[label_] for label_ in max_labels]))
                 )  # TODO
-                data.at[org_index, "scores_predicted"] = ",".join(
-                    [f"{probabilities[label_]:.2f}" for label_ in max_labels]
+                update["scores_predicted"].append(
+                    (
+                        org_index,
+                        ",".join(
+                            [f"{probabilities[label_]:.2f}" for label_ in max_labels]
+                        ),
+                    )
                 )
                 # entropy
                 p = np.array(list(probabilities.values()))
-                data.at[org_index, "entropy"] = -1 * (p * np.log2(p)).sum()
+                update["entropy"].append((org_index, -1 * (p * np.log2(p)).sum()))
                 # test data
                 if test_indices is not None and org_index in test_indices:
-                    test_uid = data.at[org_index, "uid"]
+                    test_uid = data.at[org_index, "uid"]  # TODO(opt): cache
                     if test_uid in annotations.keys():
                         predicted_test.append(max_labels)
                         true_test.append(annotations[test_uid].split(","))
                 elif is_labeled:  # labelled data
-                    data.at[org_index, "score_true"] = probabilities.get(
-                        annotations[data.at[org_index, "uid"]], -1
+                    update["score_true"].append(
+                        (
+                            org_index,
+                            probabilities.get(
+                                annotations[data.at[org_index, "uid"]], -1
+                            ),
+                        )
                     )
             else:
-                data.at[org_index, "label_predicted"] = None
-                data.at[org_index, "score_predicted"] = 0
-                data.at[org_index, "scores_predicted"] = None
+                update["label_predicted"].append((org_index, None))
+                update["score_predicted"].append((org_index, 0))
+                update["scores_predicted"].append((org_index, None))
+    #
+    for key in update:
+        update_for_key = update[key]
+        if len(update_for_key) == 0 or key not in data.columns:
+            continue
+        update_for_key = sorted(update_for_key, key=lambda t_: t_[0])
+        indices, values = zip(*update_for_key)
+        print(f"Updating {key} with {len(indices)} indices")
+        print(values[:10])
+        print(indices[:10])
+        current_values = data[key].values
+        current_values[np.array(indices)] = values
+        data[key] = current_values
+
     return predicted_test, true_test, distance_to_probability

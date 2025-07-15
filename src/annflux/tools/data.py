@@ -212,7 +212,7 @@ def color_and_label(
             data_to_update.incorrect_score.max() - data_to_update.incorrect_score
         )
     #
-    if "record_id" in data.columns:
+    if "record_id" in data.columns and False: # TODO(fix): use group data?
         record_ids = data.record_id.unique()
         has_records = len(record_ids) < len(data)
         if has_records:

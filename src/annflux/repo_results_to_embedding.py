@@ -77,13 +77,16 @@ def embed_and_prepare_func(
     compute_performance: bool = False,
     show=False,
 ):
-    source = None
-    if isinstance(source, AnnfluxSource):
-        data_state_path = source.data_state_path
+    source: AnnfluxSource | None = None
+    print(f"{type(source)=}")
+    if isinstance(source_or_data_state_path, AnnfluxSource):
+        print("a")
         source = source_or_data_state_path
+        data_state_path = source.data_state_path
     else:
+        print("b")
         data_state_path = source_or_data_state_path
-
+    print(f"{type(data_state_path)=}")
     data.label_predicted = data.label_predicted.astype(str)
     data.uid = data.uid.astype(str)
     if extra_predictions_path is not None and os.path.exists(extra_predictions_path):

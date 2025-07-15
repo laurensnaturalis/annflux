@@ -1,6 +1,7 @@
 import os
 import itertools
 import sys
+from collections import Counter
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -16,6 +17,7 @@ from tqdm import tqdm
 
 from annflux.repository.resultset import Resultset
 from annflux.shared import AnnfluxSource
+from annflux.tools.io import basename_no_extension
 
 
 def labels_to_matrix(all_labels, name_to_index, t, true_labels):
@@ -32,9 +34,19 @@ def classify_path(
     features = np.load(features_path)["lastFull"]
     patch_data = pandas.read_csv(annflux_path)
     os.makedirs(feature_image_out_folder, exist_ok=True)
+    if not os.path.exists(group_data_path):
+        uids = [
+            basename_no_extension(x_)
+            for x_ in os.listdir("/mnt/big/indeed/legasea_big/images_group")
+        ]  # TODO
+        label_true = [
+            None,
+        ] * len(uids)
+        t = pandas.DataFrame({"uid": uids, "label_true": label_true})
+        t.to_csv(group_data_path, index=False)
     group_data = pandas.read_csv(group_data_path)
     record_to_label = dict(zip(group_data.uid, group_data.label_true))
-    return classify(features, patch_data, feature_image_out_folder, record_to_label)
+    return classify(features, patch_data, feature_image_out_folder, record_to_label, num_epochs=30)
 
 
 def make_feature_image_advanced(features, image_dim, record_instance_data, min_value):
@@ -210,7 +222,7 @@ def classify(
 
     out_table = pandas.DataFrame(
         {
-            "group_id": group_ids,
+            "uid": group_ids,
             "label_predicted": [
                 index_to_grouped_label[i_] for i_ in np.argmax(predictions, axis=1)
             ],
@@ -276,7 +288,7 @@ class InMemoryDataset(Dataset):
 
 
 def train_pytorch(
-    images, labels: list[int], num_epochs=10
+    images, labels: list[int], num_epochs=10, min_number_of_examples=4
 ) -> (NDArray, float, NDArray):
     """
     return features, accuracy, probability vectors
@@ -292,10 +304,24 @@ def train_pytorch(
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     )
-    X = images
-    y = labels
+    print(f"{len(images)} images")
+    X = np.stack(images)
+    y = np.array(labels)
+    print(Counter(labels))
+    ignore = [
+        t_[0] for t_ in Counter(labels).most_common() if t_[1] < min_number_of_examples
+    ]
+    sel_ = [x_ not in set(ignore) for x_ in y]
+    print(f"{len(sel_)=}, {sel_[:10]}")
+    X_sufficient_labeled = X[sel_]
+    y_sufficient_labeled = y[sel_]
+    print(f"{len(X_sufficient_labeled)=}, {len(y_sufficient_labeled)=}")
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.33, random_state=42, stratify=labels
+        X_sufficient_labeled,
+        y_sufficient_labeled,
+        test_size=0.33,
+        random_state=42,
+        stratify=np.array(labels)[sel_],
     )
 
     train_loader = DataLoader(
@@ -388,5 +414,6 @@ if __name__ == "__main__":
         feature_image_out_folder=os.path.join(source_.folder, "group_feature_images"),
         group_data_path=source_.group_flux_data_path(),
     )
+    print(f"{accuracy=}")
     np.savez(source_.group_features_path(), lastFull=features)
     out_table.to_csv(source_.group_flux_data_path())
