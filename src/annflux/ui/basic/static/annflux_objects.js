@@ -27,7 +27,7 @@ function Map2D($container) {
     elementId = elementId_;
 
     this.goldenContainer = goldenContainer;
-    if (mode_ == undefined) {
+    if (mode_ === undefined) {
       mode = "embedding";
     } else {
       //TODO: check mode in known values
@@ -86,7 +86,7 @@ function Map2D($container) {
 
   this.setData = function (data, doRender) {
     if (localStorage.getItem("debug") === "1") {
-      console.log("setData 2", elementId, mode);
+      console.log("setData 2", elementId, mode, doRender);
     }
     if (doRender === undefined) {
       doRender = true;
@@ -275,8 +275,9 @@ function Map2D($container) {
         }
         const rank_modifier = urlParams.get("invert_ranking") == "on" ? -1 : +1;
         show_data2 = show_data2.sort(
-          (a, b) =>
-            rank_modifier * (a[as_ranking_column] - b[as_ranking_column])
+          (a, b) => {
+            return rank_modifier * (Number(a[as_ranking_column]) - Number(b[as_ranking_column]))
+          }
         );
         show_data2 = show_data2.slice(
           0,
@@ -350,7 +351,7 @@ function Map2D($container) {
     d3.select(`#${imagesId}`).remove();
 
     if (localStorage.getItem("debug") === "1") {
-      console.log("render", elementId, data.length);
+      console.log("render", elementId, data.length, mode);
     }
     if (mode === "embedding") {
       dots = addDots(
@@ -381,7 +382,7 @@ function Map2D($container) {
         50,
         2 // in embedding space
       );
-    } else if (mode === "tiles") {
+    } else if (mode === "tiles" || mode === "fullImage") {
       this.images = addImages(
         data,
         this.x,

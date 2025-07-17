@@ -152,3 +152,57 @@ var partLabelConfig = {
     },
   ],
 };
+
+const originalImageLabelConfig = {
+  content: [
+    {
+      type: "row",
+      content: [
+        {
+          type: "column",
+          content: [
+            {
+              type: "component",
+              componentName: "Map",
+              componentState: { label: "A" },
+              width: "30",
+            },
+            {
+              type: "component",
+              componentName: "Control",
+              componentState: { label: "D" },
+              height: 30,
+            },
+          ],
+        },
+        {
+          type: "column",
+          content: [
+            {
+              type: "component",
+              componentName: "Labels",
+              componentState: { label: "B" },
+              height: 10,
+            },
+            {
+              type: "component",
+              componentName: "Gallery",
+              componentState: { label: "C" },
+            },
+          ],
+        },
+        {
+          type: "column",
+          content: [
+            {
+              type: "component",
+              componentName: "FullImage",
+              componentState: { label: "E" },
+              height: 50
+            }
+          ],
+        },
+      ],
+    },
+  ],
+}

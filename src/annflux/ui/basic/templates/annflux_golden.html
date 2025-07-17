@@ -14,6 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <!DOCTYPE html>
+<script type="module">
+    import {asyncBufferFromUrl, parquetReadObjects} from '/static/hyparquet/index.js';
+
+    console.log(asyncBufferFromUrl);
+    window.asyncBufferFromUrl = asyncBufferFromUrl;
+    window.parquetReadObjects = parquetReadObjects;
+</script>
 <script src="https://d3js.org/d3.v4.js"></script>
 <script
         src="https://code.jquery.com/jquery-3.7.1.min.js"
@@ -25,8 +32,8 @@ limitations under the License.
         type="text/javascript"
         src="https://golden-layout.com/files/latest/js/goldenlayout.min.js"
 ></script>
-<script src="https://cdn.jsdelivr.net/npm/apache-arrow@21.0.0/Arrow.es2015.min.js"
-        integrity="sha256-pP8gMuFx0vk/FiUgLOzdAJB05W6QMXuF5UoEtLZVV2o=" crossorigin="anonymous"></script>
+
+
 <script type="text/javascript" src="/static/annflux.js"></script>
 <script type="text/javascript" src="/static/annflux_layout.js"></script>
 <script type="text/javascript" src="/static/annflux_objects.js"></script>
@@ -45,6 +52,66 @@ limitations under the License.
 <link type="text/css" rel="stylesheet" href="/labels/css"/>
 
 <body>
+<div id="help" style="position: fixed; max-width: 60%; background-color: #333333cc; display: none; z-index:100">
+    <div id="annflux_title">
+        <span style="color:rgb(134, 218, 25)" class="title_caps">IN</span>teractive <span
+            style="color:rgb(230, 226, 16)" class="title_caps">D</span>ata <span style="color:rgb(163, 44, 147)"
+                                                                                 class="title_caps">E</span>xploration
+        and <span style="color:rgb(43, 119, 170)" class="title_caps">E</span>nrichment <span
+            style="color:rgb(211, 46, 17)" class="title_caps">D</span>evice
+    </div>
+    <table>
+        <tr>
+            <td width="16%"><b>Map</b></td>
+            <td width="16%"></td>
+            <td width="16%"><b>Gallery</b></td>
+            <td width="16%"></td>
+            <td width="16%"><b>General</b></td>
+            <td width="16%"></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Mouse scroll</td>
+            <td><i>Zoom</i></td>
+            <td>Click</td>
+            <td><i>Select single image</i></td>
+            <td>?</td>
+            <td><i>Toggle this help screen</i></td>
+        </tr>
+        <tr>
+            <td>Click & drag</td>
+            <td><i>Pan</i></td>
+            <td>Shift-click</td>
+            <td><i>Select multiple images</i></td>
+            <td></td>
+            <td><i></i></td>
+        </tr>
+        <tr>
+            <td>Ctrl+Click & drag</td>
+            <td><i>Select images</i></td>
+            <td>Label shortcuts (hover over labels on top)</td>
+            <td><i>Label by keyboard</i></td>
+            <td></td>
+            <td><i></i></td>
+        </tr>
+        <tr>
+            <td>i</td>
+            <td><i>disable thumbnails</i></td>
+            <td>Ctrl+click <span class="inline-help" title="the labels suggested by the tool">possible</span> label</td>
+            <td><i>Make label <span class="inline-help" title="whether the label applies is unsure">undetermined</span></i>
+            </td>
+            <td>Version</td>
+            <td><span id="package_version"></span></td>
+        </tr>
+    </table>
+</div>
 <div id="layoutContainer"></div>
 </body>
 <script>
@@ -62,15 +129,13 @@ limitations under the License.
             ["partLabel", partLabelConfig],
             ["tileLabel", partLabelConfig],
             ["label", labelConfig],
+            ["originalImageLabel", originalImageLabelConfig],
         ]).get(gLayout);
         console.log("layoutDef", layoutDef);
         myLayout = new GoldenLayout(layoutDef);
     }
 
     localStorage.setItem("savedLayout", gLayout);
-
-    function closeFullscreen() {
-    }
 
     // myLayout = new GoldenLayout(labelConfig);
     let mapContainer = null;
@@ -150,9 +215,7 @@ limitations under the License.
             container
                 .getElement()
                 .html(
-                    gLayout == "partLabel"
-                        ? `<div id="fullImageWrapper" class="img-overlay-wrap"><img src='something' id="fullImage"/></div>`
-                        : `<div id="fullImageTiled" tabindex="0"></div>`
+                    `<div id="fullImageTiled" tabindex="0"></div>`
                 );
         }
     });
@@ -299,15 +362,15 @@ limitations under the License.
         }
 
         galleryImages.each((d2, i) => {
-            let labelsFor = (
-                d2.labeled == 0 ? d2.label_predicted : d2.label_true
-            ).split(",");
+            let labelsFor = ((
+                Number(d2.labeled) == 0 ? d2.label_predicted : d2.label_true
+            ) ?? "").split(",");
             if (labelsFromStorage && d2.uid in labelsFromStorage) {
                 labelsFor = labelsFromStorage[d2.uid].split(",");
             }
             createQuickLabel(
                 d2.uid,
-                d2.labeled == 0 ? "quick_label_predicted" : "quick_label_true",
+                Number(d2.labeled) == 0 ? "quick_label_predicted" : "quick_label_true",
                 labelsFor,
                 true
             );
@@ -509,7 +572,7 @@ limitations under the License.
         //
         $(".label_panel").css("font-weight", "");
         for (const uid of gallerySelection) {
-            let labelString = d3.select("#gallery-label-" + uid).attr("data");
+            let labelString = d3.select("#gallery-label-" + uid).attr("data") ?? "";
             if (labelString == "n/a") {
                 labelString = "";
             }
@@ -592,14 +655,22 @@ limitations under the License.
                 img.attr("src", `/images/thumbnail/${event.uid}`);
             }
         } else if (gLayout === "tileLabel") {
-            // alert(event.uid);
             const record_id = d3.select(`#gallery-${event.uid}`).data()[0]["record_id"];
             console.log(record_id);
             fullImageTileMap.setFilter(
                 new Array([
                     "record_id",
                     "equals",
-                    // d3.select(`#gallery-${event.uid}`).data()[0]["record_id"],
+                    d3.select(`#gallery-${event.uid}`).data()[0]["record_id"],
+                ])
+            );
+            fullImageTileMap.setData();
+            console.log("altImageAction", img);
+        } else if (gLayout === "originalImageLabel") {
+            fullImageTileMap.setFilter(
+                new Array([
+                    "uid",
+                    "equals",
                     event.uid,
                 ])
             );
@@ -623,10 +694,11 @@ limitations under the License.
     }
 
     function labelInGallery(uid, selectedLabel, multipleSelected, event) {
-        let labelString = d3.select("#gallery-label-" + uid).attr("data");
-        if (labelString == "n/a") {
+        let labelString = d3.select("#gallery-label-" + uid).attr("data") ?? "";
+        if (labelString === "n/a") {
             labelString = "";
         }
+        let undetermined;
         if (event === undefined) {
             undetermined = false;
         } else {
@@ -1351,61 +1423,81 @@ limitations under the License.
 
 <script type="module">
     myLayout.on("initialised", function () {
-        for (var container of [
-            mapContainer,
-            labelContainer,
-            galleryContainer,
-            fullImageContainer,
-            controlContainer,
-        ]) {
-            if (container) {
-                container.on("resize", saveState);
+            for (const container of [
+                mapContainer,
+                labelContainer,
+                galleryContainer,
+                fullImageContainer,
+                controlContainer,
+            ]) {
+                if (container) {
+                    container.on("resize", saveState);
+                }
             }
-        }
 
-        const embeddingMap = new Map2D();
-        embeddingMap.init(mapContainer, "#my_dataviz");
-        logUI(gLayout);
-        if (gLayout === "tileLabel") {
-            fullImageTileMap = new Map2D();
-            fullImageTileMap.init(mapContainer, "#fullImageTiled", "tiles"); //TODO
-            fullImageEmbeddingMap = new Map2D();
-            fullImageEmbeddingMap.init(embeddingMapContainer, "#fullImageMap");
-        }
-
-        d3.csv("/data", function (data_p) {
-        // loadParquetFile('/data').then(data_p => {
-            data = data_p;
-            if (localStorage.getItem("debug") === "1") {
-                console.log("|data|", data.length);
-            }
-            data.sort((a, b) => a.display_order - b.display_order);
-            embeddingMap.setData(data);
+            const embeddingMap = new Map2D();
+            embeddingMap.init(mapContainer, "#my_dataviz");
+            logUI(gLayout);
             if (gLayout === "tileLabel") {
-                fullImageTileMap.setData(data, false);
+                fullImageTileMap = new Map2D();
+                fullImageTileMap.init(mapContainer, "#fullImageTiled", "tiles"); //TODO
+                fullImageEmbeddingMap = new Map2D();
+                fullImageEmbeddingMap.init(embeddingMapContainer, "#fullImageMap");
+
+            } else if (gLayout === "originalImageLabel") {
+                fullImageTileMap = new Map2D();
+                fullImageTileMap.init(mapContainer, "#fullImageTiled", "fullImage");
+
             }
 
-            $("body").on("keypress", function (eventData) {
-                const key = eventData.originalEvent.key;
-                if (key === "?") {
-                    // alert("gg");
-                    $("#help").toggle();
+            async function loadParquetFile(url) {
+                const now = new Date().getTime() / 1000;
+                const file = await window.asyncBufferFromUrl({url});
+                const now2 = new Date().getTime() / 1000;
+                const data_ = await window.parquetReadObjects({
+                    file
+                })
+                console.log("parquetReadObjects took", new Date().getTime() / 1000 - now2);
+                console.log("loadParquetFile took", new Date().getTime() / 1000 - now);
+                return data_;
+            }
+
+            // d3.csv("/data", function (data_p) {
+            loadParquetFile('/data').then(data_p => {
+                data = data_p;
+                if (localStorage.getItem("debug") === "1") {
+                    console.log("|data|", data.length);
+                }
+                data.sort((a, b) => Number(a.display_order) - Number(b.display_order));
+                embeddingMap.setData(data);
+                if (gLayout === "tileLabel" || gLayout === "originalImageLabel") {
+                    fullImageTileMap.setData(data, false);
+                }
+
+                $("body").on("keypress", function (eventData) {
+                    const key = eventData.originalEvent.key;
+                    if (key === "?") {
+                        // alert("gg");
+                        $("#help").toggle();
+                    }
+                });
+            })//.catch(error => {
+//            console.error('Error loading Parquet file:', error);
+//        });
+
+            //
+            d3.csv("/data/group", function (data_p) {
+                group_data = data_p;
+                if (group_data.length > 0) {
+                    if (localStorage.getItem("debug") === "1") {
+                        console.log("|group_data|", group_data.length);
+                    }
+
+                    fullImageEmbeddingMap.setData(group_data);
+                    // fullImageTileMap.setData(data);
                 }
             });
-        })
-        //     .catch(error => {
-        //     console.error('Error loading Parquet file:', error);
-        // });
-
-        //
-        d3.csv("/data/group", function (data_p) {
-            group_data = data_p;
-            if (localStorage.getItem("debug") === "1") {
-                console.log("|group_data|", group_data.length);
-            }
-
-            fullImageEmbeddingMap.setData(group_data);
-            // fullImageTileMap.setData(data);
-        });
-    });
+        }
+    )
+    ;
 </script>

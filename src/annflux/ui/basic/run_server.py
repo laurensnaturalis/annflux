@@ -11,14 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import csv
 import os
 import shutil
 
 from PIL import Image
-from pyarrow._fs import LocalFileSystem
 
-from annflux.tools.io import generate_missing_thumbnail
+from annflux.tools.io import generate_missing_thumbnail, to_js_arrow
 from annflux.tools.progress_learn import estimate_duration
 from annflux.tools.visualization import most_contrasting_gray, brighten_hex_color
 
@@ -131,9 +129,11 @@ def _init():
     g_layout = "label"
     t = pandas.read_csv(g_state.annflux_path)
     columns = t.columns
-    has_records = len(t.record_id.unique()) < len(t)
+    has_records = "record_id" in t and len(t.record_id.unique()) < len(t)
     if "patch_x" in columns or has_records:
         g_layout = "tileLabel"
+    else:
+        g_layout = "originalImageLabel" # TODO(ENV)
 
     print(f"Using project_root={project_root}, images_path ={images_path}")
 
@@ -198,45 +198,6 @@ def annflux_endpoint():
     )
 
 
-def to_js_arrow(annflux_data_path, annflux_pq_cache_path):
-    from pyarrow import csv as pyarrow_csv
-    import pyarrow as pa
-    # table = csv.read_csv(annflux_data_path)
-    # local = LocalFileSystem()
-    # with local.open_output_stream(annflux_pq_cache_path) as file:
-    #     with pa.RecordBatchStreamWriter(file, table.schema) as writer:
-    #         writer.write_table(table, 10000)
-
-    # Open the CSV file and prepare to write to Arrow file
-    with open(annflux_data_path, mode="r") as csv_file:
-        csv_reader = csv.DictReader(csv_file)
-        table_for_schema = pyarrow_csv.read_csv(annflux_data_path)
-
-        # Open a RecordBatchStreamWriter for the Arrow file
-        with pa.OSFile(annflux_pq_cache_path, "wb") as arrow_file:
-            with pa.ipc.RecordBatchStreamWriter(arrow_file, table_for_schema.schema) as writer:
-                batch = []
-                for row in csv_reader:
-                    # Convert each row to match the schema
-                    batch.append(
-                        {
-                            "id": int(row["id"]),
-                            "name": row["name"],
-                            "age": int(row["age"]),
-                        }
-                    )
-
-                    # Optionally, write batches of records at a time
-                    if len(batch) >= 10000:
-                        record_batch = pa.RecordBatch.from_pylist(batch, schema=table_for_schema.schema)
-                        writer.write_batch(record_batch)
-                        batch = []
-
-                # Write any remaining records in the batch
-                if batch:
-                    record_batch = pa.RecordBatch.from_pylist(batch, schema=schema)
-                    writer.write_batch(record_batch)
-
 @app.route("/data")
 @nocache
 def data_get():
@@ -244,20 +205,20 @@ def data_get():
     TODO
     """
     annflux_data_path = os.path.join(g_state.data_folder, "annflux", "annflux.csv")
-    # time_start = time.time()
-    # hash_ = file_hash(annflux_data_path)
-    # print(f"{annflux_data_path} took {(time.time() - time_start) * 1000} ms")
-    # annflux_pq_cache_path = os.path.join(
-    #     g_state.data_folder, "annflux", f"annflux_{hash_}.arrow"
-    # )
-    #
-    # if not os.path.exists(annflux_pq_cache_path):
-    #     to_js_arrow(annflux_data_path, annflux_pq_cache_path)
-    #
-    # logger.info(f"annflux_data_path = {annflux_data_path}")
+    time_start = time.time()
+    hash_ = file_hash(annflux_data_path)
+    print(f"{annflux_data_path} took {(time.time() - time_start) * 1000} ms")
+    annflux_pq_cache_path = os.path.join(
+        g_state.data_folder, "annflux", f"annflux_{hash_}.parquet"
+    )
+
+    if not os.path.exists(annflux_pq_cache_path):
+        to_js_arrow(annflux_data_path, annflux_pq_cache_path)
+
+    logger.info(f"annflux_data_path = {annflux_data_path}")
     return send_file(
-        annflux_data_path,
-        mimetype="text/csv",
+        annflux_pq_cache_path,
+        mimetype="application/x-binary",
         as_attachment=False,
     )
 
@@ -311,7 +272,7 @@ def thumbnail(uid):
     else:
         with Image.open(image_path) as img:
             img.thumbnail((256, 256))  # TODO: configurable
-            img.save(thumb_path)
+            img.convert('RGB').save(thumb_path)
 
     return send_file(thumb_path, mimetype="image/jpg", as_attachment=False)
 
@@ -337,7 +298,7 @@ def thumbnail_mask(uid):
 @app.route("/images/full/<uid>")
 def images_full(uid):
     """ """
-    file_path = os.path.join(images_path.replace("images", "full_images"), f"{uid}.jpg")
+    file_path = os.path.join(images_path, f"{uid}.jpg")
     if os.path.exists(file_path):
         return send_file(file_path, mimetype="image/jpg", as_attachment=False)
     else:
