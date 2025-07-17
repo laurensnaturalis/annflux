@@ -17,7 +17,6 @@ limitations under the License.
 <script type="module">
     import {asyncBufferFromUrl, parquetReadObjects} from '/static/hyparquet/index.js';
 
-    console.log(asyncBufferFromUrl);
     window.asyncBufferFromUrl = asyncBufferFromUrl;
     window.parquetReadObjects = parquetReadObjects;
 </script>
@@ -180,6 +179,7 @@ limitations under the License.
         <input type="button" value="add" onclick="addLabel()" />
         <a href="/exclusivity">Exclusivity</a>
         <a href="/label_provider">Label provider</a>
+        <a href="/class_examples" target="class_examples">Class examples</a>
       </div>
     </div>`);
         }

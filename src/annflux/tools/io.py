@@ -22,7 +22,6 @@ import pandas
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
-from pyarrow._fs import LocalFileSystem
 from tqdm import tqdm
 
 from annflux.shared import AnnfluxSource

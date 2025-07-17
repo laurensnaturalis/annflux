@@ -90,6 +90,17 @@ HIGH
 
 # Changelog
 
+## 1.1.0.0
+
+- Added density peak based display order and most needed computation
+- Support for tiling
+- Preliminary support for video
+- Support for instance & group embeddings
+- Full image display
+- Preliminary streaming support
+- Data is now transferred using Parquet in the browser
+- Many small improvements
+
 ## 1.0.3.0
 
 - Fix for distance_weight==0 in quick.py

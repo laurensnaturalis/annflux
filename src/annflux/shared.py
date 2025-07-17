@@ -123,7 +123,7 @@ class AnnfluxSource(object):
         return os.path.join(self.working_folder, "split.json")
 
     @property
-    def repository(self) -> Repository:
+    def repository(self) -> "annflux.repository.repository.Repository":
         from annflux.repository.repository import Repository
         return Repository(os.path.join(self.working_folder, "datarepo"))
 
