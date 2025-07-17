@@ -3,7 +3,7 @@ name = "annflux"
 authors = [
     { name = "Laurens Hogeweg", email = "laurens.hogeweg@intel.com" },
 ]
-version = "1.1.1.0"
+version = "1.1.1.1"
 description = "This standalone tool provides a basic interface for interacting with large datasets so that they can be explored and annotated efficiently."
 requires-python = ">=3.11"
 dynamic = ["dependencies"]
@@ -18,7 +18,7 @@ run_tests = "annflux.scripts.run_tests:_run_tests"
 dependencies = { file = ["requirements.txt"] }
 
 [tool.setuptools.package-data]
-annflux = ["ui/basic/static/*", "ui/basic/templates/*", "data/**/*.json"]
+annflux = ["ui/basic/static/*", "ui/basic/templates/*", "data/**/*.json", "ui/basic/static/**/*"]
 
 [tool.ruff]
 # In addition to the standard set of exclusions, omit all tests, plus a specific file.
