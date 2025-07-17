@@ -21,6 +21,7 @@ import pandas
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
+from pyarrow._fs import LocalFileSystem
 from tqdm import tqdm
 
 
@@ -150,3 +151,10 @@ def generate_missing_thumbnail(uid, size=(224, 224)) -> PIL.Image:
     draw.text((x, y), uid, font=font, fill="black")
 
     return image
+
+
+def to_js_arrow(annflux_data_path, annflux_pq_cache_path):
+    pandas.read_csv(annflux_data_path).to_parquet(annflux_pq_cache_path)
+
+if __name__ == '__main__':
+    to_js_arrow("/mnt/big/indeed/legasea_big/annflux/annflux.csv", "/mnt/big/indeed/legasea_big/annflux/annflux.arrow")

@@ -229,9 +229,15 @@ function addImages(
         xName,
         yName
     );
+    let renderImageType = "thumbnail";
     if (isTileRendering) {
-        tileSizeX = x(getSpacing(show_data, xName));
-        tileSizeY = y(getSpacing(show_data, yName));
+        if (show_data.length > 1) {
+            tileSizeX = x(getSpacing(show_data, xName));
+            tileSizeY = y(getSpacing(show_data, yName));
+        } else {
+            tileSizeX = tileSizeY = width;
+            renderImageType = "original";
+        }
     } else {
         tileSizeX = Math.abs(x(tileSize) - x(0)) / Math.sqrt(k);
         tileSizeY = Math.abs(y(tileSize) - y(0)) / Math.sqrt(k);
@@ -262,10 +268,10 @@ function addImages(
         .enter()
         .append("image")
         .attr("x", function (d) {
-            return x(d[xName]);
+            return renderImageType === "thumbnail" ? x(d[xName]) : 0;
         })
         .attr("y", function (d) {
-            return y(d[yName]) * (isTileRendering ? (tileSizeX / tileSizeY) : 1); //TODO: think about this
+            return renderImageType === "thumbnail" ? y(d[yName]) * (isTileRendering ? (tileSizeX / tileSizeY) : 1) : 0; //TODO: think about this
         })
         .attr("width", function (d) {
             return tileSizeX;
@@ -274,7 +280,7 @@ function addImages(
             return tileSizeY;
         })
         .attr("href", function (d) {
-            return "/images/thumbnail/" + d.uid;
+            return (renderImageType === "thumbnail" ? "/images/thumbnail/" : "/images/full/") + d.uid;
         })
         .attr("id", function (d) {
             return "map-" + d.uid; // TODO(refactor): use this map's ID
@@ -504,73 +510,8 @@ controlHtml = `<div id="map_control">
       </table>
     </div>`;
 
-const mapHtml = `<div id="my_dataviz" tabindex="0"></div> 
-    <div id="help" style="position: fixed; max-width: 60%; background-color: #333333cc; display: none; z-index:100">
-        <div id="annflux_title">
-      <span style="color:rgb(134, 218, 25)" class="title_caps">IN</span>teractive <span style="color:rgb(230, 226, 16)" class="title_caps">D</span>ata <span style="color:rgb(163, 44, 147)" class="title_caps">E</span>xploration and <span style="color:rgb(43, 119, 170)" class="title_caps">E</span>nrichment <span style="color:rgb(211, 46, 17)" class="title_caps">D</span>evice
-    </div>
-      <table>
-        <tr>
-          <td width="16%"><b>Map</b></td>
-          <td width="16%"></td>
-          <td width="16%"><b>Gallery</b></td>
-          <td width="16%"></td>
-          <td width="16%"><b>General</b></td>
-          <td width="16%"></td>
-        </tr>
-        <tr>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-        <tr>
-          <td>Mouse scroll</td>
-          <td><i>Zoom</i></td>
-          <td>Click</td>
-          <td><i>Select single image</i></td>
-          <td>?</td>
-          <td><i>Toggle this help screen</i></td>
-        </tr>
-        <tr>
-          <td>Click & drag</td>
-          <td><i>Pan</i></td>
-          <td>Shift-click</td>
-          <td><i>Select multiple images</i></td>
-          <td></td>
-          <td><i></i></td>
-        </tr>
-        <tr>
-          <td>Ctrl+Click & drag</td>
-          <td><i>Select images</i></td>
-          <td>Label shortcuts (hover over labels on top)</td>
-          <td><i>Label by keyboard</i></td>
-          <td></td>
-          <td><i></i></td>
-        </tr>
-        <tr>
-          <td>i</td>
-          <td><i>disable thumbnails</i></td>
-          <td>Ctrl+click <span class="inline-help" title="the labels suggested by the tool">possible</span> label</td>
-          <td><i>Make label <span class="inline-help" title="whether the label applies is unsure">undetermined</span></i></td>
-          <td>Version</td>
-          <td><span id="package_version"></span></td>
-        </tr>
-      </table></div>`;
+const mapHtml = `<div id="my_dataviz" tabindex="0"></div>`;
 
 
-async function loadParquetFile(url) {
-    const response = await fetch(url);
-    const reader = await Arrow.RecordBatchReader.from(response);
-    await reader.open();
-    let data = new Arrow.Table(reader.schema);
-    for await (const recordBatch of reader) {
-        data = data.concat(recordBatch);
-    }
-    console.log(data.length);
 
-    return data;
-}
 
