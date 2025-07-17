@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import hashlib
+import json
 import os
 from typing import List
 
@@ -23,6 +24,8 @@ from PIL import ImageDraw
 from PIL import ImageFont
 from pyarrow._fs import LocalFileSystem
 from tqdm import tqdm
+
+from annflux.shared import AnnfluxSource
 
 
 def numpy_load(
@@ -158,3 +161,9 @@ def to_js_arrow(annflux_data_path, annflux_pq_cache_path):
 
 if __name__ == '__main__':
     to_js_arrow("/mnt/big/indeed/legasea_big/annflux/annflux.csv", "/mnt/big/indeed/legasea_big/annflux/annflux.arrow")
+
+def write_label_defs(annflux_folder: str, label_defs: list[tuple[str, str]]):
+    source = AnnfluxSource(os.path.join(annflux_folder, ".."))
+    os.makedirs(source.working_folder, exist_ok=True)
+    with open(source.label_definitions_path, "w") as f:
+        json.dump({"labels": label_defs}, f, indent=2)
