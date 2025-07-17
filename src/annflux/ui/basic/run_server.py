@@ -494,6 +494,10 @@ def exclusivity_data_post():
 def exclusivity_ui():
     return render_template("exclusivity.html")
 
+@app.route("/class_examples")
+def class_examples_ui():
+    return render_template("class_examples.html")
+
 
 @app.route("/label_provider")
 def label_provider_ui():
