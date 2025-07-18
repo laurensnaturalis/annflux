@@ -325,7 +325,10 @@ function renderPerformance(data) {
             ") %"
         );
         $("#percentage_near_labeled").html(
-            round(data["percentage_near_labeled"] * 100.0, 1)
+            round(data["percentage_labeled_possible"] * 100.0, 1)
+        );
+        $("#percentage_near_labeled").attr("title",
+            `Near most needed ${round(data['percentage_near_labeled'] * 100.0, 1)} %`
         );
     }
 }
@@ -375,7 +378,7 @@ controlHtml = `<div id="map_control">
             <a href="/detailed_performance">Performance</a>
           </td>
           <td>
-            <span id="test_performance"></span> Avg. precision = <span id="average_precision"></span> % - Avg. recall <span id="average_recall"></span> %
+            acc. = <span id="test_performance"></span> aP = <span id="average_precision" title="Average precision: averaged across labels how often a prediction is correct for a certain label"></span> % - aR <span id="average_recall"></span> %
           </td>
         </tr>
         <tr>
