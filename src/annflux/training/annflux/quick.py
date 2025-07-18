@@ -410,7 +410,7 @@ def quick_reclassification_instance(knn_type, state):
         )
     #
     # use DP cluster to predict unpredicted
-    if has_dp_cluster and len(annotations) > 0 and False:  # TODO(CRITICAL)
+    if has_dp_cluster and len(annotations) > 0:
         state.g_quick_status = "computing predictions for unpredicted using DP cluster"
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
@@ -433,6 +433,9 @@ def quick_reclassification_instance(knn_type, state):
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
         ].index.values
         print(f"{len(unpredicted_idx)=} after make_predictions")
+    write_performance_key_val(
+        state.performance_path, "percentage_labeled_possible", 1 - len(data[pandas.isna(data["label_possible"])]) / len(data)
+    )
     #
     state.g_quick_status = "computing performance"
     print(f"{predicted_test=}, {true_test=}")
