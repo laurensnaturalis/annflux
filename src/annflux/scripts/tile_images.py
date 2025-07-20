@@ -10,6 +10,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from tqdm import tqdm
 
 from annflux.tools.io import basename_no_extension
+from annflux.tools.remote_io import fetch_images
 
 
 def tile_and_save_image_with_padding(
@@ -165,12 +166,20 @@ def link_files(
                 target_fn = os.path.join(
                     output_folder,
                     target_pattern.format(
-                        subfolder=os.path.dirname(fn).split(os.path.sep)[-1], basename=os.path.basename(fn)
+                        subfolder=os.path.dirname(fn).split(os.path.sep)[-1],
+                        basename=os.path.basename(fn),
                     ),
                 )
 
         os.symlink(os.path.abspath(fn), target_fn)
-        rows.append((os.path.abspath(fn), basename_no_extension(fn), target_fn, basename_no_extension(target_fn)))
+        rows.append(
+            (
+                os.path.abspath(fn),
+                basename_no_extension(fn),
+                target_fn,
+                basename_no_extension(target_fn),
+            )
+        )
     result = pandas.DataFrame(
         data=rows,
         columns=(
@@ -181,6 +190,32 @@ def link_files(
         ),
     )
     return result
+
+
+def download_files(
+    input_file: str,
+    output_folder: str,
+    existing_original_paths: set[str],  # TODO: implement
+    batch_size: int = 10000,
+    label_column: str = None,
+    resize_width: int = 512,
+    url_column: str = None,
+    uid_column="image_id",
+    sleep_seconds: float = 1.0,
+) -> pandas.DataFrame:
+    stream_source = pandas.read_parquet(input_file)
+    stream_source = stream_source.sample(n=batch_size)  # TODO: stratify
+
+    photo_paths, failed_uids = fetch_images(
+        stream_source, output_folder, max_width=resize_width, url_column=url_column, sleep_seconds=sleep_seconds
+    )
+    stream_source["path"] = photo_paths
+    stream_source["image_id"] = stream_source[uid_column]
+    stream_source["label_true"] = stream_source[label_column]
+    stream_source["original_path"] = stream_source[url_column]
+    stream_source["original_id"] = stream_source[uid_column]
+
+    return stream_source
 
 
 def execute(

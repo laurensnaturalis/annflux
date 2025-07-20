@@ -24,9 +24,9 @@ import openvino as ov
 import pandas
 import torch
 import zarr
+from numpy._typing import NDArray
 from openvino.runtime import properties
 from PIL import Image
-from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -340,10 +340,10 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         elif do_batched:
             filenames = dataset.filename
             num_batches = len(filenames) // batch_size + 1
-            features_per_batch: list[np.array] = [
+            features_per_batch: list[NDArray] | list[None] = [
                 None,
             ] * num_batches
-            probs_per_batch: list[np.array] = [
+            probs_per_batch: list[NDArray] | list[None] = [
                 None,
             ] * num_batches
 
@@ -362,7 +362,9 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                         feature_cache = zarr.open_group(feature_cache_path)
                     cache_filenames = feature_cache.get("filenames")[start:end]
                     if cache_filenames[0] != "0":
-                        if len(cache_filenames) == len(filenames[start:end]) and np.all(cache_filenames == filenames[start:end]):
+                        if len(cache_filenames) == len(filenames[start:end]) and np.all(
+                            cache_filenames == filenames[start:end]
+                        ):
                             cache_batch_features = feature_cache.get("features")[
                                 start:end
                             ]
@@ -422,6 +424,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
 
                 with torch.no_grad():
                     with torch.autocast(self.device):
+                        print(f"{classes_=}")
                         outputs = self.compute_outputs(images_, classes_)
                 features_for_batch = outputs[3].cpu().numpy()
 
@@ -543,15 +546,21 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         """
         if isinstance(out_folder, str):
             out_folder = Path(out_folder)
+        print(f"{Counter(data['label_true'])=}")
         data["caption"] = data["label_true"].apply(
-            lambda x_: x_.replace(" ", "_").replace(",", " ")
-        )
-        data["caption"] = data["caption"].apply(
-            lambda x_: canon_(x_, remove_unknown=True, output_separator=" ")
+            lambda x_: canon_(x_, remove_unknown=True, output_separator=" ", replace_space=True)
         )
         print(f"{data.caption=}")
-        counts = data[data.subset != "test"].groupby("caption").size().to_frame(name="count").reset_index()
-        sufficient_data_classes = set(counts[counts["count"] >= 3]["caption"])
+        counts = (
+            data[data.subset != "test"]
+            .groupby("caption")
+            .size()
+            .to_frame(name="count")
+            .reset_index()
+        )
+        print(counts)
+        sufficient_data_classes = set(counts[counts["count"] >= 3]["caption"]) - {""}
+        print(f"{sufficient_data_classes=}")
         data = data[data["caption"].isin(sufficient_data_classes)]
         #
         unique_labels = data.caption.unique()

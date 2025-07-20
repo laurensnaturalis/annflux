@@ -96,3 +96,28 @@ def compute_most_needed(
         len(near_labeled_indices) + len(set_labeled_indices)
     ) / num_total
     return counter_of_most_need, near_labeled_indices, perc_near_labeled
+
+def compute_near_labeled(
+    all_nn_indices: np.array, labeled_indices: List[int]
+):
+    """
+    Compute points that are near labeled points
+    """
+    set_labeled_indices = set(labeled_indices)
+    near_labeled_indices = []
+    num_total = len(all_nn_indices)
+    indices_todo = set(list(range(num_total))) - set_labeled_indices
+    start_time = time.time()
+    for index in tqdm(
+        indices_todo, total=len(indices_todo), desc="computing near labeled"
+    ):
+        if set_labeled_indices.intersection(set(all_nn_indices[index])) == set():
+            pass
+        else:
+            near_labeled_indices.append(index)
+    logger.info(f"compute_near_labeled took={time.time() - start_time}")
+
+    perc_near_labeled = (
+        len(near_labeled_indices) + len(set_labeled_indices)
+    ) / num_total
+    return near_labeled_indices, perc_near_labeled

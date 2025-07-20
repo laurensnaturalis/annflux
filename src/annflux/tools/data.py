@@ -32,15 +32,15 @@ from annflux.training.annflux.group_classifier_cnn import get_labels
 @lru_cache
 def canon_(
     multilabel_string: str, remove_unknown=False, output_separator=","
-) -> str | None:
+, replace_space=False) -> str | None:
     """
     Canonizes a multilabel string separated by comma's
     """
-    return (
+    result = (
         output_separator.join(
             sorted(
                 [
-                    x_
+                    x_.replace(" ", "_") if replace_space else x_
                     for x_ in multilabel_string.split(",")
                     if "?" not in x_ or not remove_unknown
                 ]
@@ -49,6 +49,7 @@ def canon_(
         if multilabel_string is not None and not pandas.isna(multilabel_string)
         else None
     )
+    return result
 
 
 def color_and_label(
@@ -212,7 +213,7 @@ def color_and_label(
             data_to_update.incorrect_score.max() - data_to_update.incorrect_score
         )
     #
-    if "record_id" in data.columns and False: # TODO(fix): use group data?
+    if "record_id" in data.columns and False:  # TODO(fix): use group data?
         record_ids = data.record_id.unique()
         has_records = len(record_ids) < len(data)
         if has_records:
@@ -264,6 +265,7 @@ def get_images_path() -> str:
     :return:
     """
     return os.path.join(get_project_root(), "images")
+
 
 def get_thumb_path() -> str:
     """

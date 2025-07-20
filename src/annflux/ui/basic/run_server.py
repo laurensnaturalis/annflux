@@ -567,14 +567,15 @@ def status():
     label_update = request.get_json(force=True)
     # print(f"{label_update=}")
     auto_linear_train_idle_time = int(os.getenv("AUTO_LINEAR_TRAIN_IDLE_TIME", 1800))
+    # print(label_update["idleTime"], auto_linear_train_idle_time, g_state.labeled_indices)
     if label_update["idleTime"] > auto_linear_train_idle_time:
         if g_state.train_thread is None or not g_state.train_thread.is_alive():
             if g_state.labeled_indices is not None:
-                logger.info(
-                    f"Training from status: {g_state.trained_for_version=}"
-                    f", {len(g_state.labeled_indices)=}, {label_update['idleTime']}"
-                )
                 if g_state.trained_for_version != len(g_state.labeled_indices):
+                    logger.info(
+                        f"Training from status: {g_state.trained_for_version=}"
+                        f", {len(g_state.labeled_indices)=}, {label_update['idleTime']}"
+                    )
                     g_state.train_thread = threading.Thread(
                         target=retrain_job, args=(g_state,)
                     )

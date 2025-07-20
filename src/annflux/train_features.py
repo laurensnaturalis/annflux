@@ -99,7 +99,7 @@ def train_then_features(
     train_model=True,
     model_variant="wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M",
     cache_name: str = None,
-    feature_cache: str = None, # TODO(implement)
+    feature_cache: str = None,  # TODO(implement)
 ) -> (np.array, np.array, Model):
     """
     Returns (features, probs) of `dataset`
@@ -160,10 +160,13 @@ def train_then_features(
                 repo.commit(
                     repo_model,
                     ancestors=[dataset],
-                    tag=model_variant,
+                    tag=f"clip:{model_variant}",  # TODO: other architectures than CLIP
                     allow_mixed_tags=True,
                 )
                 shutil.rmtree(model_out_folder)
+                model = get_model_folder(source.repository, architecture, model_variant)
+                extractor = Extractor(model, logging.getLogger("train_features"))
+                extractor.load_model()
             else:
                 raise ValueError  # TODO
         #
@@ -395,6 +398,7 @@ def init_folder(
     start_labels=None,
     exclusivity_groups: List[List[str]] = None,
     refresh_media=False,
+    import_stream_metadata=False,
 ) -> AnnfluxSource:
     if start_labels is None:
         start_labels = []
@@ -470,6 +474,16 @@ def init_folder(
 
         unseen_data["label"] = unseen_data[label_column_for_unseen]
         unseen_data["record_id"] = unseen_data[id_column].apply(lambda x_: x_ + "R")
+        #
+        if import_stream_metadata:
+            stream_metadata = pandas.read_csv(
+                os.path.join(source.working_folder, "stream_process.csv")
+            )
+
+            unseen_data = pandas.merge(
+                unseen_data, stream_metadata, left_on=id_column, right_on="image_id"
+            )  # TODO: image_id
+        #
         unseen_data.to_csv(unseen_dataset_path, index=False)
     taxon_mapping_path = os.path.join(source.working_folder, "taxon_mapping.csv")
     if not os.path.exists(taxon_mapping_path):
