@@ -156,10 +156,17 @@ def generate_missing_thumbnail(uid, size=(224, 224)) -> PIL.Image:
 
 
 def to_js_arrow(annflux_data_path, annflux_pq_cache_path):
-    pandas.read_csv(annflux_data_path).to_parquet(annflux_pq_cache_path)
+    pandas.read_csv(
+        annflux_data_path, dtype={"scores_possible": str, "scores_predicted": str}
+    ).to_parquet(annflux_pq_cache_path)
 
-if __name__ == '__main__':
-    to_js_arrow("/mnt/big/indeed/legasea_big/annflux/annflux.csv", "/mnt/big/indeed/legasea_big/annflux/annflux.arrow")
+
+if __name__ == "__main__":
+    to_js_arrow(
+        "/mnt/big/indeed/legasea_big/annflux/annflux.csv",
+        "/mnt/big/indeed/legasea_big/annflux/annflux.arrow",
+    )
+
 
 def write_label_defs(annflux_folder: str, label_defs: list[tuple[str, str]]):
     source = AnnfluxSource(os.path.join(annflux_folder, ".."))

@@ -37,7 +37,7 @@ from urllib3.exceptions import ProtocolError
 from annflux.repo_results_to_embedding import embed_and_prepare
 from annflux.repository.model import ClipModel
 from annflux.scripts.extract_video_frames import frame_capture
-from annflux.scripts.tile_images import tile_and_save, link_files
+from annflux.scripts.tile_images import tile_and_save, link_files, download_files
 from annflux.shared import AnnfluxSource
 from annflux.tools.api_sdk import is_port_open, call_predict
 from annflux.tools.mixed import get_logger
@@ -82,7 +82,7 @@ def export_model_package(source: AnnfluxSource, out_folder: Optional[str]):
         f.write(usage)
 
 
-def execute(arg_list: list[str] | None = None, al_selection_fraction: float = 0.05):
+def execute(arg_list: list[str] | None = None):
     # Create the main parser
     parser = argparse.ArgumentParser(description="AnnFlux command", add_help=False)
     subparsers = parser.add_subparsers(dest="command")
@@ -129,6 +129,7 @@ def execute(arg_list: list[str] | None = None, al_selection_fraction: float = 0.
             label_column_name=args.label_column_name,
             start_labels=args.start_labels,
             refresh_media=args.refresh_media,
+            import_stream_metadata=args.import_stream_metadata,
         )
         print(f"Initialized AnnFlux in folder {source.working_folder}")
     elif args.command == "train_then_features":
@@ -153,6 +154,7 @@ def execute(arg_list: list[str] | None = None, al_selection_fraction: float = 0.
             label_column_name=args.label_column_name,
             start_labels=args.start_labels,
             exclusivity_groups=[group_.split(",") for group_ in args.exclusivity],
+            import_stream_metadata=args.import_stream_metadata
         )
         print(f"Initialized AnnFlux in folder {source.working_folder}")
         train_then_features(
@@ -174,7 +176,7 @@ def execute(arg_list: list[str] | None = None, al_selection_fraction: float = 0.
         source = AnnfluxSource(folder)
         if args.subcommand == "stream":
             stream(
-                al_selection_fraction, args.data_input, source, subsample=args.subsample
+                args.percentage_to_add, args.data_input, source, subsample=args.subsample
             )
 
 
@@ -213,6 +215,7 @@ stream_pipeline_steps = {
     "extract_video_frames": frame_capture,
     "tile": tile_and_save,
     "link_files": link_files,
+    "download_files": download_files,
 }
 
 
@@ -336,7 +339,9 @@ def stream(
             model_version, port, stream_process_table, table_to_predict, tmp_path
         )
     else:
-        table_to_predict["filename"] = table_to_predict["path"] # TODO: patch_path --> path
+        table_to_predict["filename"] = table_to_predict[
+            "path"
+        ]  # TODO: patch_path --> path
         features, probs, model = train_then_features(
             source,
             table_to_predict,
@@ -366,15 +371,15 @@ def stream(
     # stream_process_table.to_csv(stream_process_path, index=False)
     write_table(stream_process_table, stream_process_path)
     # - Select data using AL
-    if al_selection_fraction < 1.0:
+    if al_selection_fraction < 1.0 and "label_probability" in stream_process_table.columns:
         image_level = (
-            stream_process_table[~pandas.isna(stream_process_table.label_probability)]
+            stream_process_table[~pandas.isna(stream_process_table["label_probability"])]
             .groupby(by="original_id")
-            .mean("label_probability")
+            .mean("label_probability")  # noqa
             .reset_index()
         )
         print(image_level)
-        print(len(image_level))
+        print(image_level.columns)
         import numpy as np
 
         weights = np.array(1 - image_level["label_probability"] ** 3).copy()
@@ -404,13 +409,13 @@ def stream(
     os.makedirs(source.images_folder, exist_ok=True)
     stream_process_table["date_to_project"] = None
     for r, row in data_to_add.iterrows():
-        shutil.copy(row.patch_path, source.images_folder)
-        stream_logger.info(f"Adding {row.patch_path} to project")
+        shutil.copy(row.path, source.images_folder)
+        stream_logger.info(f"Adding {row.path} to project")
         stream_process_table.loc[r, "date_to_project"] = (
             datetime.datetime.now().isoformat()
         )
     write_table(stream_process_table, stream_process_path)
-    print("run init with --refresh_media")
+    print("run init with --refresh_media --import_stream_metadata")
     # if os.path.exists(source.data_path):
     #     images = pandas.read_csv(source.data_path)
     #     images = pandas.concat([images, data_to_add], ignore_index=True)
@@ -595,6 +600,11 @@ def make_init_parser(subparsers, parent_parser):
     )
     init_parser.add_argument(
         "--refresh_media",
+        help="TODO",
+        action="store_true",
+    )
+    init_parser.add_argument(
+        "--import_stream_metadata",
         help="TODO",
         action="store_true",
     )

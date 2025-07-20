@@ -37,6 +37,7 @@ limitations under the License.
 <script type="text/javascript" src="/static/annflux_layout.js"></script>
 <script type="text/javascript" src="/static/annflux_objects.js"></script>
 <script type="text/javascript" src="/static/lap.js"></script>
+<link rel="shortcut icon" href="/static/annflux.ico">
 <link
         type="text/css"
         rel="stylesheet"
@@ -310,7 +311,7 @@ limitations under the License.
         const rank_modifier = urlParams.get("invert_ranking") == "on" ? -1 : +1;
         console.log("drawGallery", as_ranking_column, rank_modifier);
         show_data = show_data.sort(
-            (a, b) => rank_modifier * (a[as_ranking_column] - b[as_ranking_column])
+            (a, b) => rank_modifier * (Number(a[as_ranking_column]) - Number(b[as_ranking_column]))
         );
         if (localStorage.getItem("debug") === "2") {
             console.log("drawGallery", show_data);

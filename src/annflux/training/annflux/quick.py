@@ -29,7 +29,7 @@ from tqdm import tqdm
 from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
 from annflux.algorithms.feature_reconstruction_error import compute_fre
-from annflux.algorithms.most_needed import compute_most_needed
+from annflux.algorithms.most_needed import compute_most_needed, compute_near_labeled
 from annflux.performance.basic import (
     compute_performance,
     write_performance_key_val,
@@ -67,7 +67,12 @@ def quick_reclassification_instance(knn_type, state):
     folder = result_set.path
     data = pandas.read_csv(
         os.path.join(state.data_folder, "annflux", "annflux.csv"),
-        dtype={"label_predicted": str, "score_true": float, "uid": str, "score_possible": str},
+        dtype={
+            "label_predicted": str,
+            "score_true": float,
+            "uid": str,
+            "score_possible": str,
+        },
     )
     data.reset_index(drop=True, inplace=True)
     logger.info(f"instant_reclassification 2={time.time() - start_time}")
@@ -76,24 +81,13 @@ def quick_reclassification_instance(knn_type, state):
     with open(os.path.join(state.working_folder, "split.json")) as f:
         test_uids = set(json.load(f)["test"])
     logger.info(f"instant_reclassification 3={time.time()}")
-    custom_path = f"{folder}/custom.npz"
-    custom2_path = f"{folder}/custom.npy"
     reload_features = state.cache_for != result_set.entry.uid
-    recompute = state.version_for_recompute != (
-        result_set.entry.uid + "_" + str(state.trained_for_version_previous)
-    )
     logger.info(
         f"{state.version_for_recompute=}, {result_set.entry.uid=},{state.trained_for_version_previous=}"
     )
     if reload_features:
         state.g_quick_status = "Loading features"
-
-        if os.path.exists(custom_path):
-            state.features = numpy_load(custom_path, "arr_0")
-        elif os.path.exists(custom2_path):
-            state.features = np.load(custom2_path)
-        else:
-            state.features = numpy_load(f"{folder}/last_full.npz", "lastFull")
+        state.features = numpy_load(f"{folder}/last_full.npz", "lastFull")
     assert len(data) == len(state.features), f"{len(data)=}, {len(state.features)=}"
     annotated_uids = set(annotations.keys())
     most_needed_first = annotated_uids - test_uids
@@ -102,42 +96,9 @@ def quick_reclassification_instance(knn_type, state):
     )
     logger.info(f"instant_reclassification 4={time.time() - start_time}")
     #
-    data["label_undetermined"] = None
-    for i, uid in enumerate(data.uid.values):
-        if annotations.get(uid):
-            labels = annotations.get(uid).split(",")
-            sure_labels = []
-            for label_ in labels:
-                if label_.endswith("=?"):
-                    data.at[i, "label_undetermined"] = (
-                        label_
-                        if pandas.isna(data.at[i, "label_undetermined"])
-                        else data.at[i, "label_undetermined"] + "," + label_
-                    )
-                else:
-                    sure_labels.append(label_)
-            annotations[uid] = ",".join(sorted(sure_labels))
-    state.label_array = np.array(
-        [
-            (annotations.get(uid).split(",") if annotations.get(uid) else None)
-            if uid not in test_uids
-            else None
-            for i, uid in enumerate(data.uid.values)
-        ],
-        dtype=object,
-    )
-    state.label_array = np.array(
-        [remove_sys(x_) for x_ in state.label_array], dtype=object
-    )
-    state.label_array_test = np.array(
-        [
-            (annotations.get(uid).split(",") if annotations.get(uid) else None)
-            if uid in test_uids
-            else None
-            for i, uid in enumerate(data.uid.values)
-        ],
-        dtype=object,
-    )
+    set_data_undetermined(annotations, data)
+    #
+    set_state_label_array(annotations, data, state, test_uids)
     logger.info(f"state.label_array_test={state.label_array_test}")
     logger.info(f"|label_array_test|={len(state.label_array_test)}")
     test_indices = set([i for i, uid in enumerate(data.uid.values) if uid in test_uids])
@@ -293,26 +254,33 @@ def quick_reclassification_instance(knn_type, state):
         plt.savefig("distance_to_probability.png")
 
     #
-    prev_near_labeled_perc = get_performance_key_val(
-        state.performance_path, "percentage_near_labeled", -1.0
-    )
-    print("prev_near_labeled_perc", prev_near_labeled_perc)
-    if prev_near_labeled_perc < min_prev_near_labeled_perc:
-        state.g_quick_status = "computing most needed"
-        counter_of_most_need, near_labeled_indices, near_labeled_perc = (
-            compute_most_needed(
-                state.all_indices, state.labeled_indices, state.features
+    has_density_peak = "dp_most_needed" in data.columns
+    if not has_density_peak:
+        prev_near_labeled_perc = get_performance_key_val(
+            state.performance_path, "percentage_near_labeled", -1.0
+        )
+        if prev_near_labeled_perc < min_prev_near_labeled_perc:
+            state.g_quick_status = "computing most needed"
+            counter_of_most_need, near_labeled_indices, near_labeled_perc = (
+                compute_most_needed(
+                    state.all_indices, state.labeled_indices, state.features
+                )
             )
-        )
-        write_performance_key_val(
-            state.performance_path, "percentage_near_labeled", near_labeled_perc
-        )
+            write_performance_key_val(
+                state.performance_path, "percentage_near_labeled", near_labeled_perc
+            )
+        else:
+            logger.warning(
+                f"Skipping most needed because {prev_near_labeled_perc=}<{min_prev_near_labeled_perc}"
+            )
+            near_labeled_indices = np.arange(len(state.all_distances))
+            counter_of_most_need = {}
     else:
-        logger.warning(
-            f"Skipping most needed because {prev_near_labeled_perc=}<{min_prev_near_labeled_perc}"
+        near_labeled_indices, near_labeled_perc = compute_near_labeled(
+            state.all_indices, state.labeled_indices
         )
-        near_labeled_indices = np.arange(len(state.all_distances))
         counter_of_most_need = {}
+    # predictions for near labeled
     time_start = time.time()
     distances, indices = (
         state.all_distances[near_labeled_indices],
@@ -383,7 +351,7 @@ def quick_reclassification_instance(knn_type, state):
         if i_ > 500:  # TODO(improvement): based on actual page size
             break
     #
-    if "dp_most_needed" in data.columns:
+    if has_density_peak:
         logger.info("Using dp_most_needed for most needed")
         data["direct_most_needed"] = data["most_needed"]
         data["most_needed"] = data["dp_most_needed"]
@@ -434,7 +402,9 @@ def quick_reclassification_instance(knn_type, state):
         ].index.values
         print(f"{len(unpredicted_idx)=} after make_predictions")
     write_performance_key_val(
-        state.performance_path, "percentage_labeled_possible", 1 - len(data[pandas.isna(data["label_possible"])]) / len(data)
+        state.performance_path,
+        "percentage_labeled_possible",
+        1 - len(data[pandas.isna(data["label_possible"]) & pandas.isna(data["label_predicted"])]) / len(data),
     )
     #
     state.g_quick_status = "computing performance"
@@ -464,6 +434,48 @@ def quick_reclassification_instance(knn_type, state):
         columns=("class", "color"),
     ).to_csv(os.path.join(state.data_folder, "annflux", "class_to_color.csv"))
     state.g_quick_status = "idle"
+
+
+def set_state_label_array(annotations, data, state, test_uids):
+    state.label_array = np.array(
+        [
+            (annotations.get(uid).split(",") if annotations.get(uid) else None)
+            if uid not in test_uids
+            else None
+            for i, uid in enumerate(data.uid.values)
+        ],
+        dtype=object,
+    )
+    state.label_array = np.array(
+        [remove_sys(x_) for x_ in state.label_array], dtype=object
+    )
+    state.label_array_test = np.array(
+        [
+            (annotations.get(uid).split(",") if annotations.get(uid) else None)
+            if uid in test_uids
+            else None
+            for i, uid in enumerate(data.uid.values)
+        ],
+        dtype=object,
+    )
+
+
+def set_data_undetermined(annotations, data):
+    data["label_undetermined"] = None
+    for i, uid in enumerate(data.uid.values):
+        if annotations.get(uid):
+            labels = annotations.get(uid).split(",")
+            sure_labels = []
+            for label_ in labels:
+                if label_.endswith("=?"):
+                    data.at[i, "label_undetermined"] = (
+                        label_
+                        if pandas.isna(data.at[i, "label_undetermined"])
+                        else data.at[i, "label_undetermined"] + "," + label_
+                    )
+                else:
+                    sure_labels.append(label_)
+            annotations[uid] = ",".join(sorted(sure_labels))
 
 
 def compute_knn(
@@ -670,6 +682,7 @@ def make_predictions(
     """
     The predictions are made for the knn results in (`indices`, `distances`) which correspond to the indices in data defined
      by `org_map`
+     Results are written in `data`
     :param annotations: map from uid to true label string
     :param data: AnnFlux data frame
     :param indices: matrix with rows corresponding to predicted samples and columns to indices of neighbors in knn
@@ -697,6 +710,8 @@ def make_predictions(
         "score_true",
     ]:
         update[key] = []
+    data["scores_predicted"] = data["scores_predicted"].astype(str)
+    data["score_possible"] = data["score_possible"].astype(str)
 
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
         org_index = data_indices[i]

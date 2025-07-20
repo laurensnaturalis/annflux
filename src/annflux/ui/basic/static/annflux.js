@@ -280,7 +280,7 @@ function addImages(
             return tileSizeY;
         })
         .attr("href", function (d) {
-            return (renderImageType === "thumbnail" ? "/images/thumbnail/" : "/images/full/") + d.uid;
+            return (d.image_url !== undefined ? d.image_url : (renderImageType === "thumbnail" ? "/images/thumbnail/" : "/images/full/") + d.uid);
         })
         .attr("id", function (d) {
             return "map-" + d.uid; // TODO(refactor): use this map's ID
