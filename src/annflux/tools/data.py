@@ -31,8 +31,11 @@ from annflux.training.annflux.group_classifier_cnn import get_labels
 
 @lru_cache
 def canon_(
-    multilabel_string: str, remove_unknown=False, output_separator=","
-, replace_space=False) -> str | None:
+    multilabel_string: str,
+    remove_unknown=False,
+    output_separator=",",
+    replace_space=False,
+) -> str | None:
     """
     Canonizes a multilabel string separated by comma's
     """
@@ -179,35 +182,25 @@ def color_and_label(
     ):
         data_to_update["incorrect_score"] = 0.0
         for r, row in data_to_update.iterrows():
+            label_possible = row.label_possible
+            score_possible = row.score_possible
+            label_predicted = row.label_predicted
+            scores_predicted = row.scores_predicted
+            label_true = row.label_true
             if (
                 row.labeled == 0
-                or pandas.isna(row.label_possible)
-                or pandas.isna(row.score_possible)
-                or len(row.label_possible) == 0
+                or pandas.isna(label_possible)
+                or pandas.isna(score_possible)
+                or len(label_possible) == 0
             ):
                 continue
-            # print(row.label_possible, row.score_possible)
-            predicted_map = dict(
-                list(
-                    zip(
-                        row.label_possible.split(",")
-                        if isinstance(row.label_possible, str)
-                        else [],
-                        map(float, row.score_possible.split(","))
-                        if isinstance(row.score_possible, str)
-                        else [row.score_possible],
-                    )
-                )
+            score = compute_incorrect_score(
+                label_possible,
+                label_true,
+                score_possible,
+                label_predicted,
+                scores_predicted,
             )
-            labels_true = set(row.label_true.split(","))
-            for key in copy.copy(list(predicted_map.keys())):
-                if predicted_map[key] < 0.5 and key not in labels_true:
-                    del predicted_map[key]
-            score = 0
-            for label_ in set(predicted_map.keys()).union(labels_true):
-                score += abs(
-                    ((label_ in labels_true) * 1) - predicted_map.get(label_, 0.0)
-                )
             data_to_update.at[r, "incorrect_score"] = score
         data_to_update.incorrect_score = (
             data_to_update.incorrect_score.max() - data_to_update.incorrect_score
@@ -239,6 +232,39 @@ def color_and_label(
     logger.info(f"coloring took={time.time() - time_start}")
 
     return class_to_color
+
+
+def compute_incorrect_score(
+    label_possible: str | float,
+    label_true: str,
+    score_possible: str | float,
+    label_predicted: str | float,
+    scores_predicted: str | float,
+):
+    predicted_map = name_to_probability(label_possible, score_possible)
+    predicted_map.update(name_to_probability(label_predicted, scores_predicted))
+    labels_true = set(label_true.split(","))
+    for key in copy.copy(list(predicted_map.keys())):
+        if predicted_map[key] < 0.5 and key not in labels_true:
+            del predicted_map[key]
+    score = 0
+    for label_ in set(predicted_map.keys()).union(labels_true):
+        score += abs(((label_ in labels_true) * 1) - predicted_map.get(label_, 0.0))
+    return score
+
+
+def name_to_probability(label_possible, score_possible):
+    predicted_map = dict(
+        list(
+            zip(
+                label_possible.split(",") if isinstance(label_possible, str) else [],
+                map(float, score_possible.split(","))
+                if isinstance(score_possible, str)
+                else [score_possible],
+            )
+        )
+    )
+    return predicted_map
 
 
 def remove_uids_from_double_check(

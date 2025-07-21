@@ -269,7 +269,7 @@ function Map2D($container) {
           show_data2 = show_data2.filter(
             (row) =>
               row.double_checked == 0 ||
-              row.label_undetermined.length > 0 ||
+              (row.label_undetermined ?? "").length > 0 ||
               urlParams.get("ignore_double_checked") == "on"
           );
         }
