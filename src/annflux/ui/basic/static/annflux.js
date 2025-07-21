@@ -156,8 +156,8 @@ function filterData(
     if (label_true) {
         show_data_start = show_data_start.filter((a) =>
             urlParams.get("not_label_true") == "on"
-                ? !a["label_true"].toLowerCase().includes(label_true)
-                : a["label_true"].toLowerCase().includes(label_true)
+                ? !(a["label_true"] ?? "").toLowerCase().includes(label_true)
+                : (a["label_true"] ?? "").toLowerCase().includes(label_true)
         );
     }
     const label_undetermined = urlParams.get("label_undetermined");

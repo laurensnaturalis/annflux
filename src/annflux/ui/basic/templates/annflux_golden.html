@@ -993,7 +993,10 @@ limitations under the License.
                 .attr("title", function (d) {
                     return labelToShortcuts.get(d[0]);
                 })
-                .attr("class", "label_panel")
+                // .attr("class", "label_panel")
+                .attr("class", function (d) {
+                    return `label_${d[0].replace(" ", "_")}`;
+                })
                 .attr("id", function (d) {
                     return `label_panel_${d[0].replace(" ", "_")}`;
                 })

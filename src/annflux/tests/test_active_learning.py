@@ -11,15 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import unittest
-
-from annflux.scripts.run_tests import run_cli_tests
-
-
+from __future__ import annotations
 
 import unittest
 
 
-class TestCli(unittest.TestCase):
-    def test_cli(self):
-        run_cli_tests()
+from annflux.tools.data import compute_incorrect_score
+
+
+class TestIncorrectScore(unittest.TestCase):
+    def test_computation(self):
+        self.assertAlmostEquals(
+            0.33,
+            compute_incorrect_score(
+                "vegetative",
+                "blurry-or-low-res,flowering,low-quality",
+                "0.13",
+                "blurry-or-low-res,flowering,low-quality",
+                "0.94,0.87,0.86",
+            ),
+        )
