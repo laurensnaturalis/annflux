@@ -76,7 +76,6 @@ def color_and_label(
     )
     cmap = plt.get_cmap("viridis")
     cmap_distinct = plt.get_cmap("tab20b")
-    annotation_values = set([canon_(x_) for x_ in annotations.values()])
     individual_labels = set(
         list(itertools.chain(*[x_.split(",") for x_ in annotations.values()]))
     )
@@ -108,7 +107,15 @@ def color_and_label(
                     for x_ in data["label_predicted"].unique()
                     if x_ is not None and x_ != "n/a"
                 ]
-            ).union(annotation_values)
+            ).union(
+                set(
+                    list(
+                        itertools.chain(
+                            *[canon_(x_).split() for x_ in annotations.values()]
+                        )
+                    )
+                )
+            )
         )
     )
     unique_labels.append("n/a")
@@ -181,6 +188,7 @@ def color_and_label(
         and "score_possible" in data_to_update.columns
     ):
         data_to_update["incorrect_score"] = 0.0
+        # TODO: use vector update
         for r, row in data_to_update.iterrows():
             label_possible = row.label_possible
             score_possible = row.score_possible
