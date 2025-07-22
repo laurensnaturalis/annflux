@@ -16,7 +16,7 @@ import json
 import logging
 import os
 import time
-from collections import defaultdict
+from collections import defaultdict, Counter
 from typing import Set, Dict, Any, Tuple
 
 import faiss
@@ -43,21 +43,21 @@ from annflux.training.annflux.group_classifier_cnn import classify
 
 min_prev_near_labeled_perc = 0.99  # TODO: configurable
 
-logger = logging.getLogger("annflux_server")
-
 
 def group_classification(features, annflux_data) -> (np.array, float, list[str]):
     return classify(features, annflux_data)
 
 
-def quick_reclassification(state: AnnFluxState, knn_type="quick", group=False):
+def quick_reclassification(
+    state: AnnFluxState, logger: logging.Logger, knn_type="quick", group=False
+):
     if not group:
-        quick_reclassification_instance(knn_type, state)
+        quick_reclassification_instance(knn_type, state, logger)
     else:
         quick_reclassification_group(knn_type, state)
 
 
-def quick_reclassification_instance(knn_type, state):
+def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     """
     Trains a quick new model using kNN
     """
@@ -404,7 +404,14 @@ def quick_reclassification_instance(knn_type, state):
     write_performance_key_val(
         state.performance_path,
         "percentage_labeled_possible",
-        1 - len(data[pandas.isna(data["label_possible"]) & pandas.isna(data["label_predicted"])]) / len(data),
+        1
+        - len(
+            data[
+                pandas.isna(data["label_possible"])
+                & pandas.isna(data["label_predicted"])
+            ]
+        )
+        / len(data),
     )
     #
     state.g_quick_status = "computing performance"
@@ -417,7 +424,9 @@ def quick_reclassification_instance(knn_type, state):
         display_update_uids=new_labeled_nn_uids
         if new_labeled_nn_uids is not None and len(new_labeled_nn_uids) > 0
         else None,
+        logger=logger,
     )
+    class_cluster_to_count = Counter([canon_(x_) for x_ in annotations.values()])
 
     with open(state.doublecheck_path) as f:
         double_checked = set(json.load(f)["checked"])
@@ -432,6 +441,13 @@ def quick_reclassification_instance(knn_type, state):
     pandas.DataFrame(
         data=zip(class_to_color.keys(), class_to_color.values()),
         columns=("class", "color"),
+    ).merge(
+        pandas.DataFrame(
+            data=zip(class_cluster_to_count.keys(), class_cluster_to_count.values()),
+            columns=("class", "count"),
+        ),
+        on="class",
+        how="left",
     ).to_csv(os.path.join(state.data_folder, "annflux", "class_to_color.csv"))
     state.g_quick_status = "idle"
 

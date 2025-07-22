@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import math
 import os
 import shutil
 
@@ -133,7 +134,7 @@ def _init():
     if "patch_x" in columns or has_records:
         g_layout = "tileLabel"
     else:
-        g_layout = "originalImageLabel" # TODO(ENV)
+        g_layout = "originalImageLabel"  # TODO(ENV)
 
     print(f"Using project_root={project_root}, images_path ={images_path}")
 
@@ -272,7 +273,7 @@ def thumbnail(uid):
     else:
         with Image.open(image_path) as img:
             img.thumbnail((256, 256))  # TODO: configurable
-            img.convert('RGB').save(thumb_path)
+            img.convert("RGB").save(thumb_path)
 
     return send_file(thumb_path, mimetype="image/jpg", as_attachment=False)
 
@@ -424,7 +425,7 @@ def label():
     with open(g_state.labels_path, "w") as f:
         json.dump(j_labels, f, indent=2)
 
-    quick_reclassification(g_state, group=is_group)
+    quick_reclassification(g_state, logger, group=is_group)
 
     return {
         "success": True,
@@ -470,13 +471,14 @@ def labels_css():
         os.path.join(g_state.working_folder, "class_to_color.csv")
     )
     css_str = []
+    count_max = label_to_color["count"].max()
     for _, row in label_to_color.iterrows():
         if not pandas.isna(row["class"]) and "," not in row["class"]:
             background_color = brighten_hex_color(row.color)
             font_color = most_contrasting_gray(row.color)
             css_str.append(
                 f".label_{row['class'].replace(' ', '_')} {{ background-color: {background_color}; "
-                f"border:2px solid {row.color}; color: {font_color}}}"
+                f"border:2px solid {row.color}; color: {font_color}; font-size: {max(1.0, 2 * math.sqrt(row['count'] / count_max))}em }}"
             )
 
     return Response("\n".join(css_str), mimetype="text/css")
@@ -493,6 +495,7 @@ def exclusivity_data_post():
 @app.route("/exclusivity")
 def exclusivity_ui():
     return render_template("exclusivity.html")
+
 
 @app.route("/class_examples")
 def class_examples_ui():
@@ -540,7 +543,7 @@ def retrain_job(state: AnnFluxState):
     peak_merge(state.data_folder)
     state.g_quick_status = "quicker classification"
     #
-    quick_reclassification(state)
+    quick_reclassification(state, logger)
     #
     if False:
         # TODO(restore)
