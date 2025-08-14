@@ -215,7 +215,7 @@ function Map2D($container) {
       console.log("dragEnd", show_data.length, show_data);
       drawGallery(show_data);
     }
-    if (mode == "embedding") {
+    if (mode === "embedding") {
       // auto suggestion
       let as_ranking_column = urlParams.get("as_ranking_column");
       if (localStorage.getItem("debug") === "2") {
@@ -230,7 +230,7 @@ function Map2D($container) {
       }
       let show_data2 = [];
       let show_data_test = [];
-      if (as_ranking_column == "score_true") {
+      if (as_ranking_column === "score_true") {
         show_labeled = "labeled";
       }
       let [show_data_start, tmp_] = filterData(
@@ -261,7 +261,16 @@ function Map2D($container) {
         show_data2 = show_data_start.filter(
           (row) => row.labeled == (show_labeled == "unlabeled" ? 0 : 1) //&& row.in_test == 1
         );
-        if (show_labeled == "labeled") {
+        let filter_query = urlParams.get('filter_query') ?? "";
+        if (filter_query.trim().length > 0) {
+            try {
+                eval(`show_data2 = show_data2.filter((row) => ${filter_query})`);
+            }
+            catch {
+                alert(`invalid filter ${filter_query}`)
+            }
+        }
+        if (show_labeled === "labeled") {
           console.log(
             "ignore_double_checked",
             urlParams.get("ignore_double_checked")

@@ -69,6 +69,7 @@ def create_file_logger(filename, mode):
 
 
 def get_basic_logger(name: str):
+    logging.basicConfig()
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
     return logger

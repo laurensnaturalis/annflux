@@ -6,14 +6,12 @@ import os
 import shutil
 import tempfile
 from collections import Counter
-from multiprocessing import Pool
 from pathlib import Path
-from typing import Set, Callable, List
+from typing import Set, Callable
 
 import numpy as np
 import pandas
 import zarr
-from PIL import Image
 from sklearn.model_selection import train_test_split
 
 from annflux.repository.dataset import Dataset
@@ -21,30 +19,11 @@ from annflux.repository.model import KerasModel, Model, ClipModel
 from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
 from annflux.shared import AnnfluxSource
+from annflux.tools.data import init_folder
 from annflux.training.annflux.feature_extractor import (
     make_resultset,
     TrainParameters,
 )
-
-
-def png_to_jpg(path: str):
-    im = Image.open(path)
-    rgb_im = im.convert("RGB")
-    rgb_im.save(path.replace(".png", ".jpg"))
-
-
-def make_images(images_path_):
-    images_path_ = Path(images_path_)
-    jpgs = glob.glob(str(images_path_ / "*.jpg"))
-    pngs = glob.glob(str(images_path_ / "*.png"))
-    all_files = glob.glob(str(images_path_ / "*"))
-
-    if len(pngs) > 0:
-        with Pool(32) as pool:
-            pool.map(png_to_jpg, pngs)
-
-    if len(all_files) != len(jpgs):
-        print(f"Non JPGs in {images_path_}")
 
 
 def execute(source: AnnfluxSource, architecture="efficientnetb0"):
@@ -170,7 +149,7 @@ def train_then_features(
             else:
                 raise ValueError  # TODO
         #
-        if False and isinstance(extractor, AttentionMapMixin):
+        if False:  # and isinstance(extractor, AttentionMapMixin):
             output_folder = "/mnt/big/indeed/diopsis-hazehorst-apr5-6-gem/attention"  # TODO(generalize)
             os.makedirs(output_folder, exist_ok=True)
             features = extractor.compute_features_and_attention_map(
@@ -390,134 +369,3 @@ def train(
     deep_backend_func(dataset, previous_model, architecture, train_folder)
     model = Model(train_folder)
     repo.commit(model, tag="seen")
-
-
-def init_folder(
-    source: AnnfluxSource,
-    label_column_name=None,
-    start_labels=None,
-    exclusivity_groups: List[List[str]] = None,
-    refresh_media=False,
-    import_stream_metadata=False,
-) -> AnnfluxSource:
-    if start_labels is None:
-        start_labels = []
-    if exclusivity_groups is None:
-        exclusivity_groups = []
-    working_folder = source.working_folder
-    data_path = source.data_path
-    label_column_for_unseen = (
-        source.label_column_for_unseen
-        if label_column_name is None
-        else label_column_name
-    )
-    start_labels = [(x_, "null") for x_ in start_labels]  # TODO
-
-    images_path = source.images_folder
-    start_labels = source.start_labels if start_labels is None else start_labels
-    if len(exclusivity_groups) == 0:
-        exclusivity = source.exclusivity
-    else:
-        exclusivity = []
-        for group_children in exclusivity_groups:
-            exclusivity.extend(itertools.combinations(group_children, 2))
-    id_column = source.id_column
-
-    annflux_folder_exists = os.path.isdir(working_folder)
-    if not annflux_folder_exists:
-        os.makedirs(working_folder)
-        with open(os.path.join(working_folder, "label_defs.json"), "w") as f:
-            json.dump({"labels": start_labels}, f)
-        pandas.DataFrame(data=exclusivity, columns=["left", "right"]).to_csv(
-            os.path.join(working_folder, "exclusivity.csv"), index=False
-        )
-
-    unseen_dataset_path = os.path.join(working_folder, "unseen_annflux_data.csv")
-    unseen_data = None
-    if not os.path.exists(unseen_dataset_path) or refresh_media:
-        if not os.path.exists(data_path) or refresh_media:
-            make_images(images_path)
-
-            clean_filenames(images_path)
-            image_ids = [
-                os.path.splitext(x_)[0]
-                for x_ in os.listdir(images_path)
-                if x_.endswith(".jpg")
-            ]
-            images_table = pandas.DataFrame(
-                data=zip(
-                    image_ids,
-                    [
-                        "foo,bar",
-                    ]
-                    * len(image_ids),
-                ),
-                columns=[id_column, label_column_for_unseen],
-            )
-            images_table.to_csv(data_path, index=False)
-
-        unseen_data = pandas.read_csv(data_path, dtype={id_column: str})
-        unseen_data[id_column] = unseen_data[id_column].str.replace("-", "_")
-        unseen_data[id_column] = unseen_data[id_column].apply(
-            lambda x_: x_.replace(":", "_").replace(".", "_")
-        )
-        unseen_data["filename"] = unseen_data[id_column].apply(
-            lambda x_: os.path.join(images_path, x_ + ".jpg")
-        )
-        unseen_data["set"] = None
-        unseen_data["uid"] = unseen_data[id_column]
-        if label_column_for_unseen not in unseen_data.columns:
-            print(
-                f"'{label_column_for_unseen}' not in {unseen_data.columns}, "
-                f"consider to use --label_column_name {{label}}"
-            )
-
-        unseen_data["label"] = unseen_data[label_column_for_unseen]
-        unseen_data["record_id"] = unseen_data[id_column].apply(lambda x_: x_ + "R")
-        #
-        if import_stream_metadata:
-            stream_metadata = pandas.read_csv(
-                os.path.join(source.working_folder, "stream_process.csv")
-            )
-
-            unseen_data = pandas.merge(
-                unseen_data, stream_metadata, left_on=id_column, right_on="image_id"
-            )  # TODO: image_id
-        #
-        unseen_data.to_csv(unseen_dataset_path, index=False)
-    taxon_mapping_path = os.path.join(source.working_folder, "taxon_mapping.csv")
-    if not os.path.exists(taxon_mapping_path):
-        ids = [str(x_) for x_ in range(1000)]
-        pandas.DataFrame(data=list(zip(ids, ids)), columns=["label", "taxon"]).to_csv(
-            taxon_mapping_path
-        )
-
-    #
-    test_path = os.path.join(working_folder, "split.json")
-    if not os.path.exists(test_path):
-        test_uids = np.random.choice(
-            unseen_data.uid.values, int(0.10 * len(unseen_data)), replace=False
-        ).tolist()
-        with open(test_path, "w") as f:
-            json.dump({"test": test_uids}, f)
-    repo = source.repository
-    if len(repo.get(label=Dataset, tag="unseen")) == 0 or refresh_media:
-        dataset = Dataset(unseen_dataset_path, taxon_mapping_path=taxon_mapping_path)
-        repo.commit(dataset, tag="unseen")
-
-    return source
-
-
-def clean_filenames(images_path):
-    for fn in os.listdir(images_path):
-        if ":" in fn or "." in fn:
-            os.rename(
-                os.path.join(images_path, fn),
-                os.path.join(
-                    images_path,
-                    fn.replace(":", "_")
-                    .replace(".", "_")
-                    .replace("=", "_")
-                    .replace("_jpg", ".jpg"),
-                ),
-            )

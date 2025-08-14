@@ -14,7 +14,6 @@
 # limitations under the License.
 import time
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from numpy._typing import NDArray
@@ -30,11 +29,11 @@ class AnnFluxState(object):
         self.working_folder_ = Path(working_folder)
 
     @property
-    def data_folder(self) -> str:
+    def project_folder(self) -> str:
         return str(self.working_folder_ / "..")
 
     @property
-    def working_folder(self) -> str:
+    def annflux_folder(self) -> str:
         return str(self.working_folder_)
 
     @property
@@ -94,3 +93,5 @@ class AnnFluxState(object):
     labels_path: str = None
     doublecheck_path: str = None
     performance_path: str = None
+
+

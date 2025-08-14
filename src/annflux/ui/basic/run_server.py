@@ -17,6 +17,8 @@ import shutil
 
 from PIL import Image
 
+from annflux.repo_results_to_embedding import group_embedding
+from annflux.shared import AnnfluxSource
 from annflux.tools.io import generate_missing_thumbnail, to_js_arrow
 from annflux.tools.progress_learn import estimate_duration
 from annflux.tools.visualization import most_contrasting_gray, brighten_hex_color
@@ -49,11 +51,15 @@ from annflux.tools.data import (
     remove_uids_from_double_check,
     get_group_images_path,
     get_failed_images_path,
-    get_thumb_path,
+    get_thumb_path, create_group_flux_data,
 )
 from annflux.tools.mixed import get_logger, str2bool, get_version
 from annflux.tools.io import file_hash
-from annflux.training.annflux.quick import quick_reclassification, group_classification
+from annflux.training.annflux.quick import (
+    quick_reclassification,
+    group_classification,
+    load_data,
+)
 from annflux.training.tensorflow.tf_backend import linear_retraining
 
 project_root: Optional[str] = None
@@ -103,24 +109,26 @@ def _init():
     g_state = AnnFluxState(working_folder)
 
     g_state.doublecheck_path = os.path.join(
-        g_state.data_folder, "annflux", "doublecheck.json"
+        g_state.project_folder, "annflux", "doublecheck.json"
     )
-    exclusivity_path = os.path.join(g_state.data_folder, "annflux", "exclusivity.csv")
+    exclusivity_path = os.path.join(
+        g_state.project_folder, "annflux", "exclusivity.csv"
+    )
     label_provider_path = os.path.join(
-        g_state.data_folder, "annflux", "label_provider.csv"
+        g_state.project_folder, "annflux", "label_provider.csv"
     )
-    g_state.labels_path = os.path.join(g_state.data_folder, "annflux", "labels.json")
+    g_state.labels_path = os.path.join(g_state.project_folder, "annflux", "labels.json")
     label_definitions_path = os.path.join(
-        g_state.data_folder, "annflux", "label_defs.json"
+        g_state.project_folder, "annflux", "label_defs.json"
     )
     g_state.performance_path = os.path.join(
-        g_state.data_folder, "annflux", "performance.json"
+        g_state.project_folder, "annflux", "performance.json"
     )
 
     print(os.getenv("LOGGING_LEVEL", "INFO"))
     log_level: int = logging.getLevelName(os.getenv("LOGGING_LEVEL", "INFO"))
-    log_path = os.path.join(g_state.working_folder, "annflux.log")
-    os.makedirs(g_state.working_folder, exist_ok=True)
+    log_path = os.path.join(g_state.annflux_folder, "annflux.log")
+    os.makedirs(g_state.annflux_folder, exist_ok=True)
     logger = get_logger(log_path, level=log_level, name="annflux_server")
     logging.getLogger("werkzeug").addFilter(NoStatus())
     logger.warning(
@@ -196,6 +204,7 @@ def annflux_endpoint():
             os.getenv("INDEED_TEMPLATE", "golden")
         ],
         layout=g_layout,
+        auto_linear_train_idle_time=int(os.getenv("AUTO_LINEAR_TRAIN_IDLE_TIME", 1800)),
     )
 
 
@@ -205,12 +214,12 @@ def data_get():
     """
     TODO
     """
-    annflux_data_path = os.path.join(g_state.data_folder, "annflux", "annflux.csv")
+    annflux_data_path = os.path.join(g_state.project_folder, "annflux", "annflux.csv")
     time_start = time.time()
     hash_ = file_hash(annflux_data_path)
     print(f"{annflux_data_path} took {(time.time() - time_start) * 1000} ms")
     annflux_pq_cache_path = os.path.join(
-        g_state.data_folder, "annflux", f"annflux_{hash_}.parquet"
+        g_state.project_folder, "annflux", f"annflux_{hash_}.parquet"
     )
 
     if not os.path.exists(annflux_pq_cache_path):
@@ -230,7 +239,9 @@ def data_group_get():
     """
     TODO
     """
-    group_data_path = os.path.join(g_state.data_folder, "annflux", "group0_annflux.csv")
+    group_data_path = os.path.join(
+        g_state.project_folder, "annflux", "group0_annflux.csv"
+    )
     logger.info(f"annflux_data_path = {group_data_path}")
     return (
         send_file(
@@ -248,7 +259,9 @@ group_uids = set()
 
 def get_group_uids() -> set[str]:
     global group_uids
-    group_data_path = os.path.join(g_state.data_folder, "annflux", "group0_annflux.csv")
+    group_data_path = os.path.join(
+        g_state.project_folder, "annflux", "group0_annflux.csv"
+    )
 
     if os.path.exists(group_data_path):
         group_uids = set(pandas.read_csv(group_data_path)["uid"])
@@ -444,7 +457,7 @@ def performance():
 @app.route("/detailed_performance/data")
 def detailed_performance_data():
     return send_file(
-        os.path.join(g_state.working_folder, "detailed_performance.csv"),
+        os.path.join(g_state.annflux_folder, "detailed_performance.csv"),
         mimetype="text_csv",
         as_attachment=False,
     )
@@ -468,7 +481,7 @@ def label_provider_data():
 @app.route("/labels/css")
 def labels_css():
     label_to_color = pandas.read_csv(
-        os.path.join(g_state.working_folder, "class_to_color.csv")
+        os.path.join(g_state.annflux_folder, "class_to_color.csv")
     )
     css_str = []
     count_max = label_to_color["count"].max()
@@ -523,7 +536,7 @@ def retrain_job(state: AnnFluxState):
     weights_path = linear_retraining(state, StatusUpdate(state))
     shutil.copy(
         weights_path,
-        os.path.join(state.working_folder, state.version_for_recompute + ".weights.h5"),
+        os.path.join(state.annflux_folder, state.version_for_recompute + ".weights.h5"),
     )
     #
     state.g_quick_status = "computing embedding"
@@ -539,30 +552,58 @@ def retrain_job(state: AnnFluxState):
     state.trained_for_version_pre = len(state.labeled_indices)
     #
     state.g_quick_status = "computing density peak"
-    fast_density_peak_clustering(state.data_folder)
-    peak_merge(state.data_folder)
+    fast_density_peak_clustering(state.project_folder)
+    peak_merge(state.project_folder)
     state.g_quick_status = "quicker classification"
     #
     quick_reclassification(state, logger)
-    #
-    if False:
-        # TODO(restore)
-        record_features, accuracy_group, record_table = group_classification(
-            g_state.features, pandas.read_csv(g_state.annflux_path)
-        )
-        print(record_features.shape, accuracy_group, len(record_table))
-        record_table.to_csv(
-            os.path.join(g_state.working_folder, "group0_annflux.csv"), index=False
-        )
-        import numpy as np
 
-        np.savez(
-            os.path.join(g_state.working_folder, "group0_features.npz"),
-            lastFull=record_features,
-        )
-    # #
     logger.info(f"retrain_job: done - {state.trained_for_version}")
     state.trained_for_version = len(state.labeled_indices)
+
+
+def group_train_job(state: AnnFluxState):
+    state.g_quick_status = "group training"
+    source = AnnfluxSource(state.project_folder)
+
+    if g_state.features is None:
+        load_data(state, logger)
+
+    create_group_flux_data(source)
+
+    split_path = os.path.join(state.annflux_folder, "split_group.json")
+    group_data = pandas.read_csv(source.group_flux_data_path())
+    import numpy as np
+    if not os.path.exists(split_path):
+        test_uids = np.random.choice(
+            group_data.uid.values, int(0.10 * len(group_data)), replace=False
+        ).tolist()
+        with open(split_path, "w") as f:
+            json.dump({"test": test_uids}, f)
+    else:
+        test_uids = json.load(open(split_path))["test"]
+
+    record_features, accuracy_group, record_table = group_classification(
+        g_state.features,
+        pandas.read_csv(g_state.annflux_path),
+        os.path.join(state.annflux_folder, "group_feature_images"),
+        group_data,
+        test_uids
+    )
+    print(record_features.shape, accuracy_group, len(record_table))
+    record_table.to_csv(
+        os.path.join(g_state.annflux_folder, "group0_annflux.csv"), index=False
+    )
+    import numpy as np
+
+    np.savez(
+        os.path.join(g_state.annflux_folder, "group0_features.npz"),
+        lastFull=record_features,
+    )
+    state.g_quick_status = "group embedding"
+    group_embedding(g_state.project_folder)
+    logger.info(f"group_train_job: done - {state.trained_for_version}")
+    state.trained_for_version = len(state.labeled_indices)  # TODO(crit): for group
 
 
 @app.route("/status", methods=["POST"])
@@ -571,6 +612,7 @@ def status():
     # print(f"{label_update=}")
     auto_linear_train_idle_time = int(os.getenv("AUTO_LINEAR_TRAIN_IDLE_TIME", 1800))
     # print(label_update["idleTime"], auto_linear_train_idle_time, g_state.labeled_indices)
+    group_train = label_update["groupTrain"] if "groupTrain" in label_update else False
     if label_update["idleTime"] > auto_linear_train_idle_time:
         if g_state.train_thread is None or not g_state.train_thread.is_alive():
             if g_state.labeled_indices is not None:
@@ -583,6 +625,14 @@ def status():
                         target=retrain_job, args=(g_state,)
                     )
                     g_state.train_thread.start()
+    #
+    if group_train:
+        if g_state.train_thread is None or not g_state.train_thread.is_alive():
+            # TODO(opt): consider multiple train threads
+            g_state.train_thread = threading.Thread(
+                target=group_train_job, args=(g_state,)
+            )
+            g_state.train_thread.start()
     #
     estimated_duration_s = 0
     duration_std_s = 0
@@ -607,7 +657,7 @@ def status():
         else 0
     )
     detailed_performance_path = os.path.join(
-        g_state.working_folder, "detailed_performance.csv"
+        g_state.annflux_folder, "detailed_performance.csv"
     )
     num_unlabeled_certain = 0
     perc_likely_certain = 0

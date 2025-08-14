@@ -116,6 +116,9 @@ limitations under the License.
 </body>
 <script>
     let gLayout = "{{ layout }}";
+    <!--@formatter:off-->
+    let forceIdleTime = {{ auto_linear_train_idle_time }} + 1;
+    <!--@formatter:on-->
     var myLayout;
     // localStorage.clear();
     savedState = localStorage.getItem("savedState");
@@ -136,6 +139,7 @@ limitations under the License.
     }
 
     localStorage.setItem("savedLayout", gLayout);
+
 
     // myLayout = new GoldenLayout(labelConfig);
     let mapContainer = null;
@@ -168,7 +172,7 @@ limitations under the License.
         if (componentState.label == "B") {
             labelContainer = container;
             container.getElement().html(`<div id="panel">
-      <span id="labelPanel"><b style="color: red">Add labels first!</b></span>
+      <div id="labelPanel"><b style="color: red">Add labels first!</b></div>
       <br/><a class="noButton" href="#" onclick="persistentToggle('addLabelPanel')"><img src="/static/newlabel.svg" width="24px"></a>
       <div id="addLabelPanel">
         <a href="javascript:void(0)" onclick="setLabelParent(null)">+</a>
@@ -233,6 +237,12 @@ limitations under the License.
     );
 
     myLayout.init();
+
+    // = layout dependent UI
+    if (gLayout === "tileLabel") {
+        $("#groupTrainButton").css("display", "");
+    }
+
 
     let gLabeled = new Map();
     let selection = [];
@@ -656,13 +666,19 @@ limitations under the License.
                 img.attr("src", `/images/thumbnail/${event.uid}`);
             }
         } else if (gLayout === "tileLabel") {
-            const record_id = d3.select(`#gallery-${event.uid}`).data()[0]["record_id"];
+            const data = d3.select(`#gallery-${event.uid}`).data()[0];
+            let record_id = null;
+            if ("record_id" in data) {
+                record_id = data["record_id"]
+            } else {
+                record_id = data["uid"]
+            }
             console.log(record_id);
             fullImageTileMap.setFilter(
                 new Array([
                     "record_id",
                     "equals",
-                    d3.select(`#gallery-${event.uid}`).data()[0]["record_id"],
+                    record_id,
                 ])
             );
             fullImageTileMap.setData();
@@ -906,6 +922,7 @@ limitations under the License.
         "label_predicted",
         "label_true",
         "label_undetermined",
+        "filter_query",
         "as_ranking_column",
         "show_labeled",
         "color_map",
@@ -1024,44 +1041,36 @@ limitations under the License.
                 console.log(no_sys_labels);
             }
             //
-            d3.select("#label_predicted")
-                .selectAll("option")
-                .data(no_sys_labels)
-                .enter()
-                .append("option")
-                .attr("value", (d) => d[0].toLowerCase())
-                .html((d) => d[0]);
-            d3.select("#label_predicted")
-                .insert("option", ":first-child")
-                .html("--none--")
-                .attr("selected", "selected")
-                .attr("value", "null");
-            //
-            d3.select("#label_true")
-                .selectAll("option")
-                .data(g_labels)
-                .enter()
-                .append("option")
-                .attr("value", (d) => d[0].toLowerCase())
-                .html((d) => d[0]);
-            d3.select("#label_true")
-                .insert("option", ":first-child")
-                .html("--none--")
-                .attr("selected", "selected")
-                .attr("value", "null");
-            //
-            d3.select("#label_undetermined")
-                .selectAll("option")
-                .data(g_labels)
-                .enter()
-                .append("option")
-                .attr("value", (d) => d[0].toLowerCase())
-                .html((d) => d[0]);
-            d3.select("#label_undetermined")
-                .insert("option", ":first-child")
-                .html("--none--")
-                .attr("selected", "selected")
-                .attr("value", "null");
+            // Array of select element IDs and their corresponding data sources
+            const selectElements = [
+                {id: "#label_predicted", data: no_sys_labels},
+                {id: "#label_true", data: g_labels},
+                {id: "#label_undetermined", data: g_labels},
+                {id: "#label_ignore", data: g_labels}
+            ];
+
+            // Loop through each select element
+            selectElements.forEach(({id, data}) => {
+                // Select the element
+                const select = d3.select(id);
+
+                // Add options for each data item
+                select
+                    .selectAll("option")
+                    .data(data)
+                    .enter()
+                    .append("option")
+                    .attr("value", (d) => d[0].toLowerCase())
+                    .html((d) => d[0]);
+
+                // Insert the default "--none--" option
+                select
+                    .insert("option", ":first-child")
+                    .html("--none--")
+                    .attr("selected", "selected")
+                    .attr("value", "null");
+            });
+
             //
             for (const option of options) {
                 const optionValFromUrl = urlParams.get(option);
@@ -1258,18 +1267,19 @@ limitations under the License.
         );
     }
 
-    function statusPoll(forceIdleTime) {
+    function statusPoll(forceIdleTime, groupTrain) {
         // if (urlParams.get("linear_auto_train") == "on") {
         idleTime++;
         // logUI(`idleTime = ${idleTime}`);
         // }
+        groupTrain = groupTrain ?? false;
         const idleTimeForPost =
             forceIdleTime !== undefined ? forceIdleTime : idleTime;
         if (idleTimeForPost > 1000) {
             console.log(`idleTimeForPost = ${idleTimeForPost}, forceIdleTime = ${forceIdleTime}, idleTime = ${idleTime}`);
         }
         // console.log(`idleTimeForPost = ${idleTimeForPost}`);
-        $.post("/status", JSON.stringify({idleTime: idleTimeForPost})).done(
+        $.post("/status", JSON.stringify({idleTime: idleTimeForPost, groupTrain: groupTrain})).done(
             function (data) {
                 $("#status").attr("title", JSON.stringify(data, null, " "));
                 $("#status").html(data["status"]);
@@ -1300,7 +1310,7 @@ limitations under the License.
                     Math.round(parseFloat(data["perc_likely_certain"]) * 1000, 1) / 10
                 );
                 $("#likely_certain_perc").attr("title",
-                   `${data['num_labeled']}/${data['num_total']} = ${Math.round(parseFloat(data['num_labeled'] / data['num_total']) * 1000, 1) / 10} %`
+                    `${data['num_labeled']}/${data['num_total']} = ${Math.round(parseFloat(data['num_labeled'] / data['num_total']) * 1000, 1) / 10} %`
                 );
                 $("#average_precision").html(
                     round(data["average_precision"] * 100.0, 1)
@@ -1318,7 +1328,7 @@ limitations under the License.
         console.log(el.value, el.id);
         urlOptions.set(
             el.id,
-            el.value == "on" ? $("#" + el.id + ":checked").val() : el.value
+            el.value === "on" ? $("#" + el.id + ":checked").val() : el.value
         );
         if (["label_undetermined", "label_true"].indexOf(el.id) > -1) {
             urlOptions.set("show_labeled", "labeled");
@@ -1329,8 +1339,12 @@ limitations under the License.
         let url = "/annflux?";
         //window.location.href = "/annflux?" +
         for (const [key, value] of urlOptions) {
-            if (value && value != "null") {
-                url += `&${key}=${value}`;
+            let modifiedValue = value;
+            if (key === "filter_query") {
+                modifiedValue = encodeURIComponent(modifiedValue);
+            }
+            if (value && value !== "null") {
+                url += `&${key}=${modifiedValue}`;
             }
         }
         window.location.href = url;
@@ -1369,8 +1383,14 @@ limitations under the License.
 
     function forceLinearTrain() {
         $("#loading_circle").toggle();
-        statusPoll(3000);
+        statusPoll(forceIdleTime);
     }
+
+    function groupTrain() {
+        $("#loading_circle").toggle();
+        statusPoll(1, true);
+    }
+
 
     function highlightGalleryInMap() {
         galleryImages.each((d, i) => {
@@ -1484,7 +1504,6 @@ limitations under the License.
                 $("body").on("keypress", function (eventData) {
                     const key = eventData.originalEvent.key;
                     if (key === "?") {
-                        // alert("gg");
                         $("#help").toggle();
                     }
                 });
