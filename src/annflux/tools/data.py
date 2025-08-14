@@ -12,18 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
+import glob
 import itertools
 import json
 import logging
 import os
 import time
 from functools import lru_cache
+from multiprocessing import Pool
+from pathlib import Path
 from typing import List
 
 import numpy as np
 import pandas
+from PIL import Image
 from matplotlib import pyplot as plt
 from matplotlib.colors import rgb2hex
+
+from annflux.repository.dataset import Dataset
+from annflux.shared import AnnfluxSource
 
 from annflux.tools.mixed import get_basic_logger
 from annflux.training.annflux.group_classifier_cnn import get_labels
@@ -72,7 +79,7 @@ def color_and_label(
     logger.info(f"color_and_label: updating {len(data_to_update)} media")
     #
     label_array = np.array(
-        [annotations.get(uid) for i, uid in enumerate(data.uid.values)]
+        [annotations.get(uid) for i, uid in enumerate(data.uid.values)]  # noqa
     )
     cmap = plt.get_cmap("viridis")
     cmap_distinct = plt.get_cmap("tab20b")
@@ -99,30 +106,32 @@ def color_and_label(
     )
     data.label_true = data.label_true.apply(lambda x_: canon_(x_))
 
-    unique_labels = sorted(
+    # list of multi-labels (multiple labels in a single string; canonized)
+    unique_multi_labels = sorted(
         list(
             set(
                 [
-                    x_
+                    canon_(x_, output_separator=",")
                     for x_ in data["label_predicted"].unique()
                     if x_ is not None and x_ != "n/a"
                 ]
-            ).union(
-                set(
-                    list(
-                        itertools.chain(
-                            *[canon_(x_).split() for x_ in annotations.values()]
-                        )
-                    )
-                )
             )
+            .union(
+                set([canon_(x_, output_separator=",") for x_ in annotations.values()])
+            )
+            .union(individual_labels)
         )
     )
-    unique_labels.append("n/a")
-    logger.info(f"unique_labels={unique_labels}")
+    unique_multi_labels.append("n/a")
+    logger.info(f"unique_labels={unique_multi_labels}")
     logger.info(f"unique_labels end={time.time() - start_time}")
     label_to_float = dict(
-        list(zip(unique_labels, np.arange(len(unique_labels)) / len(unique_labels)))
+        list(
+            zip(
+                unique_multi_labels,
+                np.arange(len(unique_multi_labels)) / len(unique_multi_labels),
+            )
+        )
     )
 
     time_start = time.time()
@@ -166,17 +175,17 @@ def color_and_label(
             )
             del data_to_update["fre_for_color"]
         logger.info(f"fre_for_color took={time.time() - start_time}")
-    class_to_color = {
-        k: rgb2hex(cmap_distinct(label_to_float[k]))
-        for k in list(unique_labels)
-        if k is not None
+    multilabel_to_color = {
+        class_: rgb2hex(cmap_distinct(label_to_float[class_]))
+        for class_ in list(unique_multi_labels)
+        if class_ is not None
     }
 
-    def class_to_color_(x_):
-        return class_to_color[x_] if x_ not in ["n/a", None] else "#AAAAAA"
+    def multilabel_to_color_func(x_):
+        return multilabel_to_color[x_] if x_ not in ["n/a", None] else "#AAAAAA"
 
     data["color_class"] = data.apply(
-        lambda x_: class_to_color_(
+        lambda x_: multilabel_to_color_func(
             x_.label_predicted if not x_.labeled else x_.label_true
         ),
         axis=1,
@@ -239,7 +248,7 @@ def color_and_label(
     logger.info(f"label_possible took={time.time() - start_time}")
     logger.info(f"coloring took={time.time() - time_start}")
 
-    return class_to_color
+    return multilabel_to_color
 
 
 def compute_incorrect_score(
@@ -352,3 +361,171 @@ def add_group_to_exclusivity(group_children: List[str], exclusivity_path: str):
         exclusivity_table = update
     print(f"Adding {group_children} to {exclusivity_path}")
     exclusivity_table.to_csv(exclusivity_path, index=False)
+
+
+if __name__ == "__main__":
+    print(canon_("os hyoideum"))
+
+
+def create_group_flux_data(source):
+    if not os.path.exists(source.group_flux_data_path()):
+        uids = [
+            basename_no_extension(x_)
+            for x_ in os.listdir(source.named_path("images_group"))
+        ]
+        label_true = [
+            None,
+        ] * len(uids)
+        t = pandas.DataFrame({"uid": uids, "label_true": label_true})
+        t.to_csv(source.group_flux_data_path(), index=False)
+
+
+def make_images(images_path_):
+    images_path_ = Path(images_path_)
+    jpgs = glob.glob(str(images_path_ / "*.jpg"))
+    pngs = glob.glob(str(images_path_ / "*.png"))
+    all_files = glob.glob(str(images_path_ / "*"))
+
+    if len(pngs) > 0:
+        with Pool(32) as pool:
+            pool.map(png_to_jpg, pngs)
+
+    if len(all_files) != len(jpgs):
+        print(f"Non JPGs in {images_path_}")
+
+
+def png_to_jpg(path: str):
+    im = Image.open(path)
+    rgb_im = im.convert("RGB")
+    rgb_im.save(path.replace(".png", ".jpg"))
+
+
+def init_folder(
+    source: AnnfluxSource,
+    label_column_name=None,
+    start_labels=None,
+    exclusivity_groups: List[List[str]] = None,
+    refresh_media=False,
+    import_stream_metadata=False,
+) -> AnnfluxSource:
+    if start_labels is None:
+        start_labels = []
+    if exclusivity_groups is None:
+        exclusivity_groups = []
+    working_folder = source.working_folder
+    data_path = source.data_path
+    label_column_for_unseen = (
+        source.label_column_for_unseen
+        if label_column_name is None
+        else label_column_name
+    )
+    start_labels = [(x_, "null") for x_ in start_labels]  # TODO
+
+    images_path = source.images_folder
+    start_labels = source.start_labels if start_labels is None else start_labels
+    if len(exclusivity_groups) == 0:
+        exclusivity = source.exclusivity
+    else:
+        exclusivity = []
+        for group_children in exclusivity_groups:
+            exclusivity.extend(itertools.combinations(group_children, 2))
+    id_column = source.id_column
+
+    annflux_folder_exists = os.path.isdir(working_folder)
+    if not annflux_folder_exists:
+        os.makedirs(working_folder)
+        with open(os.path.join(working_folder, "label_defs.json"), "w") as f:
+            json.dump({"labels": start_labels}, f)
+        pandas.DataFrame(data=exclusivity, columns=["left", "right"]).to_csv(
+            os.path.join(working_folder, "exclusivity.csv"), index=False
+        )
+
+    unseen_dataset_path = os.path.join(working_folder, "unseen_annflux_data.csv")
+    unseen_data = None
+    if not os.path.exists(unseen_dataset_path) or refresh_media:
+        if not os.path.exists(data_path) or refresh_media:
+            make_images(images_path)
+
+            clean_filenames(images_path)
+            image_ids = [
+                os.path.splitext(x_)[0]
+                for x_ in os.listdir(images_path)
+                if x_.endswith(".jpg")
+            ]
+            images_table = pandas.DataFrame(
+                data=zip(
+                    image_ids,
+                    [
+                        "foo,bar",
+                    ]
+                    * len(image_ids),
+                ),
+                columns=[id_column, label_column_for_unseen],
+            )
+            images_table.to_csv(data_path, index=False)
+
+        unseen_data = pandas.read_csv(data_path, dtype={id_column: str})
+        unseen_data[id_column] = unseen_data[id_column].str.replace("-", "_")
+        unseen_data[id_column] = unseen_data[id_column].apply(
+            lambda x_: x_.replace(":", "_").replace(".", "_")
+        )
+        unseen_data["filename"] = unseen_data[id_column].apply(
+            lambda x_: os.path.join(images_path, x_ + ".jpg")
+        )
+        unseen_data["set"] = None
+        unseen_data["uid"] = unseen_data[id_column]
+        if label_column_for_unseen not in unseen_data.columns:
+            print(
+                f"'{label_column_for_unseen}' not in {unseen_data.columns}, "
+                f"consider to use --label_column_name {{label}}"
+            )
+
+        unseen_data["label"] = unseen_data[label_column_for_unseen]
+        unseen_data["record_id"] = unseen_data[id_column].apply(lambda x_: x_ + "R")
+        #
+        if import_stream_metadata:
+            stream_metadata = pandas.read_csv(
+                os.path.join(source.working_folder, "stream_process.csv")
+            )
+
+            unseen_data = pandas.merge(
+                unseen_data, stream_metadata, left_on=id_column, right_on="image_id"
+            )  # TODO: image_id
+        #
+        unseen_data.to_csv(unseen_dataset_path, index=False)
+    taxon_mapping_path = os.path.join(source.working_folder, "taxon_mapping.csv")
+    if not os.path.exists(taxon_mapping_path):  # TODO: check if this is still necessary
+        ids = [str(x_) for x_ in range(1000)]
+        pandas.DataFrame(data=list(zip(ids, ids)), columns=["label", "taxon"]).to_csv(
+            taxon_mapping_path
+        )
+
+    #
+    split_path = os.path.join(working_folder, "split.json")
+    if not os.path.exists(split_path):
+        test_uids = np.random.choice(
+            unseen_data.uid.values, int(0.10 * len(unseen_data)), replace=False
+        ).tolist()
+        with open(split_path, "w") as f:
+            json.dump({"test": test_uids}, f)
+    repo = source.repository
+    if len(repo.get(label=Dataset, tag="unseen")) == 0 or refresh_media:
+        dataset = Dataset(unseen_dataset_path, taxon_mapping_path=taxon_mapping_path)
+        repo.commit(dataset, tag="unseen")
+
+    return source
+
+
+def clean_filenames(images_path):
+    for fn in os.listdir(images_path):
+        if ":" in fn or "." in fn:
+            os.rename(
+                os.path.join(images_path, fn),
+                os.path.join(
+                    images_path,
+                    fn.replace(":", "_")
+                    .replace(".", "_")
+                    .replace("=", "_")
+                    .replace("_jpg", ".jpg"),
+                ),
+            )

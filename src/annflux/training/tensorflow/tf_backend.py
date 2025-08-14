@@ -76,7 +76,7 @@ def linear_retraining(state: AnnFluxState, status_callback):
     loss_ = "binary_crossentropy"
     model.compile(loss=loss_, optimizer="adam", metrics=["accuracy"])
 
-    weights_path = os.path.join(state.working_folder, "linear.weights.h5")
+    weights_path = os.path.join(state.annflux_folder, "linear.weights.h5")
     checkpointer = ModelCheckpoint(
         weights_path,
         monitor="val_loss",

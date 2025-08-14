@@ -39,7 +39,7 @@ def compute_performance(
     data: pandas.DataFrame,
     certain_threshold=0.95,
 ):
-    performance_graph_path = os.path.join(state.working_folder, "performance.json")
+    performance_graph_path = os.path.join(state.annflux_folder, "performance.json")
     num_train_val = len(state.labeled_indices)
     if len(true_test) > 0 and len(predicted_test) > 0:
         binarizer = MultiLabelBinarizer()
@@ -52,19 +52,24 @@ def compute_performance(
         )
     labels = list(set(itertools.chain(*[x_.split(",") for x_ in annotations.values()])))
     detailed_performance_table = []
+
     for label_ in labels:
+        logger.debug(f"{label_=}")
         per_image_true = np.array([int(label_ in x_) for x_ in true_test])
         per_image_predicted = np.array([int(label_ in x_) for x_ in predicted_test])
 
         precision, recall, f_score, support = precision_recall_fscore_support(
             per_image_true, per_image_predicted, zero_division=0.0
         )
-        if len(precision) > 1:
+        # if sum(per_image_true) > 0:
+        #     print(label_, per_image_true, per_image_predicted, precision, recall, f_score, support)
+        if len(precision) > 0 and sum(per_image_true) > 0:
+            index_ = 1 if len(precision) > 1 else 0
             logger.debug(
-                f"{label_} precision={precision[1]:.2f} recall={recall[1]:.2f} {support[1]}"
+                f"{label_} precision={precision[index_]:.2f} recall={recall[index_]:.2f} {support[index_]}"
             )
             detailed_performance_table.append(
-                (label_, precision[1], recall[1], support[1])
+                (label_, precision[index_], recall[index_], support[index_])
             )
     out_table = pandas.DataFrame(
         data=detailed_performance_table,
@@ -105,7 +110,7 @@ def compute_performance(
     ]
     out_table["num_labeled"] = [num_labeled.get(x_, 0) for x_ in out_table.label]
     out_table.to_csv(
-        os.path.join(state.working_folder, "detailed_performance.csv"), index=False
+        os.path.join(state.annflux_folder, "detailed_performance.csv"), index=False
     )
 
 

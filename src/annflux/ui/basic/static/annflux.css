@@ -28,6 +28,12 @@ span {
     overflow-y: auto;
 }
 
+#labelPanel {
+    padding: 2px;
+    overflow-y: auto;
+    max-height: 200px;
+}
+
 #my_dataviz {
     float: left;
     background-color: black;

@@ -172,8 +172,8 @@ function filterData(
         spatialFilterMargin = 0;
     }
     for (const d of show_data_start) {
-        const tX = x(d[xName]) * k + Tx;
-        const tY = y(d[yName]) * k + Ty;
+        const tX = x(Number(d[xName])) * k + Tx;
+        const tY = y(Number(d[yName])) * k + Ty;
         // console.log(tX, tY);
         if (tX > spatialFilterMargin && tX < width && tY > spatialFilterMargin && tY < height) {
             show_data.push(d);
@@ -268,10 +268,10 @@ function addImages(
         .enter()
         .append("image")
         .attr("x", function (d) {
-            return renderImageType === "thumbnail" ? x(d[xName]) : 0;
+            return renderImageType === "thumbnail" ? x(Number(d[xName])) : 0;
         })
         .attr("y", function (d) {
-            return renderImageType === "thumbnail" ? y(d[yName]) * (isTileRendering ? (tileSizeX / tileSizeY) : 1) : 0; //TODO: think about this
+            return renderImageType === "thumbnail" ? y(Number(d[yName])) * (isTileRendering ? (tileSizeX / tileSizeY) : 1) : 0; //TODO: think about this
         })
         .attr("width", function (d) {
             return tileSizeX;
@@ -363,16 +363,18 @@ controlHtml = `<div id="map_control">
         </tr>
         <tr>
           <td><img src="/static/annflux.svg" width="32px"/></td>
-          <td><span id="speed_active_time"></span> active, <span id="speed_annotation"></span> <img src="/static/label.svg" width="24px"/>/h, likely certain <span id="speed_certain"></span><img src="/static/label.svg" width="24px"/>/h</td>
-        
+          <td><span id="speed_active_time"></span> active, <span id="speed_annotation"></span> <img src="/static/label.svg" width="24px"/>/h, likely certain <span id="speed_certain"></span><img src="/static/label.svg" width="24px"/>/h</td>        
         <tr>
-          <td>Quick training</td>
+          <td>Training</td>
           <td>
             <a href="javascript:void(0)" onclick="forceLinearTrain()"
-              >Train now</a
+              >Linear</a
+            > 
+            <a href="javascript:void(0)" onclick="groupTrain()" id="groupTrainButton"
+              >Group</a
             >
           </td>
-        </tr>
+        </tr>        
         <tr>
           <td>
             <a href="/detailed_performance">Performance</a>
@@ -462,7 +464,24 @@ controlHtml = `<div id="map_control">
           </td>
         </tr>
         <tr>
-          <td>Show</td>
+          <td>Label ignore</td>
+          <td>
+            <select
+              id="label_ignore"
+              onchange="changeOption(this)"
+            ></select>
+          </td>
+        </tr>
+        <tr>
+          <td>Filter</td>
+          <td>
+            <input type="text"
+              id="filter_query"
+            /> <a href="#" onclick="changeOption(document.getElementById('filter_query'))">Apply</a>
+          </td>
+        </tr>
+        <tr>
+          <td>Show (un)labeled</td>
           <td>
             <select id="show_labeled" onchange="changeOption(this)">
               <option value="unlabeled" selected="selected">unlabeled</option>

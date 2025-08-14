@@ -39,13 +39,26 @@ from annflux.tools.core import AnnFluxState
 from annflux.tools.data import canon_, color_and_label
 from annflux.tools.io import numpy_load
 from annflux.tools.mixed import remove_sys
-from annflux.training.annflux.group_classifier_cnn import classify
+from annflux.training.annflux.group_classifier_cnn import (
+    classify_path as group_classify,
+)
 
 min_prev_near_labeled_perc = 0.99  # TODO: configurable
 
 
-def group_classification(features, annflux_data) -> (np.array, float, list[str]):
-    return classify(features, annflux_data)
+def group_classification(
+    features,
+    annflux_path_or_data: str | pandas.DataFrame,
+    feature_image_out_folder,
+    group_data_path_or_data: str | pandas.DataFrame,
+test_uids
+) -> tuple[NDArray, float, pandas.DataFrame]:
+    """
+    :return features, accuracy, out_table
+    """
+    return group_classify(
+        features, annflux_path_or_data, feature_image_out_folder, group_data_path_or_data, test_uids
+    )
 
 
 def quick_reclassification(
@@ -62,57 +75,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     Trains a quick new model using kNN
     """
     start_time = time.time()
-    repo = Repository(os.path.join(state.working_folder, "datarepo"))
-    result_set = repo.get(label=Resultset, tag="unseen").last()
-    folder = result_set.path
-    data = pandas.read_csv(
-        os.path.join(state.data_folder, "annflux", "annflux.csv"),
-        dtype={
-            "label_predicted": str,
-            "score_true": float,
-            "uid": str,
-            "score_possible": str,
-        },
-    )
-    data.reset_index(drop=True, inplace=True)
-    logger.info(f"instant_reclassification 2={time.time() - start_time}")
-    with open(state.labels_path) as f:
-        annotations = json.load(f)
-    with open(os.path.join(state.working_folder, "split.json")) as f:
-        test_uids = set(json.load(f)["test"])
-    logger.info(f"instant_reclassification 3={time.time()}")
-    reload_features = state.cache_for != result_set.entry.uid
-    logger.info(
-        f"{state.version_for_recompute=}, {result_set.entry.uid=},{state.trained_for_version_previous=}"
-    )
-    if reload_features:
-        state.g_quick_status = "Loading features"
-        state.features = numpy_load(f"{folder}/last_full.npz", "lastFull")
-    assert len(data) == len(state.features), f"{len(data)=}, {len(state.features)=}"
-    annotated_uids = set(annotations.keys())
-    most_needed_first = annotated_uids - test_uids
-    state.labeled_indices = sorted(
-        [i for i, uid in enumerate(data.uid.values) if uid in most_needed_first]
-    )
-    logger.info(f"instant_reclassification 4={time.time() - start_time}")
-    #
-    set_data_undetermined(annotations, data)
-    #
-    set_state_label_array(annotations, data, state, test_uids)
-    logger.info(f"state.label_array_test={state.label_array_test}")
-    logger.info(f"|label_array_test|={len(state.label_array_test)}")
-    test_indices = set([i for i, uid in enumerate(data.uid.values) if uid in test_uids])
-    logger.info(f"|test_uids|={len(test_uids)}")
-    logger.info(f"|test_indices|={len(test_indices)}")
-    state.labeled_test_indices = sorted(
-        [
-            i
-            for i, uid in enumerate(data.uid.values)
-            if uid in test_uids and uid in annotations
-        ]
-    )
-    logger.info(f"|labeled_test_indices|={len(state.labeled_test_indices)}")
-    logger.info(f"instant_reclassification 5={time.time() - start_time}")
+    annotations, data, result_set, test_indices, test_uids = load_data(state, logger)
 
     # print("labeled_indices", labeled_indices)
     state.all_distances, state.all_indices = compute_knn(
@@ -125,7 +88,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     )
 
     has_dp_cluster = "dp_cluster" in data.columns
-    dp_most_needed_idx: np.array = None
+    dp_most_needed_idx: NDArray | None = None
     if has_dp_cluster:
         dp_most_needed_idx = data[
             data["dp_most_needed"] < data["dp_most_needed"].max()
@@ -448,8 +411,64 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         ),
         on="class",
         how="left",
-    ).to_csv(os.path.join(state.data_folder, "annflux", "class_to_color.csv"))
+    ).to_csv(os.path.join(state.project_folder, "annflux", "class_to_color.csv"))
     state.g_quick_status = "idle"
+
+
+def load_data(state: AnnFluxState, logger: logging.Logger):
+    start_time = time.time()
+    repo = Repository(os.path.join(state.annflux_folder, "datarepo"))
+    result_set = repo.get(label=Resultset, tag="unseen").last()
+    folder = result_set.path
+    data = pandas.read_csv(
+        os.path.join(state.project_folder, "annflux", "annflux.csv"),
+        dtype={
+            "label_predicted": str,
+            "score_true": float,
+            "uid": str,
+            "score_possible": str,
+        },
+    )
+    data.reset_index(drop=True, inplace=True)
+    logger.info(f"instant_reclassification 2={time.time() - start_time}")
+    with open(state.labels_path) as f:
+        annotations = json.load(f)
+    with open(os.path.join(state.annflux_folder, "split.json")) as f:
+        test_uids = set(json.load(f)["test"])
+    logger.info(f"instant_reclassification 3={time.time()}")
+    reload_features = state.cache_for != result_set.entry.uid
+    logger.info(
+        f"{state.version_for_recompute=}, {result_set.entry.uid=},{state.trained_for_version_previous=}"
+    )
+    if reload_features:
+        state.g_quick_status = "Loading features"
+        state.features = numpy_load(f"{folder}/last_full.npz", "lastFull")
+    assert len(data) == len(state.features), f"{len(data)=}, {len(state.features)=}"
+    annotated_uids = set(annotations.keys())
+    most_needed_first = annotated_uids - test_uids
+    state.labeled_indices = sorted(
+        [i for i, uid in enumerate(data.uid.values) if uid in most_needed_first]
+    )
+    logger.info(f"instant_reclassification 4={time.time() - start_time}")
+    #
+    set_data_undetermined(annotations, data)
+    #
+    set_state_label_array(annotations, data, state, test_uids)
+    logger.info(f"state.label_array_test={state.label_array_test}")
+    logger.info(f"|label_array_test|={len(state.label_array_test)}")
+    test_indices = set([i for i, uid in enumerate(data.uid.values) if uid in test_uids])
+    logger.info(f"|test_uids|={len(test_uids)}")
+    logger.info(f"|test_indices|={len(test_indices)}")
+    state.labeled_test_indices = sorted(
+        [
+            i
+            for i, uid in enumerate(data.uid.values)
+            if uid in test_uids and uid in annotations
+        ]
+    )
+    logger.info(f"|labeled_test_indices|={len(state.labeled_test_indices)}")
+    logger.info(f"instant_reclassification 5={time.time() - start_time}")
+    return annotations, data, result_set, test_indices, test_uids
 
 
 def set_state_label_array(annotations, data, state, test_uids):
@@ -540,7 +559,7 @@ def quick_reclassification_group(knn_type, state):
     Trains a quick new model using kNN
     """
     start_time = time.time()
-    group_annflux_path = os.path.join(state.working_folder, "group0_annflux.csv")
+    group_annflux_path = os.path.join(state.annflux_folder, "group0_annflux.csv")
     data = pandas.read_csv(
         group_annflux_path,
         dtype={"label_predicted": str, "score_true": float, "uid": str},
@@ -551,7 +570,7 @@ def quick_reclassification_group(knn_type, state):
     #     test_uids = set(json.load(f)["test"])
 
     state.group_features = np.load(
-        os.path.join(state.working_folder, "group0_features.npz")
+        os.path.join(state.annflux_folder, "group0_features.npz")
     )["lastFull"]
     assert len(data) == len(state.group_features), (
         f"{len(data)=}, {len(state.group_features)=}"
@@ -663,7 +682,7 @@ def quick_reclassification_group(knn_type, state):
     pandas.DataFrame(
         data=zip(class_to_color.keys(), class_to_color.values()),
         columns=("class", "color"),
-    ).to_csv(os.path.join(state.data_folder, "annflux", "class_to_color_group.csv"))
+    ).to_csv(os.path.join(state.project_folder, "annflux", "class_to_color_group.csv"))
     state.g_quick_status = "idle"
 
 

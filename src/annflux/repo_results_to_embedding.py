@@ -152,10 +152,10 @@ def embed_and_prepare_func(
     return acc_test
 
 
-if __name__ == "__main__":
-    source_ = AnnfluxSource(sys.argv[1])
+def group_embedding(project_folder):
+    source_ = AnnfluxSource(project_folder)
     data_ = pandas.read_csv(source_.group_flux_data_path())
-    if "group_id" in data_: # TODO: let group classifier output the right format
+    if "group_id" in data_:  # TODO: let group classifier output the right format
         data_["uid"] = data_.group_id
         data_.score_predicted = data_.score_predicted.apply(lambda x_: x_ / 100.0)
         del data_["group_id"]
@@ -168,3 +168,7 @@ if __name__ == "__main__":
         None,
         False,
     )
+
+
+if __name__ == "__main__":
+    group_embedding(sys.argv[1])

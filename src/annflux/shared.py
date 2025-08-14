@@ -28,7 +28,7 @@ class AnnfluxSource(object):
     id_column = "image_id"
     data_path_ = None
     images_path_ = None
-    working_folder_ = None
+    annflux_folder_ = None
     label_column_for_unseen = "label"
 
     def __init__(self, folder: Union[PathLike, str] = None):
@@ -36,7 +36,7 @@ class AnnfluxSource(object):
             folder = Path(folder)
             self.data_path_ = str(folder / "images.csv")
             self.images_path_ = str(folder / "images")
-            self.working_folder_ = str(folder / "annflux")
+            self.annflux_folder_ = str(folder / "annflux")
             self.folder = folder
 
     @property
@@ -52,18 +52,18 @@ class AnnfluxSource(object):
 
     @property
     def flux_data_path(self):
-        return os.path.join(self.working_folder_, "annflux.csv")
+        return os.path.join(self.annflux_folder_, "annflux.csv")
 
     def group_flux_data_path(self, group=0):
-        return os.path.join(self.working_folder_, f"group{group}_annflux.csv")
+        return os.path.join(self.annflux_folder_, f"group{group}_annflux.csv")
 
     def group_features_path(self, group=0):
-        return os.path.join(self.working_folder_, f"group{group}_features.npz")
+        return os.path.join(self.annflux_folder_, f"group{group}_features.npz")
 
 
     @property
     def stream_data_path(self):
-        return os.path.join(self.working_folder_, "stream_process.csv")
+        return os.path.join(self.annflux_folder_, "stream_process.csv")
 
     @property
     def images_folder(self):
@@ -80,6 +80,8 @@ class AnnfluxSource(object):
     def original_images_path(self):
         return str(self.folder / "original")
 
+    def named_path(self, name: str):
+        return str(self.folder / name)
 
     @property
     def working_folder(self):
@@ -87,9 +89,9 @@ class AnnfluxSource(object):
         'annflux' folder in the project folder
         """
         return (
-            os.path.join(base_data_path, self.working_folder_)
+            os.path.join(base_data_path, self.annflux_folder_)
             if base_data_path is not None
-            else self.working_folder_
+            else self.annflux_folder_
         )
 
     @property

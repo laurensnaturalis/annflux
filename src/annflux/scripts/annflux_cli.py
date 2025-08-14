@@ -41,7 +41,8 @@ from annflux.scripts.tile_images import tile_and_save, link_files, download_file
 from annflux.shared import AnnfluxSource
 from annflux.tools.api_sdk import is_port_open, call_predict
 from annflux.tools.mixed import get_logger
-from annflux.train_features import init_folder, train_then_features
+from annflux.train_features import train_then_features
+from annflux.tools.data import init_folder
 from annflux.training.annflux.feature_extractor import TrainParameters
 import annflux
 

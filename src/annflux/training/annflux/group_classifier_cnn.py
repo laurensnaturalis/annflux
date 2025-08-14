@@ -17,7 +17,6 @@ from tqdm import tqdm
 
 from annflux.repository.resultset import Resultset
 from annflux.shared import AnnfluxSource
-from annflux.tools.io import basename_no_extension
 
 
 def labels_to_matrix(all_labels, name_to_index, t, true_labels):
@@ -29,24 +28,41 @@ def labels_to_matrix(all_labels, name_to_index, t, true_labels):
 
 
 def classify_path(
-    features_path, annflux_path, feature_image_out_folder, group_data_path
-) -> (np.array, float, pandas.DataFrame):
-    features = np.load(features_path)["lastFull"]
-    patch_data = pandas.read_csv(annflux_path)
+    features_path_or_features: NDArray,
+    annflux_path_or_data: str | pandas.DataFrame,
+    feature_image_out_folder: str,
+    group_data_path_or_data: str | pandas.DataFrame,
+    test_uids: list[str] = None,
+) -> tuple[NDArray, float, pandas.DataFrame]:
+    features = (
+        np.load(features_path_or_features)["lastFull"]
+        if isinstance(features_path_or_features, str)
+        else features_path_or_features
+    )
+    patch_data = (
+        pandas.read_csv(annflux_path_or_data)
+        if isinstance(annflux_path_or_data, str)
+        else annflux_path_or_data
+    )
+
+    group_data = (
+        pandas.read_csv(group_data_path_or_data)
+        if isinstance(group_data_path_or_data, str)
+        else group_data_path_or_data
+    )
+
     os.makedirs(feature_image_out_folder, exist_ok=True)
-    if not os.path.exists(group_data_path):
-        uids = [
-            basename_no_extension(x_)
-            for x_ in os.listdir("/mnt/big/indeed/legasea_big/images_group")
-        ]  # TODO
-        label_true = [
-            None,
-        ] * len(uids)
-        t = pandas.DataFrame({"uid": uids, "label_true": label_true})
-        t.to_csv(group_data_path, index=False)
-    group_data = pandas.read_csv(group_data_path)
+
     record_to_label = dict(zip(group_data.uid, group_data.label_true))
-    return classify(features, patch_data, feature_image_out_folder, record_to_label, num_epochs=30)
+    return classify(
+        features,
+        patch_data,
+        feature_image_out_folder,
+        record_to_label,
+        test_uids=test_uids,
+        num_epochs=30,
+        cache_feature_image=True
+    )
 
 
 def make_feature_image_advanced(features, image_dim, record_instance_data, min_value):
@@ -68,12 +84,14 @@ def make_feature_image_advanced(features, image_dim, record_instance_data, min_v
 
 
 def classify(
-    features,
+    features: NDArray,
     instance_data: pandas.DataFrame,
     feature_image_out_folder,
     record_to_label: dict[str, str],
     num_epochs=10,
-) -> (np.array, float, pandas.DataFrame):
+    cache_feature_image=False,
+    test_uids: list[str] = None,
+) -> tuple[NDArray, float, pandas.DataFrame]:
     """
     :return features, accuracy, out_table
     """
@@ -81,10 +99,11 @@ def classify(
     # if "label_original" not in instance_data.columns:
     #     return
     # # TODO: check if there's fewer groups than images, otherwise skip step
-
+    test_uids = set(test_uids)
     grouped_labels = []
     grouped_images = []
     group_ids = []
+    is_test: list[bool] = []
     # TODO: use predicted patch labels
     if "hour" in instance_data.columns:  # camera trap / ecology specific
         instance_data.dropna(subset="hour", inplace=True)
@@ -141,13 +160,19 @@ def classify(
         predicted_label_matrix
     )
 
-    for record_id in tqdm(instance_data.record_id.unique()):
+    for record_id in tqdm(
+        instance_data.record_id.unique(),
+        desc="creating or loading group feature images",
+    ):
         group_ids.append(record_id)
         feature_image_path = os.path.join(
             feature_image_out_folder,
             f"{record_id}.jpg",
         )
-        if not os.path.exists(feature_image_path):
+        print(f"{feature_image_path=}")
+        if (
+            not os.path.exists(feature_image_path) or not cache_feature_image
+        ):  # TODO: decide when to enable cache
             # feature_image, results_for_image = make_feature_image_basic(features, image_dim, original_image_id, patch_data)
             results_for_record = instance_data[instance_data.record_id == record_id]
             # print(f"{len(results_for_record)=}")
@@ -202,6 +227,7 @@ def classify(
         assert feature_image.shape == (image_dim, image_dim, 3), feature_image.shape
 
         grouped_labels.append(record_to_label[record_id])
+        is_test.append(record_id in test_uids)
         grouped_images.append(feature_image.astype(np.float32))
 
     tmp = np.vstack(grouped_images)
@@ -213,9 +239,11 @@ def classify(
         zip(set(grouped_labels), range(len(set(grouped_labels))))
     )
     index_to_grouped_label = {val: key for key, val in grouped_label_to_index.items()}
+    #
     features, accuracy, predictions = train_pytorch(
         grouped_images,
         [grouped_label_to_index[x_] for x_ in grouped_labels],
+        is_test,
         num_epochs=num_epochs,
     )
     probabilities = np.max(predictions, axis=-1)
@@ -228,6 +256,7 @@ def classify(
             ],
             "label_true": grouped_labels,
             "score_predicted": probabilities,
+            "is_test": is_test,
         }
     )
     return features, accuracy, out_table
@@ -288,8 +317,8 @@ class InMemoryDataset(Dataset):
 
 
 def train_pytorch(
-    images, labels: list[int], num_epochs=10, min_number_of_examples=4
-) -> (NDArray, float, NDArray):
+    images, labels: list[int], is_test: list[bool], num_epochs=10, min_number_of_examples=4
+) -> tuple[NDArray, float, NDArray]:
     """
     return features, accuracy, probability vectors
     """
@@ -305,23 +334,24 @@ def train_pytorch(
         ]
     )
     print(f"{len(images)} images")
-    X = np.stack(images)
+    X = np.stack(images)  # noqa
     y = np.array(labels)
     print(Counter(labels))
     ignore = [
         t_[0] for t_ in Counter(labels).most_common() if t_[1] < min_number_of_examples
     ]
-    sel_ = [x_ not in set(ignore) for x_ in y]
-    print(f"{len(sel_)=}, {sel_[:10]}")
-    X_sufficient_labeled = X[sel_]
-    y_sufficient_labeled = y[sel_]
+    selection_for_train_val = np.array([x_ not in set(ignore) for x_ in y]) * (1 - np.array(is_test)) > 0
+    assert len(selection_for_train_val) == len(images)
+    print(f"{len(selection_for_train_val)=}, {selection_for_train_val[:10]}, {sum(selection_for_train_val)=}")
+    X_sufficient_labeled = X[selection_for_train_val]  # noqa
+    y_sufficient_labeled = y[selection_for_train_val]
     print(f"{len(X_sufficient_labeled)=}, {len(y_sufficient_labeled)=}")
-    X_train, X_test, y_train, y_test = train_test_split(
+    X_train, X_validation, y_train, y_validation = train_test_split(  # noqa
         X_sufficient_labeled,
         y_sufficient_labeled,
         test_size=0.33,
         random_state=42,
-        stratify=np.array(labels)[sel_],
+        stratify=np.array(labels)[selection_for_train_val],
     )
 
     train_loader = DataLoader(
@@ -362,7 +392,7 @@ def train_pytorch(
     print("Training Finished")
 
     test_loader = DataLoader(
-        InMemoryDataset(X_test, y_test, transform=transform),
+        InMemoryDataset(X_validation, y_validation, transform=transform),
         batch_size=32,
         shuffle=False,
     )
@@ -378,7 +408,7 @@ def train_pytorch(
 
     return (
         np.vstack(group_features),
-        accuracy_score(y_test, np.argmax(predictions_test, axis=-1)),
+        accuracy_score(y_validation, np.argmax(predictions_test, axis=-1)),
         np.vstack(predictions_all),
     )
 
@@ -408,12 +438,12 @@ def predict(device, model, loader) -> (np.array, list[NDArray]):
 if __name__ == "__main__":
     source_ = AnnfluxSource(sys.argv[1])
     resultset: Resultset = source_.repository.get(label=Resultset).last()
-    features, accuracy, out_table = classify_path(
-        features_path=resultset.last_full_path,
-        annflux_path=source_.data_state_path,
+    features_, accuracy_, out_table_ = classify_path(
+        features_path_or_features=resultset.last_full_path,
+        annflux_path_or_data=source_.data_state_path,
         feature_image_out_folder=os.path.join(source_.folder, "group_feature_images"),
         group_data_path=source_.group_flux_data_path(),
     )
-    print(f"{accuracy=}")
-    np.savez(source_.group_features_path(), lastFull=features)
-    out_table.to_csv(source_.group_flux_data_path())
+    print(f"{accuracy_=}")
+    np.savez(source_.group_features_path(), lastFull=features_)
+    out_table_.to_csv(source_.group_flux_data_path())
