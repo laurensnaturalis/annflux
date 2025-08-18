@@ -16,7 +16,7 @@ import json
 import logging
 import os
 import time
-from collections import defaultdict, Counter
+from collections import defaultdict
 from typing import Set, Dict, Any, Tuple
 
 import faiss
@@ -51,13 +51,17 @@ def group_classification(
     annflux_path_or_data: str | pandas.DataFrame,
     feature_image_out_folder,
     group_data_path_or_data: str | pandas.DataFrame,
-test_uids
+    test_uids,
 ) -> tuple[NDArray, float, pandas.DataFrame]:
     """
     :return features, accuracy, out_table
     """
     return group_classify(
-        features, annflux_path_or_data, feature_image_out_folder, group_data_path_or_data, test_uids
+        features,
+        annflux_path_or_data,
+        feature_image_out_folder,
+        group_data_path_or_data,
+        test_uids,
     )
 
 
@@ -322,20 +326,6 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         data_ = data[data["dp_most_needed"] < data["dp_most_needed"].max()]
         near_labeled_perc = len(data_[data["labeled"] == 1]) / len(data_)
 
-        # counts_per_cluster = (
-        #     data.groupby("dp_cluster").size().reset_index(name="counts")
-        # )
-        # counts_per_cluster = {
-        #     row_.dp_cluster: row_.counts for _, row_ in counts_per_cluster.iterrows()
-        # }
-        # for _, row in data.sort_values("dp_most_needed").iterrows():
-        #     print(f"{counts_per_cluster[row['dp_cluster']] / len(data)=}")
-        #     if row["labeled"] == 1 and row["dp_cluster"] < len(counts_per_cluster):
-        #         near_labeled_perc += counts_per_cluster[row["dp_cluster"]] / len(data)
-        #     print(f"{near_labeled_perc=}")
-        #     if near_labeled_perc > 1.0:
-        #         near_labeled_perc = 1.0
-        #         break
         write_performance_key_val(
             state.performance_path, "percentage_near_labeled", near_labeled_perc
         )
@@ -346,9 +336,6 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
         ].index.values.tolist()
-        print(f"{len(unpredicted_idx)=} before make_predictions")
-        print(f"{len(dp_most_needed_idx)=}")
-        print(f"{state.label_array[dp_most_needed_idx]=}")
         make_predictions(
             annotations,
             data,
@@ -381,15 +368,18 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     print(f"{predicted_test=}, {true_test=}")
     compute_performance(predicted_test, true_test, state, annotations, data)
     state.g_quick_status = "coloring and labelling"
-    class_to_color = color_and_label(
+
+    class_to_color, class_to_count = color_and_label(
         data,
         annotations,
+        json.load(open(os.path.join(state.annflux_folder, "label_defs.json")))[
+            "labels"
+        ],
         display_update_uids=new_labeled_nn_uids
         if new_labeled_nn_uids is not None and len(new_labeled_nn_uids) > 0
         else None,
         logger=logger,
     )
-    class_cluster_to_count = Counter([canon_(x_) for x_ in annotations.values()])
 
     with open(state.doublecheck_path) as f:
         double_checked = set(json.load(f)["checked"])
@@ -401,6 +391,16 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         f"no prediction={len(data[(data.score_predicted == 0) & (data.labeled == 0)])}"
     )
     logger.info(f"instant_reclassification done = {time.time() - start_time}")
+
+    make_class_to_color(
+        class_to_count,
+        class_to_color,
+        os.path.join(state.project_folder, "annflux", "class_to_color.csv"),
+    )
+    state.g_quick_status = "idle"
+
+
+def make_class_to_color(class_cluster_to_count, class_to_color, out_path):
     pandas.DataFrame(
         data=zip(class_to_color.keys(), class_to_color.values()),
         columns=("class", "color"),
@@ -411,8 +411,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         ),
         on="class",
         how="left",
-    ).to_csv(os.path.join(state.project_folder, "annflux", "class_to_color.csv"))
-    state.g_quick_status = "idle"
+    ).to_csv(out_path)
 
 
 def load_data(state: AnnFluxState, logger: logging.Logger):
@@ -554,7 +553,7 @@ def compute_knn(
     return all_distances, all_indices
 
 
-def quick_reclassification_group(knn_type, state):
+def quick_reclassification_group(knn_type, state, logger):
     """
     Trains a quick new model using kNN
     """
@@ -750,6 +749,8 @@ def make_predictions(
 
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
         org_index = data_indices[i]
+        uid: str = data.at[org_index, "uid"]
+
         # is_labeled = (
         #     update["uid"][org_index] in annotations
         #     and (test_indices is None or org_index not in test_indices)  # TODO: check
@@ -768,10 +769,12 @@ def make_predictions(
                 if distance_weight < 1e-8:
                     distance_weight = 1e-8
                 for label_ in multilabel_:
+                    if uid == "304_20220917191315_41686":
+                        print(i2, data.at[data_indices[i2], "uid"], label_, distance_weight)
                     probabilities[label_] += 1 / distance_weight
                     # get data for estimating relation between distance and probability
                     if is_labeled:
-                        true_labels = annotations[update["uid"][org_index]].split(",")
+                        true_labels = annotations[uid].split(",")
                         for label2_ in probabilities:
                             if label2_ in true_labels:
                                 running_prob = (1 / distance_weight) / (
@@ -783,6 +786,10 @@ def make_predictions(
                     #
                 if len(multilabel_) > 0:
                     max_mass += 1 / distance_weight
+        #
+        if uid == "304_20220917191315_41686":
+            print("HAAR", uid, probabilities)
+
         # knn class probability
         for label_ in probabilities:
             probabilities[label_] /= max_mass

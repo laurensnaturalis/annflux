@@ -17,7 +17,10 @@ import itertools
 import json
 import logging
 import os
+import shutil
 import time
+from collections import Counter
+from datetime import datetime
 from functools import lru_cache
 from multiprocessing import Pool
 from pathlib import Path
@@ -31,6 +34,7 @@ from matplotlib.colors import rgb2hex
 
 from annflux.repository.dataset import Dataset
 from annflux.shared import AnnfluxSource
+from annflux.tools.io import basename_no_extension
 
 from annflux.tools.mixed import get_basic_logger
 from annflux.training.annflux.group_classifier_cnn import get_labels
@@ -62,12 +66,44 @@ def canon_(
     return result
 
 
+def get_full_labeling(tuples, leaf):
+    # TODO: outside
+    parent_map = {}
+    for t_ in tuples:
+        child, parent = t_[0], t_[1]
+        if parent != "null":
+            parent_map[child] = parent
+
+    # Traverse from leaf to root
+    full_label = []
+    current = leaf
+    while current in parent_map:
+        full_label.append(current)
+        current = parent_map[current]
+    full_label.append(current)  # Add the root
+
+    # Reverse to get root-to-leaf order
+    full_label.reverse()
+    return full_label
+
+
 def color_and_label(
     data: pandas.DataFrame,
     annotations: dict[str, str],
+    label_definitions: list[tuple[str, str]],
     display_update_uids: list[str] = None,
     logger: logging.Logger = get_basic_logger("color_and_label"),
 ):
+    individual_labels = list(
+        itertools.chain(
+            *[canon_(x_, remove_unknown=True).split(",") for x_ in annotations.values()]
+        )
+    )
+
+    class_to_count = Counter(individual_labels)
+    class_to_count.update(
+        Counter([canon_(x_, remove_unknown=True) for x_ in annotations.values()])
+    )
     start_time = time.time()
     logger.info(f"color_and_label start={time.time()}")
     #
@@ -83,15 +119,13 @@ def color_and_label(
     )
     cmap = plt.get_cmap("viridis")
     cmap_distinct = plt.get_cmap("tab20b")
-    individual_labels = set(
-        list(itertools.chain(*[x_.split(",") for x_ in annotations.values()]))
-    )
+    individual_labels_unique = set(individual_labels)
     data_to_update["label_predicted"] = data_to_update["label_predicted"].apply(
         lambda x_: x_
         if len(
             set(
                 x_.split(",") if x_ is not None and not pandas.isna(x_) else []
-            ).intersection(individual_labels)
+            ).intersection(individual_labels_unique)
         )
         > 0
         else "n/a"
@@ -106,33 +140,33 @@ def color_and_label(
     )
     data.label_true = data.label_true.apply(lambda x_: canon_(x_))
 
-    # list of multi-labels (multiple labels in a single string; canonized)
-    unique_multi_labels = sorted(
-        list(
-            set(
-                [
-                    canon_(x_, output_separator=",")
-                    for x_ in data["label_predicted"].unique()
-                    if x_ is not None and x_ != "n/a"
-                ]
-            )
-            .union(
-                set([canon_(x_, output_separator=",") for x_ in annotations.values()])
-            )
-            .union(individual_labels)
-        )
+    # list of multi-labels (multiple labels in a single string; canonized) and single labels
+    unique_predicted_multilabels = set(
+        [
+            canon_(x_, output_separator=",")
+            for x_ in data["label_predicted"].unique()
+            if x_ is not None and x_ != "n/a"
+        ]
     )
-    unique_multi_labels.append("n/a")
-    logger.info(f"unique_labels={unique_multi_labels}")
+    unique_annotated_multilabels = set(
+        [
+            canon_(x_, output_separator=",", remove_unknown=True)
+            for x_ in annotations.values()
+        ]
+    )
+    unique_labels = sorted(
+        list(unique_predicted_multilabels.union(unique_annotated_multilabels)),
+        key=lambda x_: class_to_count.get(x_, 0),
+        reverse=True,
+    )
+    for multilabel_ in individual_labels_unique:
+        canon_full = canon_(",".join(get_full_labeling(label_definitions, multilabel_)))
+        if multilabel_ not in unique_labels and canon_full not in unique_labels:
+            unique_labels.append(multilabel_)
+
+    unique_labels.append("n/a")
+    logger.info(f"unique_labels={unique_labels}")
     logger.info(f"unique_labels end={time.time() - start_time}")
-    label_to_float = dict(
-        list(
-            zip(
-                unique_multi_labels,
-                np.arange(len(unique_multi_labels)) / len(unique_multi_labels),
-            )
-        )
-    )
 
     time_start = time.time()
     cluster_to_color = {k: rgb2hex(cmap(k / 100)) for k in range(101)}
@@ -175,14 +209,78 @@ def color_and_label(
             )
             del data_to_update["fre_for_color"]
         logger.info(f"fre_for_color took={time.time() - start_time}")
+    #
+    label_to_float = dict(
+        list(
+            zip(
+                unique_labels[:20],
+                np.arange(len(unique_labels[:20])) / len(unique_labels[:20]),
+            )
+        )
+    )
+
     multilabel_to_color = {
-        class_: rgb2hex(cmap_distinct(label_to_float[class_]))
-        for class_ in list(unique_multi_labels)
+        class_: cmap_distinct(label_to_float[class_])
+        for class_ in list(unique_labels[:20])
         if class_ is not None
     }
 
+    for multilabel_ in unique_labels[20:]:
+        labels_ = multilabel_.split(",")
+        if len(labels_) == 1:
+            full_labels = get_full_labeling(label_definitions, labels_[0])
+        else:
+            deepest_label = None
+            deepest_level = -1
+            for label2_ in labels_:
+                full_labels = get_full_labeling(label_definitions, label2_)
+                if len(full_labels) > deepest_level:
+                    deepest_label = label2_
+                    deepest_level = len(full_labels)
+            full_labels = get_full_labeling(label_definitions, deepest_label)
+        assigned = False
+        if len(full_labels) > 1:
+            for i_ in range(1, len(full_labels)):
+                ancestor_ = full_labels[:-i_]
+                ancestor_canon = canon_(",".join(ancestor_))
+                if ancestor_canon in multilabel_to_color:
+                    # print(f"Using {ancestor_} for label {label_}")
+                    ancestor_color = multilabel_to_color[ancestor_canon]
+                    multilabel_to_color[multilabel_] = np.clip(
+                        np.array(ancestor_color)
+                        + np.random.randn(len(ancestor_color)) * 0.05,
+                        0,
+                        1,
+                    )
+                    assigned = True
+                    break
+        elif full_labels[0] in multilabel_to_color:
+            ancestor_color = multilabel_to_color[full_labels[0]]
+            multilabel_to_color[multilabel_] = np.clip(
+                np.array(ancestor_color) + np.random.randn(len(ancestor_color)) * 0.05,
+                0,
+                1,
+            )
+            assigned = True
+        if not assigned:
+            print(f"{multilabel_} not assigned")
+
+    # if the full label tree of an individual label use its same color
+    for label_ in individual_labels_unique:
+        if label_ not in multilabel_to_color:
+            canon_full = canon_(",".join(get_full_labeling(label_definitions, label_)))
+            if canon_full in multilabel_to_color:
+                multilabel_to_color[label_] = multilabel_to_color[canon_full]
+
+    for key in multilabel_to_color:
+        multilabel_to_color[key] = rgb2hex(multilabel_to_color[key])
+
     def multilabel_to_color_func(x_):
-        return multilabel_to_color[x_] if x_ not in ["n/a", None] else "#AAAAAA"
+        return (
+            multilabel_to_color[canon_(x_, remove_unknown=True)]
+            if x_ not in ["n/a", None]
+            else "#AAAAAA"
+        )
 
     data["color_class"] = data.apply(
         lambda x_: multilabel_to_color_func(
@@ -248,7 +346,7 @@ def color_and_label(
     logger.info(f"label_possible took={time.time() - start_time}")
     logger.info(f"coloring took={time.time() - time_start}")
 
-    return multilabel_to_color
+    return multilabel_to_color, class_to_count
 
 
 def compute_incorrect_score(
@@ -361,10 +459,6 @@ def add_group_to_exclusivity(group_children: List[str], exclusivity_path: str):
         exclusivity_table = update
     print(f"Adding {group_children} to {exclusivity_path}")
     exclusivity_table.to_csv(exclusivity_path, index=False)
-
-
-if __name__ == "__main__":
-    print(canon_("os hyoideum"))
 
 
 def create_group_flux_data(source):
@@ -529,3 +623,34 @@ def clean_filenames(images_path):
                     .replace("_jpg", ".jpg"),
                 ),
             )
+
+
+def make_backup(source_path, backup_dir="backups"):
+    """
+    Creates a backup of the source_path in the backup_dir with a timestamp.
+
+    Args:
+        source_path (str): Path to the file or directory to back up.
+        backup_dir (str): Directory where backups will be stored. Defaults to "backups".
+    """
+    # Create the backup directory if it doesn't exist
+    os.makedirs(backup_dir, exist_ok=True)
+
+    # Get the base name of the source path
+    base_name = os.path.basename(source_path)
+
+    # Create a timestamp string
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Create the backup path with timestamp
+    backup_path = os.path.join(backup_dir, f"{base_name}_{timestamp}")
+
+    # Copy the file or directory to the backup location
+    if os.path.isfile(source_path):
+        shutil.copy2(source_path, backup_path)
+        print(f"File backed up to: {backup_path}")
+    elif os.path.isdir(source_path):
+        shutil.copytree(source_path, backup_path)
+        print(f"Directory backed up to: {backup_path}")
+    else:
+        print(f"Error: {source_path} does not exist or is not a file/directory.")

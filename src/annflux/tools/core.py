@@ -72,7 +72,7 @@ class AnnFluxState(object):
             f.write(f"{key},{val},{num_total or ''},{num_labeled or ''}\n")
 
     cache_for: str = None
-    features: np.array = None
+    features: NDArray = None
     knn_index = None
     all_distances = None
     all_indices = None

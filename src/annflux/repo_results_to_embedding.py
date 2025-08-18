@@ -78,15 +78,11 @@ def embed_and_prepare_func(
     show=False,
 ):
     source: AnnfluxSource | None = None
-    print(f"{type(source)=}")
     if isinstance(source_or_data_state_path, AnnfluxSource):
-        print("a")
         source = source_or_data_state_path
         data_state_path = source.data_state_path
     else:
-        print("b")
         data_state_path = source_or_data_state_path
-    print(f"{type(data_state_path)=}")
     data.label_predicted = data.label_predicted.astype(str)
     data.uid = data.uid.astype(str)
     if extra_predictions_path is not None and os.path.exists(extra_predictions_path):
@@ -115,18 +111,7 @@ def embed_and_prepare_func(
                 ]
             ),
         )
-    if "last_full" in features_path:
-        npz_path = features_path.replace("last_full", "custom")
-        npy_path = features_path.replace("last_full.npz", "custom.npy")
-        if os.path.exists(npz_path):
-            features = numpy_load(npz_path, "arr_0")
-        elif os.path.exists(npy_path):
-            features = np.load(npy_path)
-        else:
-            features = numpy_load(features_path, "lastFull")
-    else:
-        features = numpy_load(features_path, "lastFull")
-    print("embedding", len(features))
+    features = numpy_load(features_path, "lastFull")
     embedding = compute_tsne(features)
     embedding = normalize_and_scale(embedding)
 
