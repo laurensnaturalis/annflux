@@ -90,8 +90,8 @@ limitations under the License.
             <td><i>Pan</i></td>
             <td>Shift-click</td>
             <td><i>Select multiple images</i></td>
-            <td></td>
-            <td><i></i></td>
+            <td>Reset UI</td>
+            <td><i>Ctrl + Alt + R</i></td>
         </tr>
         <tr>
             <td>Ctrl+Click & drag</td>
@@ -185,6 +185,7 @@ limitations under the License.
         <a href="/exclusivity">Exclusivity</a>
         <a href="/label_provider">Label provider</a>
         <a href="/class_examples" target="class_examples">Class examples</a>
+        <a href="/v1/label_definitions/sort">Sort labels</a>
       </div>
     </div>`);
         }
@@ -1501,10 +1502,13 @@ limitations under the License.
                     fullImageTileMap.setData(data, false);
                 }
 
-                $("body").on("keypress", function (eventData) {
+                $("body").on("keyup", function (eventData) {
                     const key = eventData.originalEvent.key;
                     if (key === "?") {
                         $("#help").toggle();
+                    } else if (key === "r" && eventData.originalEvent.altKey && eventData.originalEvent.ctrlKey) {
+                        localStorage.clear();
+                        location.reload();
                     }
                 });
             })//.catch(error => {

@@ -51,7 +51,9 @@ from annflux.tools.data import (
     remove_uids_from_double_check,
     get_group_images_path,
     get_failed_images_path,
-    get_thumb_path, create_group_flux_data,
+    get_thumb_path,
+    create_group_flux_data,
+    make_backup,
 )
 from annflux.tools.mixed import get_logger, str2bool, get_version
 from annflux.tools.io import file_hash
@@ -337,6 +339,26 @@ class StatusUpdate(Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         self.state.linear_status_epoch = epoch
+
+@app.route("/v1/label_definitions/sort", methods=["GET"])
+def label_defs_sort():
+
+    if not os.path.exists(label_definitions_path):
+        label_definitions = {"labels": []}
+    else:
+        label_definitions = json.load(open(label_definitions_path))
+    #
+    class_to_color = pandas.read_csv(os.path.join(g_state.annflux_folder, "class_to_color.csv"))
+    class_to_count = dict(zip(class_to_color["class"], class_to_color["count"]))
+    label_definitions["labels"] = sorted(
+        label_definitions["labels"],
+        key=lambda t: class_to_count.get(t[0], 0),
+        reverse=True,
+    )
+    make_backup(label_definitions_path, backup_dir=os.path.join(os.path.dirname(label_definitions_path), "backups"))
+    with open(label_definitions_path, "w") as f:
+        json.dump(label_definitions, f, indent=2)
+    return {"result": "ok"}
 
 
 @app.route("/label_defs", methods=["PUT"])
