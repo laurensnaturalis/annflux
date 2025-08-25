@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import time
+import traceback
 from collections import defaultdict
 from typing import Set, Dict, Any, Tuple
 
@@ -95,11 +96,11 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     dp_most_needed_idx: NDArray | None = None
     if has_dp_cluster:
         dp_most_needed_idx = data[
-            data["dp_most_needed"] < data["dp_most_needed"].max()
+            (data["dp_most_needed"] < data["dp_most_needed"].max()) & (data["in_test"] == 0)
         ].index.values
-        assert len(dp_most_needed_idx) == int(
-            data["dp_most_needed"].max()
-        )  # includes 0
+        # assert len(dp_most_needed_idx) == int(
+        #     data["dp_most_needed"].max()
+        # )  # includes 0
         dp_distances, dp_indices = compute_knn(
             state.features[dp_most_needed_idx],
             state.features,
@@ -324,6 +325,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         data["most_needed"] = data["dp_most_needed"]
 
         data_ = data[data["dp_most_needed"] < data["dp_most_needed"].max()]
+        logger.info(f"|data most needed| = {len(data_)}")
         near_labeled_perc = len(data_[data["labeled"] == 1]) / len(data_)
 
         write_performance_key_val(
@@ -336,6 +338,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
         ].index.values.tolist()
+        print(f"{state.label_array[dp_most_needed_idx]=}")
         make_predictions(
             annotations,
             data,
@@ -453,11 +456,11 @@ def load_data(state: AnnFluxState, logger: logging.Logger):
     set_data_undetermined(annotations, data)
     #
     set_state_label_array(annotations, data, state, test_uids)
-    logger.info(f"state.label_array_test={state.label_array_test}")
-    logger.info(f"|label_array_test|={len(state.label_array_test)}")
+    logger.debug(f"state.label_array_test={state.label_array_test}")
+    logger.debug(f"|label_array_test|={len(state.label_array_test)}")
     test_indices = set([i for i, uid in enumerate(data.uid.values) if uid in test_uids])
-    logger.info(f"|test_uids|={len(test_uids)}")
-    logger.info(f"|test_indices|={len(test_indices)}")
+    logger.debug(f"|test_uids|={len(test_uids)}")
+    logger.debug(f"|test_indices|={len(test_indices)}")
     state.labeled_test_indices = sorted(
         [
             i
@@ -465,8 +468,8 @@ def load_data(state: AnnFluxState, logger: logging.Logger):
             if uid in test_uids and uid in annotations
         ]
     )
-    logger.info(f"|labeled_test_indices|={len(state.labeled_test_indices)}")
-    logger.info(f"instant_reclassification 5={time.time() - start_time}")
+    logger.debug(f"|labeled_test_indices|={len(state.labeled_test_indices)}")
+    logger.debug(f"instant_reclassification 5={time.time() - start_time}")
     return annotations, data, result_set, test_indices, test_uids
 
 
@@ -513,8 +516,8 @@ def set_data_undetermined(annotations, data):
 
 
 def compute_knn(
-    features_train: np.array,
-    features_test: np.array,
+    features_train: NDArray,
+    features_test: NDArray,
     k,
     knn_results_path,
     state,
@@ -704,15 +707,15 @@ def get_label_array(annotations, data, include_uids):
 def make_predictions(
     annotations: Dict[str, str],
     data: pandas.DataFrame,
-    indices: np.array,
-    distances: np.array,
+    indices: NDArray,
+    distances: NDArray,
     train_labels: NDArray,
     data_indices: list[int],
     test_indices: list[int] | None,
     skip_first=False,
     knn_rank_exponent=0.5,
     value_for_debug: int | None = None,
-) -> (list[list[str]], list[list[str]]):
+) -> Tuple[list[list[str]], list[list[str]]]:
     """
     The predictions are made for the knn results in (`indices`, `distances`) which correspond to the indices in data defined
      by `org_map`
@@ -759,6 +762,7 @@ def make_predictions(
         probabilities = defaultdict(lambda: 0)
         # knn class histogram
         max_mass = 0
+        debug_uid = "RGM095002_PEL_Bipr_01_x2048_y3584"
         for i2, multilabel_ in enumerate(train_labels[indices_for_i]):
             if skip_first and i2 == 0:
                 continue
@@ -769,7 +773,8 @@ def make_predictions(
                 if distance_weight < 1e-8:
                     distance_weight = 1e-8
                 for label_ in multilabel_:
-                    if uid == "304_20220917191315_41686":
+                    if uid == debug_uid: # TODO: remove
+                        traceback.print_stack()
                         print(i2, data.at[data_indices[i2], "uid"], label_, distance_weight)
                     probabilities[label_] += 1 / distance_weight
                     # get data for estimating relation between distance and probability
@@ -787,7 +792,8 @@ def make_predictions(
                 if len(multilabel_) > 0:
                     max_mass += 1 / distance_weight
         #
-        if uid == "304_20220917191315_41686":
+        if uid == debug_uid:  # TODO: remove
+            traceback.print_stack()
             print("HAAR", uid, probabilities)
 
         # knn class probability
@@ -805,7 +811,7 @@ def make_predictions(
                 for label_, prob_ in sorted(
                     probabilities.items(), key=lambda t_: -t_[1]
                 )
-                if 0.01 < prob_ < 0.50
+                if float(os.getenv("MIN_PROB_POSSIBLE", 0.05)) < prob_ < 0.50
             ]
             update["score_possible"].append(
                 (
@@ -858,10 +864,13 @@ def make_predictions(
             continue
         update_for_key = sorted(update_for_key, key=lambda t_: t_[0])
         indices, values = zip(*update_for_key)
-        print(f"Updating {key} with {len(indices)} indices")
-        print(values[:10])
-        print(indices[:10])
-        current_values = data[key].values
+        # print(f"Updating {key} with {len(indices)} indices")
+        # print(values[:10])
+        # print(indices[:10])
+        if not data[key].values.flags["OWNDATA"]: # need in test environment
+            current_values = data[key].values.copy()
+        else:
+            current_values = data[key].values
         current_values[np.array(indices)] = values
         data[key] = current_values
 

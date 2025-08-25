@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 import os.path
 import shutil
 import tempfile
@@ -20,13 +21,12 @@ from pathlib import Path
 
 from annflux.data.bombus_plant_test.data import BombusPlantTest
 from annflux.shared import AnnfluxSource
-from annflux.train_indeed_image import init_folder, add_annotations_and_set
+from annflux.train_features import init_folder, add_annotations_and_set, get_repo_model
 from annflux.training.annflux.clip import ClipFeatureExtractor
 from annflux.training.annflux.feature_extractor import TrainParameters
 
 
 class TestTrain(unittest.TestCase):
-
     def setUp(self):
         self.data_source = BombusPlantTest()
         self.data_source.download()
@@ -40,12 +40,18 @@ class TestTrain(unittest.TestCase):
         self.source = AnnfluxSource(self.data_folder)
         init_folder(self.source)
 
-        clip = ClipFeatureExtractor()
+        clip = ClipFeatureExtractor(
+            get_repo_model(
+                self.source.repository,
+                "clip",
+                "wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M",
+            ),
+            logging.getLogger(),
+        )
 
         clip.load_model()
 
         shutil.copy(self.data_source.true_labels_path, self.source.labels_path)
 
-        data = add_annotations_and_set(self.source.dataset, self.source)
-        clip.train_peft(data, tempfile.mkdtemp(),
-                        TrainParameters(num_epochs=3))
+        data = add_annotations_and_set(self.source.dataset.as_dataframe(), self.source)
+        clip.train_peft(data, tempfile.mkdtemp(), TrainParameters(num_epochs=3))

@@ -58,15 +58,12 @@ function addDots(
         .attr("id", function (d) {
             return "dot-" + d.uid;
         })
-        .style("fill", function (d) {
-            return color_by ? d[color_by] : d.color_class;
-        })
+        .style("fill", d => d.labeled == 1 ? (color_by ? d[color_by] : d.color_class ) : "")
+        .style("stroke", d => d.labeled == 0 ? (color_by ? d[color_by] : d.color_class ) : "")
         //.style("stroke", function (d) {
         //  return d.color_prob;
         //})
-        .style("stroke-width", function (d) {
-            return (d.labeled == 0 ? 2 * (1 - d.score_predicted) : 0) / k;
-        });
+        .style("stroke-width", 1 / k);
     return dots;
 }
 
@@ -126,10 +123,10 @@ function filterData(
     const Ty = hasTransform ? transform.y : 1;
     let show_data_start = [...data];
     //
-    for ([field, operator, value] of filters) {
+    for (let [field, operator, value] of filters) {
         if (operator === "equals") {
             const sizeData = show_data_start.length;
-            show_data_start = show_data_start.filter((a) => a[field] == value);
+            show_data_start = show_data_start.filter((a) => a[field] === value);
             if (localStorage.getItem("debug") === "2") {
                 console.log(
                     `|data| = ${sizeData} -> ${[field, operator, value]} -> ${
@@ -147,15 +144,15 @@ function filterData(
     if (label_predicted) {
         show_data_start = show_data_start.filter((a) =>
             // a["label_predicted"].toLowerCase().includes(label_predicted)
-            urlParams.get("not_label_predicted") == "on"
-                ? !a["label_predicted"].toLowerCase().includes(label_predicted)
-                : a["label_predicted"].toLowerCase().includes(label_predicted)
+            urlParams.get("not_label_predicted") === "on"
+                ? !(a["label_predicted"] ?? "").toLowerCase().includes(label_predicted)
+                : (a["label_predicted"] ?? "").toLowerCase().includes(label_predicted)
         );
     }
     const label_true = urlParams.get("label_true");
     if (label_true) {
         show_data_start = show_data_start.filter((a) =>
-            urlParams.get("not_label_true") == "on"
+            urlParams.get("not_label_true") === "on"
                 ? !(a["label_true"] ?? "").toLowerCase().includes(label_true)
                 : (a["label_true"] ?? "").toLowerCase().includes(label_true)
         );
@@ -163,7 +160,7 @@ function filterData(
     const label_undetermined = urlParams.get("label_undetermined");
     if (label_undetermined) {
         show_data_start = show_data_start.filter((a) =>
-            a["label_undetermined"].toLowerCase().includes(label_undetermined)
+            (a["label_undetermined"] ?? "").toLowerCase().includes(label_undetermined)
         );
     }
     let show_data = [];
@@ -177,6 +174,10 @@ function filterData(
         // console.log(tX, tY);
         if (tX > spatialFilterMargin && tX < width && tY > spatialFilterMargin && tY < height) {
             show_data.push(d);
+        } else {
+            if (localStorage.getItem("debug") >= 3) {
+                console.log(`not rendering ${d.uid} ${tX} ${tY}`);
+            }
         }
         if (show_data.length >= max_n) {
             break;
@@ -232,8 +233,8 @@ function addImages(
     let renderImageType = "thumbnail";
     if (isTileRendering) {
         if (show_data.length > 1) {
-            tileSizeX = x(getSpacing(show_data, xName));
-            tileSizeY = y(getSpacing(show_data, yName));
+            tileSizeX = tileSizeY = x(getSpacing(show_data, xName));
+            //tileSizeY = y(getSpacing(show_data, yName));
         } else {
             tileSizeX = tileSizeY = width;
             renderImageType = "original";
@@ -246,7 +247,7 @@ function addImages(
     [show_data, k] = filterData(
         data,
         x,
-        y,
+        isTileRendering ? x : y,
         numberToRender,
         transform,
         width,
@@ -254,7 +255,7 @@ function addImages(
         filters,
         xName,
         yName,
-        isTileRendering ? -tileSizeX : 0,
+        isTileRendering ? -2 * tileSizeX : 0,
     );
     // tileSizeY = tileSizeX;
     if (localStorage.getItem("debug") === "2") {
@@ -271,7 +272,7 @@ function addImages(
             return renderImageType === "thumbnail" ? x(Number(d[xName])) : 0;
         })
         .attr("y", function (d) {
-            return renderImageType === "thumbnail" ? y(Number(d[yName])) * (isTileRendering ? (tileSizeX / tileSizeY) : 1) : 0; //TODO: think about this
+            return renderImageType === "thumbnail" ? (isTileRendering ? x(Number(d[yName])) : y(Number(d[yName]))) : 0; //TODO: think about this
         })
         .attr("width", function (d) {
             return tileSizeX;
@@ -288,6 +289,26 @@ function addImages(
         .attr("data-label", function (d) {
             return d.label_true;
         });
+    //
+    if (localStorage.getItem("debug") >= 2) {
+        d3Element.selectAll("text").remove();
+        d3Element
+            .selectAll("text")
+            .data(show_data)
+            .enter()
+            .append("text")
+            .attr("x", function (d) {
+                return renderImageType === "thumbnail" ? x(Number(d[xName])) : 0;
+            })
+            .attr("y", function (d) {
+                return renderImageType === "thumbnail" ? (isTileRendering ? x(Number(d[yName])) : y(Number(d[yName]))) : 0; //TODO: think about this
+            })
+            .attr("style", `fill:red;font-size:0.2em`)
+            .text(function (d) {
+                return Math.round(renderImageType === "thumbnail" ? (isTileRendering ? x(Number(d[yName])) : y(Number(d[yName]))) : 0);
+            });
+    }
+    //
 
     d3.selectAll("image").on("click", selectImage);
     return images;
@@ -537,3 +558,39 @@ const mapHtml = `<div id="my_dataviz" tabindex="0"></div>`;
 
 
 
+
+
+// Example map (object) to render
+const myMap = {
+    "Name": "Laurens Hogeweg",
+    "Country": "Netherlands",
+    "Language": "JavaScript",
+    "Framework": "React"
+};
+
+// Function to render the map as a table inside a div
+function renderMapAsTable(map, containerId) {
+    // Create the table structure
+    const $table = $('<table>').css('border', '1px solid black');
+
+    // Add table header
+    const $thead = $('<thead>');
+    const $headerRow = $('<tr>');
+    $headerRow.append($('<th>').text('Key'));
+    $headerRow.append($('<th>').text('Value'));
+    $thead.append($headerRow);
+    $table.append($thead);
+
+    // Add table body
+    const $tbody = $('<tbody>');
+    $.each(map, function(key, value) {
+        const $row = $('<tr>');
+        $row.append($('<td>').text(key));
+        $row.append($('<td>').text(value));
+        $tbody.append($row);
+    });
+    $table.append($tbody);
+
+    // Append the table to the specified div
+    $(`#${containerId}`).append($table);
+}

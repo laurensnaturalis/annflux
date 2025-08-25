@@ -26,7 +26,7 @@ from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
 
 
-def make_resultset(dataset: Dataset, features: np.array, repo: Repository) -> Resultset:
+def make_resultset(dataset: Dataset, features: np.array, repo: Repository, message=None) -> Resultset:
     data = dataset.as_dataframe()
     tmp_folder = tempfile.mkdtemp()
     try:
@@ -44,6 +44,7 @@ def make_resultset(dataset: Dataset, features: np.array, repo: Repository) -> Re
             ancestors=[dataset] + ([model] if model is not None else []),
             tag="unseen",
             allow_mixed_tags=True,
+            message=message
         )
     except:  # noqa
         print(f"{tmp_folder=}")

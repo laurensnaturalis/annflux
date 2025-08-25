@@ -51,12 +51,21 @@ def compute_performance(
             performance_graph_path, acc_test, num_train_val, len(true_test)
         )
     labels = list(set(itertools.chain(*[x_.split(",") for x_ in annotations.values()])))
+    label_to_index = dict(zip(labels, range(len(labels))))
     detailed_performance_table = []
+
+    true_matrix = np.zeros((len(true_test), len(labels)))
+    predicted_matrix = np.zeros((len(true_test), len(labels)))
+    for i_, (true_, predicted_) in enumerate(zip(true_test, predicted_test)):
+        for label_true in true_:
+            true_matrix[i_, label_to_index[label_true]] = 1
+        for label_predicted in predicted_:
+            predicted_matrix[i_, label_to_index[label_predicted]] = 1
 
     for label_ in labels:
         logger.debug(f"{label_=}")
-        per_image_true = np.array([int(label_ in x_) for x_ in true_test])
-        per_image_predicted = np.array([int(label_ in x_) for x_ in predicted_test])
+        per_image_true = true_matrix[:, label_to_index[label_]]
+        per_image_predicted = predicted_matrix[:, label_to_index[label_]]
 
         precision, recall, f_score, support = precision_recall_fscore_support(
             per_image_true, per_image_predicted, zero_division=0.0

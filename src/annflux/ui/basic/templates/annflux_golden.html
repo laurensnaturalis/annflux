@@ -148,7 +148,9 @@ limitations under the License.
     let fullImageContainer = null;
     let controlContainer = null;
     let fullImageTileMap = null;
+    let embeddingMap = null;
     let embeddingMapContainer = null;
+    let imageInfoContainer = null;
     let fullImageEmbeddingMap = null;
 
     function saveState() {
@@ -226,6 +228,17 @@ limitations under the License.
         }
     });
     myLayout.registerComponent(
+        "ImageInfo",
+        function (container, componentState) {
+            if (componentState.label === "G") {
+                imageInfoContainer = container;
+                container
+                    .getElement()
+                    .html(`<div id="imageInfoContent" tabindex="0"></div>`);
+            }
+        }
+    );
+        myLayout.registerComponent(
         "FullEmbedding",
         function (container, componentState) {
             if (componentState.label == "F") {
@@ -257,7 +270,6 @@ limitations under the License.
     let g = null;
     let width = null;
     let height = null;
-    let dots = null;
     let lastZoomUpdate = new Date().getTime() / 1000;
     let numUpdatesActive = 0;
     let data = null;
@@ -334,7 +346,7 @@ limitations under the License.
             .data(show_data)
             .enter()
             .append("div")
-            .attr("class", "gallery")
+            .attr("class", d => d.labeled == 1 ? "gallery gallery-labeled" : "gallery")
             .attr("id", function (d) {
                 return "gallery-" + d.uid;
             })
@@ -364,7 +376,7 @@ limitations under the License.
                 .attr("id", "gallery-label-" + d.uid)
                 .attr("class", "gallery-label")
                 .attr("data-id", d.uid)
-                .attr("data", d.labeled == 0 ? d.label_predicted : d.label_true);
+                .attr("data", Number(d.labeled) === 0 ? d.label_predicted : d.label_true);
         });
         // create per image (quick) labels
         let labelsFromStorage = null;
@@ -514,15 +526,18 @@ limitations under the License.
     }
 
     function selectImage(event) {
+        /*
+        Select image in the map
+         */
         let image = d3.select("image#map-" + event.uid);
         if (!selection.includes(event.uid)) {
-            image.style("outline", "1px solid red");
+            image.style("outline", "2px solid red");
             selection.push(event.uid);
         } else {
             image.style("outline", "");
             let new_selection = [];
             for (const x of selection) {
-                if (x != event.uid) {
+                if (x !== event.uid) {
                     new_selection.push(x);
                 }
             }
@@ -540,17 +555,20 @@ limitations under the License.
     }
 
     function selectImageGallery(event) {
+        /*
+        Select image in the gallery
+         */
         let imageBox = d3.select("div.gallery#gallery-" + event.uid);
         if (d3.event.shiftKey) {
             // multiple select
             if (!gallerySelection.includes(event.uid)) {
-                imageBox.style("outline", "1px solid red");
+                imageBox.style("outline", "2px solid red");
                 gallerySelection.push(event.uid);
             } else {
                 imageBox.style("outline", "");
                 let new_selection = [];
                 for (const x of gallerySelection) {
-                    if (x != event.uid) {
+                    if (x !== event.uid) {
                         new_selection.push(x);
                     }
                 }
@@ -563,14 +581,14 @@ limitations under the License.
                 deselectGallery();
             }
             if (!selected) {
-                imageBox.style("outline", "1px solid red");
+                imageBox.style("outline", "2px solid red");
                 gallerySelection.push(event.uid);
             } else {
                 imageBox.style("outline", "");
                 gallerySelection = [];
             }
             //
-            if (gLayout == "partLabel") {
+            if (gLayout === "partLabel") {
                 showFullImage(event.uid);
             }
         }
@@ -585,7 +603,7 @@ limitations under the License.
         $(".label_panel").css("font-weight", "");
         for (const uid of gallerySelection) {
             let labelString = d3.select("#gallery-label-" + uid).attr("data") ?? "";
-            if (labelString == "n/a") {
+            if (labelString === "n/a") {
                 labelString = "";
             }
             const labels = labelString.split(",");
@@ -596,8 +614,8 @@ limitations under the License.
         //
         if (d3.event.ctrlKey) {
             let dot = d3.select("#dot-" + event.uid);
-            x_ = x(event.e_0);
-            y_ = y(event.e_1);
+            x_ = embeddingMap.x(event.e_0);
+            y_ = embeddingMap.y(event.e_1);
             // dot.transition().duration(500).style("fill", "blue").transition().duration(500).style("fill", "red");
             // dot
             //   .transition()
@@ -612,12 +630,12 @@ limitations under the License.
                 .scale(30)
                 .translate(-x_, -y_);
             console.log("trans", trans);
-            svg
+            embeddingMap.svg
                 // .select("g")
                 // .transition()
                 // .duration(750)
                 .call(
-                    zoom.transform,
+                    embeddingMap.zoom.transform,
                     trans
                     // d3.pointer(event)
                 );
@@ -674,7 +692,7 @@ limitations under the License.
             } else {
                 record_id = data["uid"]
             }
-            console.log(record_id);
+            console.log("record_id", record_id, data);
             fullImageTileMap.setFilter(
                 new Array([
                     "record_id",
@@ -694,6 +712,7 @@ limitations under the License.
             );
             fullImageTileMap.setData();
             console.log("altImageAction", img);
+            renderMapAsTable(d3.select(`#gallery-${event.uid}`).data()[0], 'imageInfoContent');
         }
         img.attr("data-curLayer", curLayer);
         selectImageGallery(event);
@@ -1202,7 +1221,7 @@ limitations under the License.
             if (key == "d") {
                 //deselectGallery();
             } else if (key == "i") {
-                toggleMapImageDisplay();
+                toggleMapImageDisplay("#my_dataviz");
             }
         });
 
@@ -1463,7 +1482,7 @@ limitations under the License.
                 }
             }
 
-            const embeddingMap = new Map2D();
+            embeddingMap = new Map2D();
             embeddingMap.init(mapContainer, "#my_dataviz");
             logUI(gLayout);
             if (gLayout === "tileLabel") {
@@ -1491,7 +1510,8 @@ limitations under the License.
             }
 
             // d3.csv("/data", function (data_p) {
-            loadParquetFile('/data').then(data_p => {
+            const filter_query = urlParams.get('filter_query') ?? null;
+            loadParquetFile(!filter_query ? '/data' : `/data?filter_query=${filter_query}`).then(data_p => {
                 data = data_p;
                 if (localStorage.getItem("debug") === "1") {
                     console.log("|data|", data.length);

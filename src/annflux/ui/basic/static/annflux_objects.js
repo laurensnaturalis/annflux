@@ -20,6 +20,8 @@ function Map2D($container) {
   this.filters = [];
   this.x = null;
   this.y = null;
+  this.svg = null;
+  this.zoom = null;
   let localData = null;
 
   // Initialize the map
@@ -39,7 +41,7 @@ function Map2D($container) {
 
     //
     // set the dimensions and margins of the graph
-    var margin = { top: 0, right: 0, bottom: 0, left: 0 };
+    let margin = { top: 0, right: 0, bottom: 0, left: 0 };
     width = this.goldenContainer.width;
     height = this.goldenContainer.height;
 
@@ -64,7 +66,7 @@ function Map2D($container) {
     d3Group = svg
       .append("g")
       .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
+    this.svg = svg;
     gallery = d3.select("#gallery").append("div");
   };
 
@@ -107,12 +109,15 @@ function Map2D($container) {
     //
     this.xDomain = getDomain(this.xName, localData);
     this.yDomain = getDomain(this.yName, localData);
+    if (localStorage.getItem("debug") >= 1) {
+      console.log("domain", this.xDomain, this.yDomain);
+    }
     //
     this.x = d3.scaleLinear().domain(this.xDomain).range([0, width]);
     this.y = d3.scaleLinear().domain(this.yDomain).range([height, 0]);
     if (mode === "tiles") {
       this.x = d3.scaleLinear().domain(this.xDomain).range([0, width]);
-      this.y = d3.scaleLinear().domain(this.yDomain).range([0, height]); // TODO: different aspect ratios
+      this.y = d3.scaleLinear().domain(this.xDomain).range([0, height]); // TODO: different aspect ratios
     }
 
     if (doRender) {
@@ -138,6 +143,7 @@ function Map2D($container) {
         );
         this.prevTransform = transform;
       });
+    this.zoom = zoom;
 
     function initZoom() {
       d3.select(`#${svgId}`).call(zoom);
@@ -215,19 +221,15 @@ function Map2D($container) {
       console.log("dragEnd", show_data.length, show_data);
       drawGallery(show_data);
     }
+    //
     if (mode === "embedding") {
       // auto suggestion
-      let as_ranking_column = urlParams.get("as_ranking_column");
+      let as_ranking_column = urlParams.get("as_ranking_column") ?? "most_needed";
       if (localStorage.getItem("debug") === "2") {
         console.log("as_ranking_column", as_ranking_column);
       }
-      if (as_ranking_column == null) {
-        as_ranking_column = "most_needed";
-      }
-      let show_labeled = urlParams.get("show_labeled");
-      if (show_labeled == null) {
-        show_labeled = "unlabeled";
-      }
+      let show_labeled = urlParams.get("show_labeled") ?? "unlabeled";
+
       let show_data2 = [];
       let show_data_test = [];
       if (as_ranking_column === "score_true") {
@@ -245,11 +247,7 @@ function Map2D($container) {
         "e_0",
         "e_1"
       );
-      let num_in_gallery = urlParams.get("num_in_gallery");
-      if (num_in_gallery == null) {
-        num_in_gallery = 10;
-      }
-      // console.log("foekoezoe", show_data_start);
+      let num_in_gallery = urlParams.get("num_in_gallery") ?? 10;
       if (
         as_ranking_column == "score_predicted" ||
         as_ranking_column == "score_true" ||
@@ -262,9 +260,10 @@ function Map2D($container) {
           (row) => row.labeled == (show_labeled == "unlabeled" ? 0 : 1) //&& row.in_test == 1
         );
         let filter_query = urlParams.get('filter_query') ?? "";
-        if (filter_query.trim().length > 0) {
+        if (filter_query.trim().length > 0 && false) {
             try {
-                eval(`show_data2 = show_data2.filter((row) => ${filter_query})`);
+                eval(`show_data2 = show_data2.filter(row => ${filter_query})`);
+                console.log(`${show_data2.length} after ${filter_query}`)
             }
             catch {
                 alert(`invalid filter ${filter_query}`)
@@ -282,7 +281,7 @@ function Map2D($container) {
               urlParams.get("ignore_double_checked") == "on"
           );
         }
-        const rank_modifier = urlParams.get("invert_ranking") == "on" ? -1 : +1;
+        const rank_modifier = urlParams.get("invert_ranking") === "on" ? -1 : +1;
         show_data2 = show_data2.sort(
           (a, b) => {
             return rank_modifier * (Number(a[as_ranking_column]) - Number(b[as_ranking_column]))
@@ -290,7 +289,7 @@ function Map2D($container) {
         );
         show_data2 = show_data2.slice(
           0,
-          show_labeled == "unlabeled" ? num_in_gallery - 1 : num_in_gallery
+          show_labeled === "unlabeled" ? num_in_gallery - 1 : num_in_gallery
         );
         if (localStorage.getItem("debug") === "2") {
           console.log("show_data2", show_data2);

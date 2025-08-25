@@ -17,7 +17,6 @@ import shlex
 import shutil
 from tempfile import mkdtemp
 
-from annflux.data.envdataset.data import EnvDataset
 # see: https://pythontest.com/testing-argparse-apps/ for inspiration
 from annflux.data.bombus_plant_test.data import BombusPlantTest
 from annflux.scripts.annflux_cli import execute
@@ -55,7 +54,7 @@ def _test_export(test_data_path) -> str:
     print("Testing export command")
     model_package_folder = os.path.join(mkdtemp(), "package")
     # TODO: remove
-    command_ = f"export {test_data_path} {model_package_folder}"
+    command_ = f"export {test_data_path} --out_folder {model_package_folder}"
     if test_type != "pytest":
         os.system(f"annflux {command_}")
     else:

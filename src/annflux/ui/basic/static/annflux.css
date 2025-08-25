@@ -45,6 +45,12 @@ span {
     padding: 2px;
 }
 
+#imageInfoContent {
+    height: 100%;
+    overflow-y: auto;
+    padding: 2px;
+}
+
 #gallery {
     height: 100%;
     overflow-y: auto;
@@ -59,10 +65,16 @@ span {
     vertical-align: top;
 }
 
+.gallery-labeled {
+    vertical-align: top;
+    border: 1px solid green;
+}
+
 .gallery-label {
     font-size: 12px;
     font-family: "Courier New", Courier, monospace;
 }
+
 
 .quick_label {
     font-size: 10px;
@@ -86,6 +98,7 @@ span {
     border-radius: 5px;
     padding: 3px;
     text-decoration: none;
+    border-style: dashed;
 
 }
 
@@ -184,4 +197,6 @@ td:nth-child(1) {
     background-color: orange;
 }
 
-  
+.debugText {
+    color:red;
+}

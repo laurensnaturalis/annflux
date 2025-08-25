@@ -160,6 +160,116 @@ def to_js_arrow(annflux_data_path, annflux_pq_cache_path):
         annflux_data_path, dtype={"scores_possible": str, "scores_predicted": str}
     ).to_parquet(annflux_pq_cache_path)
 
+import pandas as pd
+import operator
+
+def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Translates pseudo-SQL conditions (including AND, OR, and groups) into pandas queries.
+
+    Args:
+        pseudo_sql (str): Pseudo-SQL condition (e.g., '("Papilionidae" IN row.label_predicted) AND (row.value > 10)').
+        df (pd.DataFrame): The DataFrame to filter.
+
+    Returns:
+        pd.DataFrame: Filtered DataFrame based on the pseudo-SQL condition.
+    """
+    # Replace SQL-like syntax with pandas-compatible syntax
+    def parse_condition(condition):
+        # Remove row. prefix and replace with df[]
+        condition = condition.replace("row.", "df.")
+
+        # Replace IN with str.contains
+        in_condition = " IN " in condition
+        if in_condition:
+            condition = " ".join(condition.split(" ")[::-1])
+
+        condition = condition.replace(" IN ", ".str.contains('")
+        if in_condition:
+            condition += "', na$IS$False)"
+
+        # Replace =, !=, >, <, >=, <= with pandas-compatible operators
+        condition = (
+            condition.replace(" = ", " == ")
+            # .replace("!=", "!=")
+            # .replace(">", ">")
+            # .replace("<", "<")
+            # .replace(">=", ">=")
+            # .replace("<=", "<=")
+        )
+
+        # Replace IS NULL with .isna()
+        condition = condition.replace(" IS NULL", ".isna()")
+
+        # Replace IS NOT NULL with .notna()
+        condition = condition.replace(" IS NOT NULL", ".notna()")
+
+        # Replace LIKE with str.contains (note: this is a simplified version)
+        if " LIKE " in condition:
+            column, pattern = condition.split(" LIKE ", 1)
+            pattern = pattern.strip().strip("'").replace("%", ".*")
+            condition = f"{column}.str.contains(r'{pattern}', na=False, regex=True)"
+
+        # Replace quoted strings with Python strings
+        condition = condition.replace("'", '"')
+
+        # condition += "]"
+
+        return condition
+
+    # Parse the entire pseudo-SQL into a pandas-compatible boolean expression
+    def parse_expression(expr):
+        # Split into clauses for AND/OR
+        expr = expr.strip()
+
+        # Handle parentheses (groups)
+        while "(" in expr:
+            start = expr.rfind("(")
+            end = expr.find(")", start)
+            if end == -1:
+                raise ValueError("Mismatched parentheses in pseudo-SQL condition.")
+            group = expr[start + 1:end]
+            parsed_group = parse_expression(group)
+            expr = expr[:start] + f"$OPEN${parsed_group}$CLOSE$" + expr[end + 1:]
+            print(expr)
+
+        # Split by AND/OR
+        and_clauses = [c.strip() for c in expr.split(" AND ") if c]
+        if len(and_clauses) > 1:
+            return " & ".join(parse_condition(c) for c in and_clauses)
+
+        or_clauses = [c.strip() for c in expr.split(" OR ") if c]
+        if len(or_clauses) > 1:
+            return " | ".join(parse_condition(c) for c in or_clauses)
+
+        return parse_condition(expr)
+
+    # Parse the pseudo-SQL into a pandas-compatible boolean expression
+    try:
+        boolean_expr = parse_expression(pseudo_sql).replace("$OPEN$", "(").replace("$CLOSE$", ")").replace("$IS$", '=')
+    except Exception as e:
+        raise ValueError(f"Failed to parse pseudo-SQL: {e}")
+
+    # Evaluate the boolean expression safely
+    try:
+        # Create a dictionary of column names for eval()
+        namespace = {col: df[col] for col in df.columns}
+        mask = eval(boolean_expr) #, {"__builtins__": None}, namespace)
+    except Exception as e:
+        raise ValueError(f"Failed to evaluate pseudo-SQL: {e}, {boolean_expr}")
+
+    print(mask)
+    return df[mask]
+
+def compute_hash(input_string, algorithm='sha256'):
+    # Create a hash object
+    hash_object = hashlib.new(algorithm)
+
+    # Update the hash object with the bytes of the string
+    hash_object.update(input_string.encode('utf-8'))
+
+    # Get the hexadecimal digest of the hash
+    return hash_object.hexdigest()
 
 if __name__ == "__main__":
     to_js_arrow(

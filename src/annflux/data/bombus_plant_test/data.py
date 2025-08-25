@@ -23,11 +23,14 @@ class DataSource:
             self.download()
 
     def download(self):
-        req = requests.get(self.url)
+        if not os.path.isdir(self.out_folder):
+            req = requests.get(self.url)
 
-        zipfile_ = zipfile.ZipFile(BytesIO(req.content))
-        zipfile_.extractall(self.out_folder)
-        logger.warning(f"Extracted zip to {self.out_folder}")
+            zipfile_ = zipfile.ZipFile(BytesIO(req.content))
+            zipfile_.extractall(self.out_folder)
+            logger.warning(f"Extracted zip to {self.out_folder}")
+        else:
+            logger.warning(f"{self.out_folder} already exists")
 
     @property
     def folder(self):

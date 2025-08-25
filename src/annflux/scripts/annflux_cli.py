@@ -92,7 +92,7 @@ def execute(arg_list: list[str] | None = None):
         subparsers, parser
     )
 
-    architectures = ["clip", "bioclip"]
+    architectures = ["clip", "bioclip", "bioclip2"]
     clip_variants = [
         "wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M",
         "openai/clip-vit-base-patch32",
@@ -116,17 +116,18 @@ def execute(arg_list: list[str] | None = None):
     )
     make_data_parser(subparsers, [features_parser])
     #
-    # export_parser = subparsers.add_parser("export", help="TODO")
-    # export_parser.add_argument("folder", type=str, help="Data folder")
-    # export_parser.add_argument(
-    #     "--out_folder", type=str, help="Model package folder", default=None
-    # )
+    export_parser = subparsers.add_parser("export", help="TODO")
+    export_parser.add_argument("folder", type=str, help="Data folder")
+    export_parser.add_argument(
+        "--out_folder", type=str, help="Model package folder", default=None
+    )
 
     args = parser.parse_args(arg_list)
     folder = os.path.expanduser(args.folder)
+    source = AnnfluxSource(folder)
     if args.command == "init":
         source = init_folder(
-            AnnfluxSource(folder),
+            source,
             label_column_name=args.label_column_name,
             start_labels=args.start_labels,
             refresh_media=args.refresh_media,
@@ -135,38 +136,38 @@ def execute(arg_list: list[str] | None = None):
         print(f"Initialized AnnFlux in folder {source.working_folder}")
     elif args.command == "train_then_features":
         train_then_features(
-            AnnfluxSource(folder),
+            source,
             architecture=args.architecture,
             train_method=args.train_peft,
             train_parameters=TrainParameters(num_epochs=args.num_epochs),
         )
     elif args.command == "features":
         train_then_features(
-            AnnfluxSource(folder),
+            source,
             train_model=False,
             architecture=args.architecture,
             model_variant=args.model_variant,
         )
     elif args.command == "embed":
-        embed_and_prepare(AnnfluxSource(folder))
+        embed_and_prepare(source)
     elif args.command == "go":
-        source = init_folder(
-            AnnfluxSource(folder),
-            label_column_name=args.label_column_name,
-            start_labels=args.start_labels,
-            exclusivity_groups=[group_.split(",") for group_ in args.exclusivity],
-            import_stream_metadata=args.import_stream_metadata
+        label_column_name = args.label_column_name
+        start_labels = args.start_labels
+        exclusivity_groups = [group_.split(",") for group_ in args.exclusivity]
+        # import_stream_metadata = args.import_stream_metadata # TODO
+        architecture = args.architecture
+        feature_cache = args.feature_cache
+        go_command(
+            source,
+            architecture,
+            exclusivity_groups,
+            feature_cache,
+            False,
+            label_column_name,
+            start_labels,
         )
-        print(f"Initialized AnnFlux in folder {source.working_folder}")
-        train_then_features(
-            AnnfluxSource(folder),
-            architecture=args.architecture,
-            train_model=False,
-            feature_cache=args.feature_cache,
-        )
-        embed_and_prepare(AnnfluxSource(folder))
     elif args.command == "export":
-        source = AnnfluxSource(folder)
+        source = source
         export_model_package(
             source,
             os.path.join(source.working_folder, args.out_folder)
@@ -174,11 +175,40 @@ def execute(arg_list: list[str] | None = None):
             else None,
         )
     elif args.command == "data":
-        source = AnnfluxSource(folder)
+        source = source
         if args.subcommand == "stream":
             stream(
-                args.percentage_to_add, args.data_input, source, subsample=args.subsample
+                args.percentage_to_add,
+                args.data_input,
+                source,
+                subsample=args.subsample,
             )
+
+
+def go_command(
+    source,
+    architecture="clip",
+    exclusivity_groups=None,
+    feature_cache=None,
+    import_stream_metadata=False,
+    label_column_name="label",
+    start_labels=None,
+):
+    source = init_folder(
+        source,
+        label_column_name=label_column_name,
+        start_labels=start_labels,
+        exclusivity_groups=exclusivity_groups,
+        import_stream_metadata=import_stream_metadata,
+    )
+    print(f"Initialized AnnFlux in folder {source.working_folder}")
+    train_then_features(
+        source,
+        architecture=architecture,
+        train_model=False,
+        feature_cache=feature_cache,
+    )
+    embed_and_prepare(source)
 
 
 def rreplace(s, old, new, occurrence):
@@ -322,7 +352,7 @@ def stream(
     ]
     # - subsample for time-based streams
     if subsample:
-        subsample_seconds = time_string_to_seconds(subsample)
+        subsample_seconds = time_string_to_seconds(subsample) # TODO
         if subsample_seconds % 3600 == 0:
             table_to_predict = subsample_hour(subsample, table_to_predict)
         elif subsample_seconds % 60 == 0:
@@ -372,9 +402,14 @@ def stream(
     # stream_process_table.to_csv(stream_process_path, index=False)
     write_table(stream_process_table, stream_process_path)
     # - Select data using AL
-    if al_selection_fraction < 1.0 and "label_probability" in stream_process_table.columns:
+    if (
+        al_selection_fraction < 1.0
+        and "label_probability" in stream_process_table.columns
+    ):
         image_level = (
-            stream_process_table[~pandas.isna(stream_process_table["label_probability"])]
+            stream_process_table[
+                ~pandas.isna(stream_process_table["label_probability"])
+            ]
             .groupby(by="original_id")
             .mean("label_probability")  # noqa
             .reset_index()
