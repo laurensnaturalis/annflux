@@ -14,7 +14,7 @@
 import json
 import os
 from json import JSONDecodeError
-from typing import Any
+from typing import Any, Tuple, Union
 
 import datetime
 
@@ -189,13 +189,13 @@ class Repository(object):
 
     def commit(
         self,
-        obj: [Any, RepositoryObject],
+        obj: Union[Any, RepositoryObject],
         ancestors=None,
         tag="",
         message="",
         mode="move",
         allow_mixed_tags=False,
-    ) -> [RepositoryObject, Any]:
+    ) -> Union[RepositoryObject, Any]:
         """
         Commits Repository objects so that they are versioned and persisted in a repository.
         Objects are related to each other through their ancestors.

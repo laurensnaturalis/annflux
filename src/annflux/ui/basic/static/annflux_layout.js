@@ -199,6 +199,11 @@ const originalImageLabelConfig = {
               componentName: "FullImage",
               componentState: { label: "E" },
               height: 50
+            },
+            {
+              type: "component",
+              componentName: "ImageInfo",
+              componentState: { label: "G" },
             }
           ],
         },

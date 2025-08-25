@@ -7,7 +7,7 @@ import shutil
 import tempfile
 from collections import Counter
 from pathlib import Path
-from typing import Set, Callable
+from typing import Set, Callable, Tuple
 
 import numpy as np
 import pandas
@@ -35,9 +35,9 @@ def execute(source: AnnfluxSource, architecture="efficientnetb0"):
     )
 
 
-def get_model_folder(
+def get_repo_model(
     repo: Repository, architecture, model_variant, model_type=ClipModel
-):
+) -> Model:
     tag = f"{architecture}:{model_variant}"
     print(f"Looking for {tag=}, {model_type=}")
     model = repo.get(
@@ -79,7 +79,7 @@ def train_then_features(
     model_variant="wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M",
     cache_name: str = None,
     feature_cache: str = None,  # TODO(implement)
-) -> (np.array, np.array, Model):
+) -> Tuple[np.array, np.array, Model]:
     """
     Returns (features, probs) of `dataset`
     """
@@ -106,6 +106,10 @@ def train_then_features(
             from annflux.training.annflux.bioclip import (
                 BioClipFeatureExtractor as Extractor,
             )
+        if architecture == "bioclip2":
+            from annflux.training.annflux.bioclip2 import (
+                BioClip2FeatureExtractor as Extractor,
+            )
         elif architecture == "clip":
             from annflux.training.annflux.clip import ClipFeatureExtractor as Extractor
         else:
@@ -114,7 +118,7 @@ def train_then_features(
             )
         #
         print(f"{model_variant=}")
-        model = get_model_folder(source.repository, architecture, model_variant)
+        model = get_repo_model(source.repository, architecture, model_variant)
         extractor = Extractor(model, logging.getLogger("train_features"))
         extractor.load_model()
         if train_model:
@@ -143,7 +147,7 @@ def train_then_features(
                     allow_mixed_tags=True,
                 )
                 shutil.rmtree(model_out_folder)
-                model = get_model_folder(source.repository, architecture, model_variant)
+                model = get_repo_model(source.repository, architecture, model_variant)
                 extractor = Extractor(model, logging.getLogger("train_features"))
                 extractor.load_model()
             else:

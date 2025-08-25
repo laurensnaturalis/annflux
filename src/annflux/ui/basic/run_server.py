@@ -14,14 +14,24 @@
 import math
 import os
 import shutil
+import tempfile
 
 from PIL import Image
 
 from annflux.repo_results_to_embedding import group_embedding
+from annflux.repository.dataset import Dataset
+from annflux.repository.repository import Repository
+from annflux.repository.resultset import Resultset
 from annflux.shared import AnnfluxSource
-from annflux.tools.io import generate_missing_thumbnail, to_js_arrow
+from annflux.tools.io import (
+    generate_missing_thumbnail,
+    to_js_arrow,
+    compute_hash,
+    sql_to_pandas_query,
+)
 from annflux.tools.progress_learn import estimate_duration
 from annflux.tools.visualization import most_contrasting_gray, brighten_hex_color
+from annflux.training.annflux.feature_extractor import make_resultset
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import json
@@ -211,21 +221,39 @@ def annflux_endpoint():
 
 
 @app.route("/data")
+@app.route("/v1/data")
 @nocache
 def data_get():
     """
-    TODO
+    http://127.0.0.1:8006/data?filter_query=Papi%20in%20row.label_predicted
     """
     annflux_data_path = os.path.join(g_state.project_folder, "annflux", "annflux.csv")
     time_start = time.time()
+    filter_query = flask.request.args.get("filter_query")
+    print(f"{filter_query=}")
     hash_ = file_hash(annflux_data_path)
+    if filter_query is not None:
+        hash_ += compute_hash(filter_query)
     print(f"{annflux_data_path} took {(time.time() - time_start) * 1000} ms")
     annflux_pq_cache_path = os.path.join(
         g_state.project_folder, "annflux", f"annflux_{hash_}.parquet"
     )
 
     if not os.path.exists(annflux_pq_cache_path):
-        to_js_arrow(annflux_data_path, annflux_pq_cache_path)
+        if filter_query is not None:
+            t = sql_to_pandas_query(
+                filter_query,
+                pandas.read_csv(
+                    annflux_data_path, dtype={"label_predicted": str, "label_true": str}
+                ),
+            )
+            with tempfile.NamedTemporaryFile() as fn:
+                t.to_csv(fn, index=False)
+                annflux_data_path = fn.name
+
+                to_js_arrow(annflux_data_path, annflux_pq_cache_path)
+        else:
+            to_js_arrow(annflux_data_path, annflux_pq_cache_path)
 
     logger.info(f"annflux_data_path = {annflux_data_path}")
     return send_file(
@@ -340,22 +368,27 @@ class StatusUpdate(Callback):
     def on_epoch_end(self, epoch, logs=None):
         self.state.linear_status_epoch = epoch
 
+
 @app.route("/v1/label_definitions/sort", methods=["GET"])
 def label_defs_sort():
-
     if not os.path.exists(label_definitions_path):
         label_definitions = {"labels": []}
     else:
         label_definitions = json.load(open(label_definitions_path))
     #
-    class_to_color = pandas.read_csv(os.path.join(g_state.annflux_folder, "class_to_color.csv"))
+    class_to_color = pandas.read_csv(
+        os.path.join(g_state.annflux_folder, "class_to_color.csv")
+    )
     class_to_count = dict(zip(class_to_color["class"], class_to_color["count"]))
     label_definitions["labels"] = sorted(
         label_definitions["labels"],
         key=lambda t: class_to_count.get(t[0], 0),
         reverse=True,
     )
-    make_backup(label_definitions_path, backup_dir=os.path.join(os.path.dirname(label_definitions_path), "backups"))
+    make_backup(
+        label_definitions_path,
+        backup_dir=os.path.join(os.path.dirname(label_definitions_path), "backups"),
+    )
     with open(label_definitions_path, "w") as f:
         json.dump(label_definitions, f, indent=2)
     return {"result": "ok"}
@@ -468,6 +501,7 @@ def label():
 
 
 @app.route("/performance")
+@app.route("/v1/performance")
 def performance():
     return (
         json.load(open(g_state.performance_path))
@@ -513,7 +547,7 @@ def labels_css():
             font_color = most_contrasting_gray(row.color)
             css_str.append(
                 f".label_{row['class'].replace(' ', '_')} {{ background-color: {background_color}; "
-                f"border:2px solid {row.color}; color: {font_color}; font-size: {max(1.0, 2 * math.sqrt(row['count'] / count_max))}em }}"
+                f"border-color:{row.color}; border-width:2px; color: {font_color}; font-size: {max(1.0, 2 * math.sqrt(row['count'] / count_max))}em }}"
             )
 
     return Response("\n".join(css_str), mimetype="text/css")
@@ -561,6 +595,18 @@ def retrain_job(state: AnnFluxState):
         os.path.join(state.annflux_folder, state.version_for_recompute + ".weights.h5"),
     )
     #
+    repo: Repository = AnnfluxSource(state.project_folder).repository
+    # TODO: store linear model
+    make_resultset(
+        repo.get(label=Dataset).first(),
+        state.features,
+        repo,
+        message=f"linear features from label state={len(state.labeled_indices)}",
+    )
+    logger.info(
+        f"Stored Resultset for linear trained features in {repo.get(label=Resultset).first()}"
+    )
+    #
     state.g_quick_status = "computing embedding"
     embedding = compute_tsne(state.features)
     state.g_quick_status = "computing embedding done"
@@ -581,7 +627,7 @@ def retrain_job(state: AnnFluxState):
     quick_reclassification(state, logger)
 
     logger.info(f"retrain_job: done - {state.trained_for_version}")
-    state.trained_for_version = len(state.labeled_indices)
+    state.trained_for_version = len(state.labeled_indices)  # TODO: replace by hash?
 
 
 def group_train_job(state: AnnFluxState):
@@ -596,6 +642,7 @@ def group_train_job(state: AnnFluxState):
     split_path = os.path.join(state.annflux_folder, "split_group.json")
     group_data = pandas.read_csv(source.group_flux_data_path())
     import numpy as np
+
     if not os.path.exists(split_path):
         test_uids = np.random.choice(
             group_data.uid.values, int(0.10 * len(group_data)), replace=False
@@ -610,7 +657,7 @@ def group_train_job(state: AnnFluxState):
         pandas.read_csv(g_state.annflux_path),
         os.path.join(state.annflux_folder, "group_feature_images"),
         group_data,
-        test_uids
+        test_uids,
     )
     print(record_features.shape, accuracy_group, len(record_table))
     record_table.to_csv(

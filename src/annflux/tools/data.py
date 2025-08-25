@@ -71,7 +71,7 @@ def get_full_labeling(tuples, leaf):
     parent_map = {}
     for t_ in tuples:
         child, parent = t_[0], t_[1]
-        if parent != "null":
+        if parent != "null" and parent is not None:
             parent_map[child] = parent
 
     # Traverse from leaf to root
@@ -160,7 +160,11 @@ def color_and_label(
         reverse=True,
     )
     for multilabel_ in individual_labels_unique:
-        canon_full = canon_(",".join(get_full_labeling(label_definitions, multilabel_)))
+        try:
+            canon_full = canon_(",".join(get_full_labeling(label_definitions, multilabel_)))
+        except TypeError:
+            print(multilabel_, get_full_labeling(label_definitions, multilabel_))
+            raise
         if multilabel_ not in unique_labels and canon_full not in unique_labels:
             unique_labels.append(multilabel_)
 
@@ -224,7 +228,9 @@ def color_and_label(
         for class_ in list(unique_labels[:20])
         if class_ is not None
     }
+    colors = multilabel_to_color.values()
 
+    unassigned_list = []
     for multilabel_ in unique_labels[20:]:
         labels_ = multilabel_.split(",")
         if len(labels_) == 1:
@@ -240,8 +246,8 @@ def color_and_label(
             full_labels = get_full_labeling(label_definitions, deepest_label)
         assigned = False
         if len(full_labels) > 1:
-            for i_ in range(1, len(full_labels)):
-                ancestor_ = full_labels[:-i_]
+            for i_ in range(0, len(full_labels)):
+                ancestor_ = full_labels[:-i_] if i_ > 0 else full_labels
                 ancestor_canon = canon_(",".join(ancestor_))
                 if ancestor_canon in multilabel_to_color:
                     # print(f"Using {ancestor_} for label {label_}")
@@ -264,6 +270,7 @@ def color_and_label(
             assigned = True
         if not assigned:
             print(f"{multilabel_} not assigned")
+            unassigned_list.append(multilabel_)
 
     # if the full label tree of an individual label use its same color
     for label_ in individual_labels_unique:
@@ -271,6 +278,11 @@ def color_and_label(
             canon_full = canon_(",".join(get_full_labeling(label_definitions, label_)))
             if canon_full in multilabel_to_color:
                 multilabel_to_color[label_] = multilabel_to_color[canon_full]
+
+    # print(colors)
+    for label_ in unassigned_list:
+        if label_ not in multilabel_to_color:
+            multilabel_to_color[label_] = list(colors)[np.random.choice(list(range(20)))]
 
     for key in multilabel_to_color:
         multilabel_to_color[key] = rgb2hex(multilabel_to_color[key])

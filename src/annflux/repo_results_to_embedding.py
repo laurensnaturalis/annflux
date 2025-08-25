@@ -127,7 +127,7 @@ def embed_and_prepare_func(
         )  # TODO: return data and don't save in function
         peak_merge(source)  # TODO: return data and don't save in function
     data = pandas.read_csv(data_state_path)
-    color_and_label(data, annotations)
+    color_and_label(data, annotations, json.load(open(source.label_definitions_path))["labels"])
     data.to_csv(data_state_path, index=False)
     if show:
         import matplotlib.pyplot as plt

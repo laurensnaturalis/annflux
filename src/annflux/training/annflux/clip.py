@@ -68,6 +68,8 @@ def make_batches(data_train):
         train_caption_to_idx[val].append(i)
     unique_captions = list(set(train_caption))
     batch_size = len(unique_captions)  # TODO: based on number of classes
+    print(batch_size)
+    batch_size = min(batch_size, 64)
     num_batches = 1 * (len(train_img) // batch_size)
     new_captions = []
     new_images = []
@@ -244,8 +246,8 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
     ):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.logger = logger
-        self.folder = repo_model.path
         self.repo_model = repo_model
+        self.folder = repo_model.path
         self.labels_path = os.path.join(self.folder, "labels.csv")
         self.repository_entry = (
             json.load(open(os.path.join(self.folder, "description.json")))
@@ -257,7 +259,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
             self.adapter_folder = None
         self.configuration = json.load(open(os.path.join(self.folder, "model.json")))
         self.clip_variant = self.configuration["model_variant"]
-        self.model = None
+        self.model: CLIPModel | None = None
         self.processor = None
         self.index_to_label: dict[int, str] | None = None
         self.label_to_index: dict[str, int] | None = None
@@ -548,7 +550,9 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
             out_folder = Path(out_folder)
         print(f"{Counter(data['label_true'])=}")
         data["caption"] = data["label_true"].apply(
-            lambda x_: canon_(x_, remove_unknown=True, output_separator=" ", replace_space=True)
+            lambda x_: canon_(
+                x_, remove_unknown=True, output_separator=" ", replace_space=True
+            )
         )
         print(f"{data.caption=}")
         counts = (
@@ -577,7 +581,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         print(Counter(data_train["caption"]))
         data_train, data_val = train_test_split(
             data_train,
-            test_size=0.1,
+            test_size=max(int(0.1 * len(data_train)), len(sufficient_data_classes)),
             stratify=data_train["caption"],
             random_state=42,
         )
