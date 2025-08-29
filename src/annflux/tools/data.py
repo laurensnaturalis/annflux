@@ -46,6 +46,7 @@ def canon_(
     remove_unknown=False,
     output_separator=",",
     replace_space=False,
+    remove_sys=False,
 ) -> str | None:
     """
     Canonizes a multilabel string separated by comma's
@@ -56,7 +57,7 @@ def canon_(
                 [
                     x_.replace(" ", "_") if replace_space else x_
                     for x_ in multilabel_string.split(",")
-                    if "?" not in x_ or not remove_unknown
+                    if ("?" not in x_ or not remove_unknown) and ("sys:" not in x_ or not remove_sys)
                 ]
             )
         )
@@ -161,7 +162,9 @@ def color_and_label(
     )
     for multilabel_ in individual_labels_unique:
         try:
-            canon_full = canon_(",".join(get_full_labeling(label_definitions, multilabel_)))
+            canon_full = canon_(
+                ",".join(get_full_labeling(label_definitions, multilabel_))
+            )
         except TypeError:
             print(multilabel_, get_full_labeling(label_definitions, multilabel_))
             raise
@@ -169,7 +172,7 @@ def color_and_label(
             unique_labels.append(multilabel_)
 
     unique_labels.append("n/a")
-    logger.info(f"unique_labels={unique_labels}")
+    # logger.info(f"unique_labels={unique_labels}")
     logger.info(f"unique_labels end={time.time() - start_time}")
 
     time_start = time.time()
@@ -282,7 +285,9 @@ def color_and_label(
     # print(colors)
     for label_ in unassigned_list:
         if label_ not in multilabel_to_color:
-            multilabel_to_color[label_] = list(colors)[np.random.choice(list(range(20)))]
+            multilabel_to_color[label_] = list(colors)[
+                np.random.choice(list(range(20)))
+            ]
 
     for key in multilabel_to_color:
         multilabel_to_color[key] = rgb2hex(multilabel_to_color[key])
