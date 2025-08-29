@@ -207,6 +207,7 @@ limitations under the License.
       <a href="#" onclick="refresh(this)">Refresh</a>
       <a href="#" onclick="deselectGallery(this)">Deselect</a>
       <a href="#" onclick="highlightGalleryInMap(this)">Highlight gallery</a>
+      <a href="#" onclick="clearLabels(this)">Clear labels</a>
     </div>
     `);
         }
@@ -238,7 +239,7 @@ limitations under the License.
             }
         }
     );
-        myLayout.registerComponent(
+    myLayout.registerComponent(
         "FullEmbedding",
         function (container, componentState) {
             if (componentState.label == "F") {
@@ -742,7 +743,6 @@ limitations under the License.
             undetermined = event.ctrlKey;
         }
         const labels = labelString.split(",");
-        console.log(labels);
         if (labels.includes(selectedLabel)) {
             if (!multipleSelected) {
                 // remove label
@@ -795,7 +795,7 @@ limitations under the License.
                 labelString += (labelString.length > 0 ? "," : "") + label2;
             }
         }
-        console.log("labelString", labelString);
+        // console.log("labelString", labelString);
         d3.select("#gallery-label-" + uid).attr("data", labelString);
         d2 = d3.select("#gallery-" + uid).data()[0];
         createQuickLabel(
@@ -806,13 +806,10 @@ limitations under the License.
         );
         //
         setLabeledGlobal();
-        // console.log(gLabeled);
-        // console.log("here", JSON.stringify(Object.fromEntries(gLabeled)));
         localStorage.setItem(
             "labeled",
             JSON.stringify(Object.fromEntries(gLabeled))
         );
-        // $("#ui_log_last").html("Stored labeled in local storage");
         logUI("Stored labeled in local storage");
     }
 
@@ -826,13 +823,10 @@ limitations under the License.
 
     function massLabelInGallery(label, multipleSelected) {
         console.log("massLabelInGallery - selection", gallerySelection);
-        // const label = el.innerText;
         for (const uid of gallerySelection) {
             labelInGallery(uid, label, multipleSelected);
-            // d3.select("div.gallery#gallery-" + uid).style("outline", "");
         }
 
-        // gallerySelection = [];
         console.log(gallerySelection);
     }
 
@@ -1145,7 +1139,7 @@ limitations under the License.
         // User is "finished typing," do something
         function doneTyping() {
             logUI(typedText.lengt);
-            if (typedText.length == 1) {
+            if (typedText.length === 1) {
                 const key = typedText.toLowerCase()[0];
                 if (shortcuts.has(key)) {
                     massLabelInGallery(shortcuts.get(key));
@@ -1193,6 +1187,7 @@ limitations under the License.
                 })
 
                 .attr("href", `javascript:void(0)`);
+            addSpaces();
         }
 
         //
@@ -1380,6 +1375,18 @@ limitations under the License.
             [],
             true
         );
+    }
+
+    function clearLabels() {
+        for (const uid of gallerySelection) {
+            createQuickLabel(
+                uid,
+                "quick_label_true",
+                [],
+                true
+            );
+            $("#gallery-label-" + uid).attr("data", "");
+        }
     }
 
     function deselectGallery() {
