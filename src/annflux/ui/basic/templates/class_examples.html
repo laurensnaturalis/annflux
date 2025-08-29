@@ -83,9 +83,10 @@
 
                 <!--                labelGroupDiv.append("h2")-->
                 <!--                    .text(key);-->
-
+                // console.log(value);
                 labelGroupDiv.append("h2")
-                    .text(`${key} (${value.length})`);
+                    .text(`${key} (${value.length})`)
+                   labelGroupDiv.append("a").text (`${value.filter(item => item.labeled == 1).length}`).attr("href", `/annflux?filter_query=row.label_true = '${key}'&show_labeled=labeled`);
 
                 const imageContainer = labelGroupDiv.append("div")
                     .attr("class", "image-container");
@@ -94,6 +95,7 @@
                 value.slice(0, 10).forEach(d => {
                     imageContainer.append("img")
                         .attr("alt", d.label_true)
+                        .attr("style", d.labeled == 1 ? "border:1px solid green" : "border:1px dashed grey")
                         .attr("src", `/images/thumbnail/${d.image_id}`)
                         .on("error", function () {
                             console.error("Error loading image:", d.image_url); // Log error if image fails to load

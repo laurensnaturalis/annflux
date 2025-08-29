@@ -551,7 +551,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         print(f"{Counter(data['label_true'])=}")
         data["caption"] = data["label_true"].apply(
             lambda x_: canon_(
-                x_, remove_unknown=True, output_separator=" ", replace_space=True
+                x_, remove_unknown=True, output_separator=" ", replace_space=True, remove_sys=True
             )
         )
         print(f"{data.caption=}")

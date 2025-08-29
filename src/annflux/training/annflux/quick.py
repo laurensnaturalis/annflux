@@ -338,7 +338,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
         ].index.values.tolist()
-        print(f"{state.label_array[dp_most_needed_idx]=}")
+        # print(f"{state.label_array[dp_most_needed_idx]=}")
         make_predictions(
             annotations,
             data,

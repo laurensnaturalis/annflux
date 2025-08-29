@@ -62,6 +62,7 @@ def compute_fre(
     time_start = time.time()
     column_name = "fre"
     data[column_name] = None
+    update_for_key = []
     for label_predicted_ in data.label_predicted.unique():
         if pandas.isna(label_predicted_):
             continue
@@ -75,7 +76,15 @@ def compute_fre(
                 pca.inverse_transform(pca.transform(features_)) - features_, axis=1
             )
             logger.debug(f"{label_predicted_=}, {fre.min()=}, {fre.max()=}")
-            data.loc[indices_, column_name] = fre
+            # data.loc[indices_, column_name] = fre
+            for index_, fre_val in zip(indices_, fre):
+                update_for_key.append((index_, fre_val))
+    update_for_key = sorted(update_for_key, key=lambda t_: t_[0])
+    indices, values = zip(*update_for_key)
+    current_values = data[column_name].values
+    current_values[np.array(indices)] = values
+    data[column_name] = current_values
+
     logger.info(f"pca application took={time.time() - time_start:.2f}")
     data[column_name] /= data[column_name].max()
     data[column_name] = 1 - data[column_name]
