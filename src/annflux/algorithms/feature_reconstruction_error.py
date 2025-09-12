@@ -20,10 +20,12 @@ from typing import List, Dict, Iterable
 import numpy as np
 import pandas
 from sklearn.decomposition import PCA
+from tqdm import tqdm
 
 from annflux.tools.data import canon_
 
 logger = logging.getLogger("annflux_server")
+agg_to_pca = {} # TODO: reset when features are updated
 
 
 def compute_fre(
@@ -32,6 +34,7 @@ def compute_fre(
     features: np.array,
     labeled_indices: List[int],
     test_uids: Iterable[str],
+    new_labeled_indices: List[int] = None,
 ):
     """
     Compute feature reconstruction error
@@ -49,12 +52,16 @@ def compute_fre(
     for index_ in labeled_indices:
         if label_agg_array[index_] is not None:
             agg_to_indices[canon_(label_agg_array[index_])].append(index_)  # noqa
-    agg_to_pca = {}
     logger.info(f"[TIMING] PCA data preparation took {time.time() - time_start} s")
     time_start = time.time()
-    for agg, indices_ in agg_to_indices.items():
+    for agg, indices_ in tqdm(agg_to_indices.items()):
+        if new_labeled_indices is not None:
+            if len(set(new_labeled_indices).intersection(set(indices_))) == 0:
+                logger.debug(f"PCA: Skipping {agg} because not in new labeled images")
+                continue
         feat_ = features[sorted(indices_)]
         if len(feat_) > 10:
+            logger.debug(f"PCA: Updating {agg}")
             pca = PCA(n_components=0.95)
             pca.fit(feat_)
             agg_to_pca[agg] = pca
@@ -82,7 +89,7 @@ def compute_fre(
     if len(update_for_key) > 0:
         update_for_key = sorted(update_for_key, key=lambda t_: t_[0])
         indices, values = zip(*update_for_key)
-        if not data[column_name].values.flags["OWNDATA"]: # need in test environment
+        if not data[column_name].values.flags["OWNDATA"]:  # need in test environment
             current_values = data[column_name].values.copy()
         else:
             current_values = data[column_name].values

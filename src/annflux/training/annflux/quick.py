@@ -16,7 +16,6 @@ import json
 import logging
 import os
 import time
-import traceback
 from collections import defaultdict
 from typing import Set, Dict, Any, Tuple
 
@@ -167,6 +166,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     distances_ = distances
     labeled_indices_ = state.labeled_indices
     logger.info(f"labeled_indices_={len(labeled_indices_)}")
+    new_labeled_indices_for_fre = None
     if quicker_updates > 1:
         idx_sel = [
             i_
@@ -176,6 +176,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         indices_ = indices_[idx_sel]
         distances_ = distances_[idx_sel]
         labeled_indices_ = np.array(labeled_indices_)[idx_sel].tolist()
+        new_labeled_indices_for_fre = labeled_indices_
         logger.info(
             f"quicker_updates: labeled_indices_ before test_indices={len(labeled_indices_)}"
         )
@@ -362,7 +363,14 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     data.label_true = data.label_true.apply(lambda x_: canon_(x_))
     # FRE
     state.g_quick_status = "computing FRE"
-    compute_fre(annotations, data, state.features, state.labeled_indices, test_uids)
+    compute_fre(
+        annotations,
+        data,
+        state.features,
+        state.labeled_indices,
+        test_uids,
+        new_labeled_indices_for_fre,
+    )
     #
     most_needed_first = sorted(counter_of_most_need.items(), key=lambda t_: -t_[1])
     for i_, (most_needed_i, _) in enumerate(most_needed_first):
