@@ -17,7 +17,7 @@ import logging
 import os
 import time
 from collections import defaultdict
-from typing import Set, Dict, Any, Tuple
+from typing import Set, Dict, Any, Tuple, Union, List
 
 import faiss
 import numpy as np
@@ -37,7 +37,6 @@ from annflux.performance.basic import (
 )
 from annflux.tools.core import AnnFluxState
 from annflux.tools.data import canon_, color_and_label
-from annflux.tools.evaluation import compute_ece
 from annflux.tools.io import numpy_load
 from annflux.tools.mixed import remove_sys
 from annflux.training.annflux.group_classifier_cnn import (
@@ -82,7 +81,6 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     start_time = time.time()
     annotations, data, result_set, test_indices, test_uids = load_data(state, logger)
 
-    # print("labeled_indices", labeled_indices)
     state.all_distances, state.all_indices = compute_knn(
         state.features,
         state.features,
@@ -93,15 +91,15 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     )
 
     has_dp_cluster = "dp_cluster" in data.columns
-    dp_most_needed_idx: NDArray | None = None
+    dp_most_needed_idx: Union[NDArray, None] = None
+    dp_distances: Union[NDArray, None] = None
+    dp_indices: Union[NDArray, None] = None
     if has_dp_cluster:
+        # compute 1-nearest-neighbor to density peak clusters
         dp_most_needed_idx = data[
             (data["dp_most_needed"] < data["dp_most_needed"].max())
             & (data["in_test"] == 0)
         ].index.values
-        # assert len(dp_most_needed_idx) == int(
-        #     data["dp_most_needed"].max()
-        # )  # includes 0
         dp_distances, dp_indices = compute_knn(
             state.features[dp_most_needed_idx],
             state.features,
@@ -110,7 +108,6 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
             state,
             logger,
         )
-        print("has_dp_cluster", dp_distances.shape)
 
     state.cache_for = result_set.entry.uid
     state.version_for_recompute = (
@@ -124,28 +121,30 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         state.all_distances[state.labeled_indices],
         state.all_indices[state.labeled_indices],
     )
-    # figure out neighbors of updated uids
     quicker_updates = int(
         os.getenv("QUICKER_UPDATES", 0)
     )  # 0 = off, 1 = display only, 2 = display + knn
-    new_labeled_nn_idx: Set[int] | None = None
-    new_labeled_nn_uids = None
     quicker_updates = (
         quicker_updates
         if (state.new_labeled_uids is not None and len(state.new_labeled_uids) > 0)
         else 0
     )
+
+    # - figure out neighbors of updated uids
+    new_labeled_nn_idx: Set[int] | None = None
+    new_labeled_nn_uids = None
     if quicker_updates:
         # get indices of new_labeled_uids
         new_labeled_idx = data[data.uid.isin(state.new_labeled_uids)].index
         logger.info(f"new_labeled_uids={state.new_labeled_uids}")
         logger.info(f"new_labeled_idx={new_labeled_idx}")
+        # include the nearest neighbors of the newly labeled UIDs
         new_labeled_nn_idx = set(state.all_indices[new_labeled_idx].flatten())
         logger.info(f"new_labeled_nn_idx={len(new_labeled_nn_idx)}")
         new_labeled_nn_uids = data[data.index.isin(new_labeled_nn_idx)].uid
     #
     if quicker_updates:
-        if "score_possible" not in data:
+        if "score_possible" not in data.columns:
             data["label_predicted"] = None
             data["scores_predicted"] = None
             data["label_possible"] = ""
@@ -160,7 +159,8 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         data["scores_predicted"] = None
         data["label_possible"] = None
         data["score_possible"] = None
-    # - make predictions for labeled indices
+
+    # -- make predictions for labeled indices
     logger.info(f"Using knn_rank_exponent={state.knn_rank_exponent}")
     indices_ = indices
     distances_ = distances
@@ -183,29 +183,8 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         labeled_indices_.extend(test_indices)
         logger.info(f"quicker_updates: labeled_indices_={len(labeled_indices_)}")
     state.g_quick_status = "predicting labeled"
-    dump_input = False
-    if dump_input:
-        import pickle
-
-        objects_to_pickle = {
-            "annotations": annotations,
-            "data": data,
-            "indices_": indices_,
-            "distances_": distances_,
-            "label_array": state.label_array,
-            "near_labeled_indices_": labeled_indices_,
-            "test_indices": test_indices,
-            "knn_rank_exponent": state.knn_rank_exponent,
-        }
-
-        # Specify the file name where you want to save the pickled objects
-        pickle_file = "make_predictions_input2.pkl"
-
-        # Pickle the dictionary and save it to a file
-        with open(pickle_file, "wb") as file:
-            pickle.dump(objects_to_pickle, file)
     logger.info(f"make_predictions: labeled_indices_={len(labeled_indices_)}")
-    distance_to_probability = make_predictions(
+    make_predictions(
         annotations,
         data,
         indices_,
@@ -214,64 +193,8 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         labeled_indices_,
         list(test_indices),
         skip_first=True,
-        knn_rank_exponent=3,  # state.knn_rank_exponent,
+        knn_rank_exponent=state.knn_rank_exponent,
     )
-    if len(labeled_indices_) > 0 and False:
-        for rank_exponent in [0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0]:
-            # logger.info(f"rank_exponent={rank_exponent}")
-            distance_to_probability = make_predictions(
-                annotations,
-                data,
-                indices_,
-                distances_,
-                state.label_array,
-                labeled_indices_,
-                list(test_indices),
-                skip_first=True,
-                knn_rank_exponent=rank_exponent,  # state.knn_rank_exponent,
-            )
-
-            labeled_data = data.iloc[labeled_indices_]
-            labeled_data = labeled_data[~pandas.isnull(labeled_data["label_predicted"])]
-            labeled_data["label_true"] = np.array(
-                [annotations.get(uid) for i, uid in enumerate(labeled_data.uid.values)]  # noqa
-            )
-            (
-                ece,
-                bin_centers,
-                half_bin_width,
-                num,
-                scores,
-                last_bin_ece,
-                has_data,
-                fifty_threshold,
-            ) = compute_ece(
-                labeled_data,
-                half_bin_width=0.025,
-                start=0.0,
-                probability_name="score_predicted",
-                label_true_name="label_true",
-                label_predicted_name="label_predicted",
-            )
-            print(
-                "ECE",
-                ece,
-                bin_centers,
-                half_bin_width,
-                num,
-                scores,
-                last_bin_ece,
-                has_data,
-                fifty_threshold,
-            )
-            print("rank_exponent", rank_exponent, ece, last_bin_ece, num[-1])
-    debug = False
-    if debug:
-        print(distance_to_probability[:10])
-        import matplotlib.pyplot as plt
-
-        plt.scatter(*zip(*distance_to_probability))
-        plt.savefig("distance_to_probability.png")
 
     #
     has_density_peak = "dp_most_needed" in data.columns
@@ -326,7 +249,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         near_labeled_indices_.extend(test_indices)
     state.g_quick_status = "computing predictions"
     logger.info(f"make_predictions: near_labeled_indices_={len(near_labeled_indices_)}")
-    predicted_test, true_test, _ = make_predictions(
+    predicted_test, true_test = make_predictions(
         annotations,
         data,
         indices_,
@@ -336,27 +259,6 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         list(test_indices),
         knn_rank_exponent=state.knn_rank_exponent,
     )
-    if dump_input:
-        import pickle
-
-        objects_to_pickle = {
-            "annotations": annotations,
-            "data": data,
-            "indices_": indices_,
-            "distances_": distances_,
-            "label_array": state.label_array,
-            "near_labeled_indices_": near_labeled_indices_,
-            "test_indices": test_indices,
-            "knn_rank_exponent": state.knn_rank_exponent,
-        }
-
-        # Specify the file name where you want to save the pickled objects
-        pickle_file = "make_predictions_input.pkl"
-
-        # Pickle the dictionary and save it to a file
-        with open(pickle_file, "wb") as file:
-            pickle.dump(objects_to_pickle, file)
-        print(f"Input objects have been pickled and saved to {pickle_file}")
     logger.info(f"|predicted_test|={len(predicted_test)}")
     logger.info(f"make_predictions end={time.time()}")
     data.label_predicted = data.label_predicted.apply(lambda x_: canon_(x_))
@@ -397,7 +299,6 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
         ].index.values.tolist()
-        # print(f"{state.label_array[dp_most_needed_idx]=}")
         make_predictions(
             annotations,
             data,
@@ -407,7 +308,6 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
             unpredicted_idx,
             None,
             knn_rank_exponent=state.knn_rank_exponent,
-            value_for_debug=1,
         )
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
@@ -428,7 +328,15 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     #
     state.g_quick_status = "computing performance"
     # print(f"{predicted_test=}, {true_test=}")
-    compute_performance(predicted_test, true_test, state, annotations, data)
+    performance_data = {
+        "predicted_test": predicted_test,
+        "true_test": true_test,
+        "state": state,
+        "annotations": annotations,
+        "data": data,
+    }
+
+    # Dump the dictionary to a pickle file
     state.g_quick_status = "coloring and labelling"
 
     class_to_color, class_to_count = color_and_label(
@@ -773,7 +681,6 @@ def make_predictions(
     test_indices: list[int] | None,
     skip_first=False,
     knn_rank_exponent=0.5,
-    value_for_debug: int | None = None,
 ) -> Tuple[list[list[str]], list[list[str]]]:
     """
     The predictions are made for the knn results in (`indices`, `distances`) which correspond to the indices in data defined
@@ -794,7 +701,6 @@ def make_predictions(
     """
     predicted_test = []
     true_test = []
-    distance_to_probability: list[tuple[float, float]] = []
     update: dict[str, list[Tuple[int, Any]]] = {}  # key -> [(data_index, value), ...]
     for key in [
         "score_possible",
@@ -805,67 +711,39 @@ def make_predictions(
         "entropy",
         "score_true",
     ]:
-        update[key] = []
+        update[key] = [
+            (-1, None),
+        ] * len(indices)
     data["scores_predicted"] = data["scores_predicted"].astype(str)
     data["score_possible"] = data["score_possible"].astype(str)
-
+    org_index_to_uid = dict(zip(data.index, data.uid))
+    time_probabilities = 0
+    time_rest = 0
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
+        start_time = time.time()
         org_index = data_indices[i]
-        uid: str = data.at[org_index, "uid"]
 
-        # is_labeled = (
-        #     update["uid"][org_index] in annotations
-        #     and (test_indices is None or org_index not in test_indices)  # TODO: check
-        # )
         is_labeled = False
         probabilities = defaultdict(lambda: 0)
         # knn class histogram
         max_mass = 0
-        debug_uid = ""
+        multilabel_: List[str]
         for i2, multilabel_ in enumerate(train_labels[indices_for_i]):
             if skip_first and i2 == 0:
                 continue
-            # if value_for_debug == 1:
-            #     print(f"{train_labels[indices_for_i]=}")
-            if multilabel_ is not None:
-                distance_weight = distances[i][i2] ** knn_rank_exponent
-                if distance_weight < 1e-8:
-                    distance_weight = 1e-8
+            if multilabel_ is not None and len(multilabel_) > 0:
+                distance_weight = 1 / max(1e-8, distances[i][i2] ** knn_rank_exponent)  # noqa
+                if distance_weight < 0.01 * max_mass:
+                    continue
                 for label_ in multilabel_:
-                    if uid == debug_uid:  # TODO: remove
-                        # traceback.print_stack()
-                        print(
-                            i2,
-                            data.at[data_indices[i2], "uid"],
-                            label_,
-                            distance_weight,
-                        )
-                    probabilities[label_] += 1 / distance_weight
-                    # get data for estimating relation between distance and probability
-                    if is_labeled:
-                        true_labels = annotations[uid].split(",")
-                        for label2_ in probabilities:
-                            if label2_ in true_labels:
-                                running_prob = (1 / distance_weight) / (
-                                    max_mass + (1 / distance_weight)
-                                )
-                                distance_to_probability.append(
-                                    (distances[i][i2], running_prob)
-                                )
-                    #
-                if len(multilabel_) > 0:
-                    max_mass += 1 / distance_weight
-        #
-        if uid == debug_uid:  # TODO: remove
-            # traceback.print_stack()
-            print("HAAR", uid, probabilities, knn_rank_exponent)
-
-        # # knn class probability
-        # if len(probabilities) > 1:
-        #     print("FOEKA", uid, probabilities, knn_rank_exponent)
+                    probabilities[label_] += distance_weight
+                max_mass += distance_weight
 
         for label_ in probabilities:
             probabilities[label_] /= max_mass
+        time_probabilities += time.time() - start_time
+        start_time = time.time()
+        #
         if len(probabilities) > 0:
             max_labels = [
                 label_ for label_, prob_ in probabilities.items() if prob_ > 0.5
@@ -880,34 +758,32 @@ def make_predictions(
                 )
                 if float(os.getenv("MIN_PROB_POSSIBLE", 0.05)) < prob_ < 0.50
             ]
-            update["score_possible"].append(
-                (
-                    org_index,
-                    ",".join(
-                        [f"{probabilities[label_]:.2f}" for label_ in possible_labels]
-                    ),
-                )
+            update["score_possible"][i] = (
+                org_index,
+                ",".join(
+                    [f"{probabilities[label_]:.2f}" for label_ in possible_labels]
+                ),
             )
-            update["label_possible"].append((org_index, ",".join(possible_labels)))
+
+            update["label_possible"][i] = (org_index, ",".join(possible_labels))
             if len(max_labels) > 0:
-                update["label_predicted"].append((org_index, ",".join(max_labels)))
-                update["score_predicted"].append(
-                    (org_index, min([probabilities[label_] for label_ in max_labels]))
-                )  # TODO
-                update["scores_predicted"].append(
-                    (
-                        org_index,
-                        ",".join(
-                            [f"{probabilities[label_]:.2f}" for label_ in max_labels]
-                        ),
-                    )
+                update["label_predicted"][i] = (org_index, ",".join(max_labels))
+                update["score_predicted"][i] = (
+                    org_index,
+                    min([probabilities[label_] for label_ in max_labels]),
                 )
+
+                update["scores_predicted"][i] = (
+                    org_index,
+                    ",".join([f"{probabilities[label_]:.2f}" for label_ in max_labels]),
+                )
+
                 # entropy
-                p = np.array(list(probabilities.values()))
-                update["entropy"].append((org_index, -1 * (p * np.log2(p)).sum()))
+                # p = np.array(list(probabilities.values()))
+                # update["entropy"].append((org_index, -1 * (p * np.log2(p)).sum()))
                 # test data
                 if test_indices is not None and org_index in test_indices:
-                    test_uid = data.at[org_index, "uid"]  # TODO(opt): cache
+                    test_uid = org_index_to_uid[org_index] # data.at[org_index, "uid"]  # TODO(opt): cache
                     if test_uid in annotations.keys():
                         predicted_test.append(max_labels)
                         true_test.append(annotations[test_uid].split(","))
@@ -921,9 +797,13 @@ def make_predictions(
                         )
                     )
             else:
-                update["label_predicted"].append((org_index, None))
-                update["score_predicted"].append((org_index, 0))
-                update["scores_predicted"].append((org_index, None))
+                update["label_predicted"][i] = (org_index, None)
+                update["score_predicted"][i] = (org_index, 0)
+                update["scores_predicted"][i] = (org_index, None)
+        time_rest += time.time() - start_time
+
+        if i % 100 == 0:
+            print(time_rest, time_probabilities)
     #
     for key in update:
         update_for_key = update[key]
@@ -931,9 +811,6 @@ def make_predictions(
             continue
         update_for_key = sorted(update_for_key, key=lambda t_: t_[0])
         indices, values = zip(*update_for_key)
-        # print(f"Updating {key} with {len(indices)} indices")
-        # print(values[:10])
-        # print(indices[:10])
         if not data[key].values.flags["OWNDATA"]:  # need in test environment
             current_values = data[key].values.copy()
         else:
@@ -941,4 +818,4 @@ def make_predictions(
         current_values[np.array(indices)] = values
         data[key] = current_values
 
-    return predicted_test, true_test, distance_to_probability
+    return predicted_test, true_test

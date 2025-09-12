@@ -592,5 +592,5 @@ function renderMapAsTable(map, containerId) {
     $table.append($tbody);
 
     // Append the table to the specified div
-    $(`#${containerId}`).append($table);
+    $(`#${containerId}`).html($table);
 }

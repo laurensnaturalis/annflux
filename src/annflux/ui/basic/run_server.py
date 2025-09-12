@@ -498,11 +498,20 @@ def label():
     with open(g_state.labels_path, "w") as f:
         json.dump(j_labels, f, indent=2)
 
-    quick_reclassification(g_state, logger, group=is_group)
+    do_quick_reclassification(is_group)
 
     return {
         "success": True,
     }
+
+
+def do_quick_reclassification(is_group: bool):
+    if g_state.train_thread is None or not g_state.train_thread.is_alive():
+        g_state.train_thread = threading.Thread(
+            target=quick_reclassification, args=(g_state, logger, "quick", is_group)
+        )
+        g_state.train_thread.start()
+        g_state.train_thread.join()
 
 
 @app.route("/performance")

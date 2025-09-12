@@ -156,7 +156,7 @@ limitations under the License.
     function saveState() {
         var state = JSON.stringify(myLayout.toConfig());
         localStorage.setItem("savedState", state);
-        location.reload();
+        // location.reload();
     }
 
     function persistentToggle(elID) {
@@ -174,6 +174,7 @@ limitations under the License.
         if (componentState.label == "B") {
             labelContainer = container;
             container.getElement().html(`<div id="panel">
+<input type="text" id="searchLabel" onkeyup="filterLabels(event)"/>
       <div id="labelPanel"><b style="color: red">Add labels first!</b></div>
       <br/><a class="noButton" href="#" onclick="persistentToggle('addLabelPanel')"><img src="/static/newlabel.svg" width="24px"></a>
       <div id="addLabelPanel">
@@ -285,6 +286,16 @@ limitations under the License.
     let trained_for_version = null;
     const exclusivity = new Map();
     const childToParent = new Map();
+
+    function filterLabels(event) {
+        filterLabelsText(event.target.value);
+    }
+
+    function filterLabelsText(text) {
+        text = text.toLowerCase();
+        let filteredLabels = g_labels.filter(l => l[0].toLowerCase().startsWith(text)).concat(g_labels.filter(l => l[0].toLowerCase().indexOf(text) > -1 && !l[0].toLowerCase().startsWith(text)));
+        addLabelsinUI(filteredLabels);
+    }
 
     function addSpaces() {
         d3.selectAll(".quick_label").each(function () {
@@ -420,22 +431,25 @@ limitations under the License.
         // predicted (possible) labels
         try {
             galleryImages.each((d2, i) => {
-                d3.select("div#labels-" + d2.uid)
-                    .selectAll("a")
-                    .data(zip(d2.label_possible.split(","), d2.score_possible.split(",")))
-                    .enter()
-                    .append("a")
-                    .html(function (d) {
-                        return `${d[0]}(${d[1]})`;
-                    })
-                    .attr("class", "quick_label")
-                    .attr("onclick", function (d) {
-                        return `labelInGallery('${d2.uid}', '${d[0]}', false, event)`;
-                    })
+                if (d2.label_possible) {
+                    d3.select("div#labels-" + d2.uid)
+                        .selectAll("a")
+                        .data(zip(d2.label_possible.split(","), d2.score_possible.split(",")))
+                        .enter()
+                        .append("a")
+                        .html(function (d) {
+                            return `${d[0]}(${d[1]})`;
+                        })
+                        .attr("class", "quick_label")
+                        .attr("onclick", function (d) {
+                            return `labelInGallery('${d2.uid}', '${d[0]}', false, event)`;
+                        })
 
-                    .attr("href", `javascript:void(0)`);
+                        .attr("href", `javascript:void(0)`);
+                }
             });
         } catch (error) {
+            console.log(error);
         }
         // }
 
@@ -950,6 +964,43 @@ limitations under the License.
     ];
     const urlParams = new URLSearchParams(window.location.search);
 
+    function addLabelsinUI(labels, labelToShortcuts, addSetLabelParent) {
+        if (labels.length > 0) {
+            d3.select("#labelPanel").selectAll("*").remove();
+        }
+
+        d3.select("#labelPanel")
+            .selectAll("a")
+            .data(labels)
+            .enter()
+            .append("a")
+            .attr("onclick", "labelDelegate(this)")
+            .attr("href", "javascript:void(0)")
+            .attr("title", function (d) {
+                return labelToShortcuts ? labelToShortcuts.get(d[0]) : "";
+            })
+            // .attr("class", "label_panel")
+            .attr("class", function (d) {
+                return `label_${d[0].replace(" ", "_")}`;
+            })
+            .attr("id", function (d) {
+                return `label_panel_${d[0].replace(" ", "_")}`;
+            })
+            .html(function (d) {
+                return d[0];
+            });
+
+        //
+        d3.selectAll("#labelPanel a").each(function (d) {
+            var t = document.createElement("span");
+            t.innerHTML = addSetLabelParent ? "<a href='javascript:void(0)' onclick='setLabelParent(\"" +
+                d[0] +
+                "\")'>+</a> " : " ";
+            this.parentNode.insertBefore(t, this.nextSibling);
+        });
+
+    }
+
     $(document).ready(function () {
         $.get("/performance", function (data) {
             renderPerformance(data);
@@ -1010,40 +1061,7 @@ limitations under the License.
             );
             console.log(shortcuts);
 
-            if (g_labels.length > 0) {
-                d3.select("#labelPanel").selectAll("*").remove();
-            }
-
-            d3.select("#labelPanel")
-                .selectAll("a")
-                .data(g_labels)
-                .enter()
-                .append("a")
-                .attr("onclick", "labelDelegate(this)")
-                .attr("href", "javascript:void(0)")
-                .attr("title", function (d) {
-                    return labelToShortcuts.get(d[0]);
-                })
-                // .attr("class", "label_panel")
-                .attr("class", function (d) {
-                    return `label_${d[0].replace(" ", "_")}`;
-                })
-                .attr("id", function (d) {
-                    return `label_panel_${d[0].replace(" ", "_")}`;
-                })
-                .html(function (d) {
-                    return d[0];
-                });
-
-            //
-            d3.selectAll("#labelPanel a").each(function (d) {
-                var t = document.createElement("span");
-                t.innerHTML =
-                    "<a href='javascript:void(0)' onclick='setLabelParent(\"" +
-                    d[0] +
-                    "\")'>+</a> ";
-                this.parentNode.insertBefore(t, this.nextSibling);
-            });
+            addLabelsinUI(g_labels, labelToShortcuts, true);
             //
             if (localStorage.getItem("debug") === "1") {
                 console.log(g_labels);
@@ -1138,22 +1156,25 @@ limitations under the License.
 
         // User is "finished typing," do something
         function doneTyping() {
-            logUI(typedText.lengt);
+            logUI(typedText.length);
             if (typedText.length === 1) {
                 const key = typedText.toLowerCase()[0];
                 if (shortcuts.has(key)) {
                     massLabelInGallery(shortcuts.get(key));
                     typedText = "";
                 }
-                return;
+                 return;
             }
-            let matchedLabels = new Array();
-            g_labels.forEach((val, _) => {
-                if (val[0].toLowerCase().indexOf(typedText.toLowerCase()) > -1) {
-                    matchedLabels.push(val[0]);
-                }
-            });
-            addQuickLabel(gallerySelection[0], matchedLabels);
+            // let matchedLabels = new Array();
+            // g_labels.forEach((val, _) => {
+            //     if (val[0].toLowerCase().indexOf(typedText.toLowerCase()) > -1) {
+            //         matchedLabels.push(val[0]);
+            //     }
+            // });
+            // addQuickLabel(gallerySelection[0], matchedLabels);
+            filterLabelsText(typedText);
+            $("#searchLabel").val(typedText.toLowerCase());
+            $("#searchLabel").focus();
             typedText = "";
         }
 
