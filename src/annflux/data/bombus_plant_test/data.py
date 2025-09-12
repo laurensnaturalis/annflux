@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 import os.path
 import shutil
 from os import PathLike
 import zipfile
+
+import pandas
 import requests
 from io import BytesIO
 
@@ -29,6 +32,7 @@ class DataSource:
             zipfile_ = zipfile.ZipFile(BytesIO(req.content))
             zipfile_.extractall(self.out_folder)
             logger.warning(f"Extracted zip to {self.out_folder}")
+            os.rename(self.out_folder + "/s_256", self.out_folder + "/images")
         else:
             logger.warning(f"{self.out_folder} already exists")
 
@@ -48,3 +52,46 @@ class DataSource:
 class BombusPlantTest(DataSource):
     url = "https://zenodo.org/records/15049184/files/images.zip?download=1"
     name = "bombus-plant-test"
+
+
+class StreetSurfaceVis(DataSource):
+    url = "https://zenodo.org/records/11449977/files/s_256.zip?download=1"
+    labels_url = (
+        "https://zenodo.org/records/11449977/files/streetSurfaceVis_v1_0.csv?download=1"
+    )
+    name = "streetsurfacevis"
+
+    def __init__(self):
+        super().__init__()
+        self.true_labels_path_ = os.path.join(self.out_folder, "labels.json")
+
+    def download(self):
+        super().download()
+        self.true_labels_path_ = os.path.join(self.out_folder, "labels.json")
+        t = pandas.read_csv(self.labels_url, dtype={"mapillary_image_id": str})
+        with open(self.true_labels_path, "w") as f:
+            json.dump(dict(zip(t.mapillary_image_id, t.surface_type)), f, indent=2)
+
+        print(len(t))
+
+    @property
+    def true_labels_path(self):
+        return self.true_labels_path_
+
+class DiopsisPublic(DataSource):
+    url = "TODO"
+    labels_url = (
+        "TODO"
+    )
+    name = "diopsis-coco"
+
+    def __init__(self):
+        super().__init__()
+        self.true_labels_path_ = os.path.join(self.out_folder, "labels.json")
+
+    def download(self):
+        pass
+
+    @property
+    def true_labels_path(self):
+        return self.true_labels_path_

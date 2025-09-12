@@ -38,6 +38,7 @@ from annflux.performance.basic import (
 )
 from annflux.tools.core import AnnFluxState
 from annflux.tools.data import canon_, color_and_label
+from annflux.tools.evaluation import compute_ece
 from annflux.tools.io import numpy_load
 from annflux.tools.mixed import remove_sys
 from annflux.training.annflux.group_classifier_cnn import (
@@ -96,7 +97,8 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     dp_most_needed_idx: NDArray | None = None
     if has_dp_cluster:
         dp_most_needed_idx = data[
-            (data["dp_most_needed"] < data["dp_most_needed"].max()) & (data["in_test"] == 0)
+            (data["dp_most_needed"] < data["dp_most_needed"].max())
+            & (data["in_test"] == 0)
         ].index.values
         # assert len(dp_most_needed_idx) == int(
         #     data["dp_most_needed"].max()
@@ -211,8 +213,57 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         labeled_indices_,
         list(test_indices),
         skip_first=True,
-        knn_rank_exponent=state.knn_rank_exponent,
+        knn_rank_exponent=3,  # state.knn_rank_exponent,
     )
+    if len(labeled_indices_) > 0 and False:
+        for rank_exponent in [0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0]:
+            # logger.info(f"rank_exponent={rank_exponent}")
+            distance_to_probability = make_predictions(
+                annotations,
+                data,
+                indices_,
+                distances_,
+                state.label_array,
+                labeled_indices_,
+                list(test_indices),
+                skip_first=True,
+                knn_rank_exponent=rank_exponent,  # state.knn_rank_exponent,
+            )
+
+            labeled_data = data.iloc[labeled_indices_]
+            labeled_data = labeled_data[~pandas.isnull(labeled_data["label_predicted"])]
+            labeled_data["label_true"] = np.array(
+                [annotations.get(uid) for i, uid in enumerate(labeled_data.uid.values)]  # noqa
+            )
+            (
+                ece,
+                bin_centers,
+                half_bin_width,
+                num,
+                scores,
+                last_bin_ece,
+                has_data,
+                fifty_threshold,
+            ) = compute_ece(
+                labeled_data,
+                half_bin_width=0.025,
+                start=0.0,
+                probability_name="score_predicted",
+                label_true_name="label_true",
+                label_predicted_name="label_predicted",
+            )
+            print(
+                "ECE",
+                ece,
+                bin_centers,
+                half_bin_width,
+                num,
+                scores,
+                last_bin_ece,
+                has_data,
+                fifty_threshold,
+            )
+            print("rank_exponent", rank_exponent, ece, last_bin_ece, num[-1])
     debug = False
     if debug:
         print(distance_to_probability[:10])
@@ -368,7 +419,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     )
     #
     state.g_quick_status = "computing performance"
-    print(f"{predicted_test=}, {true_test=}")
+    # print(f"{predicted_test=}, {true_test=}")
     compute_performance(predicted_test, true_test, state, annotations, data)
     state.g_quick_status = "coloring and labelling"
 
@@ -762,7 +813,7 @@ def make_predictions(
         probabilities = defaultdict(lambda: 0)
         # knn class histogram
         max_mass = 0
-        debug_uid = "RGM095002_PEL_Bipr_01_x2048_y3584"
+        debug_uid = ""
         for i2, multilabel_ in enumerate(train_labels[indices_for_i]):
             if skip_first and i2 == 0:
                 continue
@@ -773,9 +824,14 @@ def make_predictions(
                 if distance_weight < 1e-8:
                     distance_weight = 1e-8
                 for label_ in multilabel_:
-                    if uid == debug_uid: # TODO: remove
-                        traceback.print_stack()
-                        print(i2, data.at[data_indices[i2], "uid"], label_, distance_weight)
+                    if uid == debug_uid:  # TODO: remove
+                        # traceback.print_stack()
+                        print(
+                            i2,
+                            data.at[data_indices[i2], "uid"],
+                            label_,
+                            distance_weight,
+                        )
                     probabilities[label_] += 1 / distance_weight
                     # get data for estimating relation between distance and probability
                     if is_labeled:
@@ -793,10 +849,13 @@ def make_predictions(
                     max_mass += 1 / distance_weight
         #
         if uid == debug_uid:  # TODO: remove
-            traceback.print_stack()
-            print("HAAR", uid, probabilities)
+            # traceback.print_stack()
+            print("HAAR", uid, probabilities, knn_rank_exponent)
 
-        # knn class probability
+        # # knn class probability
+        # if len(probabilities) > 1:
+        #     print("FOEKA", uid, probabilities, knn_rank_exponent)
+
         for label_ in probabilities:
             probabilities[label_] /= max_mass
         if len(probabilities) > 0:
@@ -867,7 +926,7 @@ def make_predictions(
         # print(f"Updating {key} with {len(indices)} indices")
         # print(values[:10])
         # print(indices[:10])
-        if not data[key].values.flags["OWNDATA"]: # need in test environment
+        if not data[key].values.flags["OWNDATA"]:  # need in test environment
             current_values = data[key].values.copy()
         else:
             current_values = data[key].values

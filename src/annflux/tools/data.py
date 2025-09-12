@@ -57,7 +57,8 @@ def canon_(
                 [
                     x_.replace(" ", "_") if replace_space else x_
                     for x_ in multilabel_string.split(",")
-                    if ("?" not in x_ or not remove_unknown) and ("sys:" not in x_ or not remove_sys)
+                    if ("?" not in x_ or not remove_unknown)
+                    and ("sys:" not in x_ or not remove_sys)
                 ]
             )
         )
@@ -518,6 +519,7 @@ def init_folder(
     exclusivity_groups: List[List[str]] = None,
     refresh_media=False,
     import_stream_metadata=False,
+    random_seed=None,
 ) -> AnnfluxSource:
     if start_labels is None:
         start_labels = []
@@ -614,6 +616,7 @@ def init_folder(
     #
     split_path = os.path.join(working_folder, "split.json")
     if not os.path.exists(split_path):
+        np.random.seed(random_seed)
         test_uids = np.random.choice(
             unseen_data.uid.values, int(0.10 * len(unseen_data)), replace=False
         ).tolist()

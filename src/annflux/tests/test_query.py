@@ -24,3 +24,11 @@ class TestQuery(unittest.TestCase):
                 data={"label_predicted": ["Pap", "Bap"], "label_true": ["Bap", "Pap"]}
             ),
         )
+
+    def test_not_in_query(self):
+        sql_to_pandas_query(
+            "(Empty NOT IN row.label_predicted)",
+            pandas.DataFrame(
+                data={"label_predicted": ["Pap", "Bap"], "label_true": ["Bap", "Pap"]}
+            ),
+        )

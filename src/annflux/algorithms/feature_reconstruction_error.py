@@ -79,11 +79,15 @@ def compute_fre(
             # data.loc[indices_, column_name] = fre
             for index_, fre_val in zip(indices_, fre):
                 update_for_key.append((index_, fre_val))
-    update_for_key = sorted(update_for_key, key=lambda t_: t_[0])
-    indices, values = zip(*update_for_key)
-    current_values = data[column_name].values
-    current_values[np.array(indices)] = values
-    data[column_name] = current_values
+    if len(update_for_key) > 0:
+        update_for_key = sorted(update_for_key, key=lambda t_: t_[0])
+        indices, values = zip(*update_for_key)
+        if not data[column_name].values.flags["OWNDATA"]: # need in test environment
+            current_values = data[column_name].values.copy()
+        else:
+            current_values = data[column_name].values
+        current_values[np.array(indices)] = values
+        data[column_name] = current_values
 
     logger.info(f"pca application took={time.time() - time_start:.2f}")
     data[column_name] /= data[column_name].max()

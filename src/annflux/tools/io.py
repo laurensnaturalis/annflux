@@ -180,12 +180,16 @@ def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
         condition = condition.replace("row.", "df.")
 
         # Replace IN with str.contains
+        not_in_condition = " NOT IN " in condition
+        if not_in_condition:
+            condition = " ".join(condition.split(" ")[::-1])
+            condition = "~" + condition.replace(" IN NOT ", ".str.contains('")
         in_condition = " IN " in condition
         if in_condition:
             condition = " ".join(condition.split(" ")[::-1])
 
         condition = condition.replace(" IN ", ".str.contains('")
-        if in_condition:
+        if in_condition or not_in_condition:
             condition += "', na$IS$False)"
 
         # Replace =, !=, >, <, >=, <= with pandas-compatible operators

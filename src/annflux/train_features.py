@@ -189,6 +189,8 @@ def train_then_features(
             else:
                 existing_feature_cache_path = None
             print(f"{existing_feature_cache_path=}")
+            num_classes = len(model.index_to_class)
+
             if not os.path.exists(feature_cache_path):
                 feature_cache = zarr.create_group(store=feature_cache_path)
                 feature_cache.create_array(
@@ -197,7 +199,6 @@ def train_then_features(
                     dtype="float",
                     name="features",
                 )
-                num_classes = len(model.index_to_class)
                 feature_cache.create_array(
                     shape=(len(dataset), num_classes),
                     chunks=(1000, num_classes),
@@ -214,6 +215,8 @@ def train_then_features(
                 feature_cache_path=feature_cache_path,
                 other_feature_cache_path=existing_feature_cache_path,
             )
+            if probs is None:
+                probs = np.zeros((len(dataset), num_classes))
         if isinstance(dataset, Dataset):
             make_resultset(dataset, features, repo)
         else:
