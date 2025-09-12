@@ -1,5 +1,7 @@
 import json
 
+from annflux.tools.data import canon_
+
 
 def m():
     j_ann = json.load(open("/mnt/big/Projects/diopsis_annotation_2/annflux/labels.json"))
@@ -16,7 +18,7 @@ def m():
         label_str = ",".join(new_labels)
 
         if label_str != "Animalia":
-            j_ann_new[key] = label_str
+            j_ann_new[key] = canon_(label_str)
 
     with open("/mnt/big/Projects/diopsis_annotation_2/annflux/labels_new.json", "w") as f:
         json.dump(j_ann_new, f, indent=2)

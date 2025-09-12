@@ -1159,20 +1159,13 @@ limitations under the License.
 
         function addQuickLabel(uid, possible_labels) {
             const d3El = d3.select("div#labels-" + uid);
-            console.log(
-                "addQuickLabel",
-                uid,
-                possible_labels,
-                d3.select("div#labels-" + uid)
-            );
-            const numExisting = d3El.selectAll("a").length;
+            const numExisting = d3El.selectAll("a").size();
             const labelData = zip(
                 new Array(numExisting).fill(""),
                 new Array(numExisting).fill(0)
             ).concat(
                 zip(possible_labels, new Array(possible_labels.length).fill(0.0))
             );
-            console.log(labelData);
             d3El
                 .selectAll("a")
                 .data(labelData)

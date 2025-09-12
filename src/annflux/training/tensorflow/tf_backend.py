@@ -86,7 +86,7 @@ def linear_retraining(state: AnnFluxState, status_callback):
     )
 
     model.fit(
-        x=BalanceSequence(x_train, y_train, 1024, balance),
+        x=BalanceSequence(x_train, y_train, 1024, balance=balance),
         batch_size=1024,
         validation_data=(x_test, y_test),
         epochs=200,

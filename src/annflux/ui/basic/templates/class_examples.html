@@ -86,7 +86,9 @@
                 // console.log(value);
                 labelGroupDiv.append("h2")
                     .text(`${key} (${value.length})`)
-                   labelGroupDiv.append("a").text (`${value.filter(item => item.labeled == 1).length}`).attr("href", `/annflux?filter_query=row.label_true = '${key}'&show_labeled=labeled`);
+                labelGroupDiv.append("a").text(`${value.filter(item => item.labeled == 1).length}`).attr("href", `/annflux?filter_query=row.label_true = '${key}'&show_labeled=labeled`);
+                labelGroupDiv.append("br")
+                labelGroupDiv.append("a").text(`${value.filter(item => item.labeled == 0).length}`).attr("href", `/annflux?filter_query=row.label_predicted = '${key}'`);
 
                 const imageContainer = labelGroupDiv.append("div")
                     .attr("class", "image-container");

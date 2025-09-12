@@ -17,6 +17,7 @@ import shutil
 import tempfile
 
 from PIL import Image
+from pandas.errors import EmptyDataError
 
 from annflux.repo_results_to_embedding import group_embedding
 from annflux.repository.dataset import Dataset
@@ -72,7 +73,8 @@ from annflux.training.annflux.quick import (
     group_classification,
     load_data,
 )
-from annflux.training.tensorflow.tf_backend import linear_retraining
+# from annflux.training.tensorflow.tf_backend import linear_retraining
+from annflux.training.tensorflow.torch_backend import linear_retraining
 
 project_root: Optional[str] = None
 images_path: Optional[str] = None
@@ -247,6 +249,7 @@ def data_get():
                     annflux_data_path, dtype={"label_predicted": str, "label_true": str}
                 ),
             )
+            print(f"{len(t)=}")
             with tempfile.NamedTemporaryFile() as fn:
                 t.to_csv(fn, index=False)
                 annflux_data_path = fn.name
@@ -365,9 +368,11 @@ class StatusUpdate(Callback):
         super().__init__()
         self.state = state
 
-    def on_epoch_end(self, epoch, logs=None):
+    def __call__(self, epoch, logs=None):
         self.state.linear_status_epoch = epoch
 
+    def on_epoch_end(self, epoch, logs=None):
+        self.state.linear_status_epoch = epoch
 
 @app.route("/v1/label_definitions/sort", methods=["GET"])
 def label_defs_sort():
@@ -733,7 +738,10 @@ def status():
     average_precision = 0
     average_recall = 0
     if os.path.exists(detailed_performance_path):
-        detailed_performance_ = pandas.read_csv(detailed_performance_path)
+        try:
+            detailed_performance_ = pandas.read_csv(detailed_performance_path)
+        except EmptyDataError:
+            detailed_performance_ = []
         if len(detailed_performance_) > 0:
             num_unlabeled_certain = int(
                 detailed_performance_.num_predicted_certain.sum()

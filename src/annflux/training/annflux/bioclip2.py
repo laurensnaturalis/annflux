@@ -6,13 +6,12 @@ from PIL import Image
 from torch.multiprocessing import Pool
 from tqdm import tqdm
 
-from annflux.repository.dataset import Dataset
 from annflux.training.annflux.feature_extractor import BaseFeatureExtractor
 
 
 def compute_feature(image_path_, model, preprocess):
     # return np.random.random(512)
-    with torch.no_grad(), torch.cuda.amp.autocast():
+    with torch.no_grad(), torch.amp.autocast("cuda"):
         try:
             image = Image.open(image_path_)
             print(f"{image_path_}")
@@ -30,7 +29,7 @@ def batch(iterable, n=1):
 
 
 def compute_batch(image_paths, model, preprocess):
-    with torch.no_grad(), torch.cuda.amp.autocast():
+    with torch.no_grad(), torch.amp.autocast("cuda"):
         batch_ = []
         for image_path_ in image_paths:
             try:
@@ -41,7 +40,7 @@ def compute_batch(image_paths, model, preprocess):
                 image = Image.new("RGB", (299, 299))
             image = preprocess(image).unsqueeze(0)
             batch_.append(image)
-        return model.encode_image(torch.vstack(batch_))
+        return model.encode_image(torch.vstack(batch_).to("cuda"))
 
 
 class BioClip2FeatureExtractor(BaseFeatureExtractor):
@@ -50,9 +49,11 @@ class BioClip2FeatureExtractor(BaseFeatureExtractor):
         super().__init__()
 
     def load_model(self):
+        print(torch.cuda.is_available())
         self.model, self.preprocess_train, self.preprocess_val = (
             open_clip.create_model_and_transforms("hf-hub:imageomics/bioclip-2")
         )
+        self.model.to("cuda")
         # tokenizer = open_clip.get_tokenizer("hf-hub:imageomics/bioclip")
 
     def compute_features(
@@ -88,6 +89,19 @@ class BioClip2FeatureExtractor(BaseFeatureExtractor):
                 total=int(len(dataset) / batch_size),
             ):
                 image_features.extend(
-                    compute_batch(batch_paths, self.model, self.preprocess_val)
+                    compute_batch(batch_paths, self.model, self.preprocess_val).cpu()
                 )
-        return np.vstack(image_features)
+        return np.vstack(image_features), None
+
+    def get_feature_size(self) -> int:
+        self.load_model()
+        image_size = (
+            self.model.encode_image(
+                self.preprocess_train(Image.new("RGB", (299, 299))).unsqueeze(0).to("cuda")
+            )
+            .detach()
+            .cpu()
+            .numpy()
+            .shape
+        )
+        return image_size[1]

@@ -193,6 +193,7 @@ def go_command(
     import_stream_metadata=False,
     label_column_name="label",
     start_labels=None,
+    random_seed=None,
 ):
     source = init_folder(
         source,
@@ -200,6 +201,7 @@ def go_command(
         start_labels=start_labels,
         exclusivity_groups=exclusivity_groups,
         import_stream_metadata=import_stream_metadata,
+        random_seed=random_seed,
     )
     print(f"Initialized AnnFlux in folder {source.working_folder}")
     train_then_features(
@@ -352,7 +354,7 @@ def stream(
     ]
     # - subsample for time-based streams
     if subsample:
-        subsample_seconds = time_string_to_seconds(subsample) # TODO
+        subsample_seconds = time_string_to_seconds(subsample)  # TODO
         if subsample_seconds % 3600 == 0:
             table_to_predict = subsample_hour(subsample, table_to_predict)
         elif subsample_seconds % 60 == 0:
