@@ -315,16 +315,17 @@ def color_and_label(
         data_to_update["incorrect_score"] = 0.0
         # TODO: use vector update
         for r, row in data_to_update.iterrows():
-            label_possible = row.label_possible
-            score_possible = row.score_possible
-            label_predicted = row.label_predicted
-            scores_predicted = row.scores_predicted
+            label_possible = str(row.label_possible) if not pandas.isna(row.label_possible) else ""
+            score_possible = str(row.score_possible) if not pandas.isna(row.label_possible) else ""
+            label_predicted = str(row.label_predicted) if not pandas.isna(row.label_predicted) else ""
+            scores_predicted = str(row.scores_predicted) if not pandas.isna(row.scores_predicted) else ""
             label_true = row.label_true
+            if row.uid == "GBIF_2837755165_0":
+                print("incorrect_score", label_possible, score_possible, label_predicted, scores_predicted, label_true)
             if (
                 row.labeled == 0
-                or pandas.isna(label_possible)
-                or pandas.isna(score_possible)
-                or len(label_possible) == 0
+                or (len(label_possible) == 0 and len(label_predicted) == 0)
+                or (len(score_possible) == 0 and len(scores_predicted) == 0)
             ):
                 continue
             score = compute_incorrect_score(
@@ -374,8 +375,14 @@ def compute_incorrect_score(
     label_predicted: str | float,
     scores_predicted: str | float,
 ):
-    predicted_map = name_to_probability(label_possible, score_possible)
-    predicted_map.update(name_to_probability(label_predicted, scores_predicted))
+    if len(label_possible) > 0:
+        predicted_map = name_to_probability(label_possible, score_possible)
+    else:
+        predicted_map = {}
+    try:
+        predicted_map.update(name_to_probability(label_predicted, scores_predicted))
+    except:
+        print("blurgh", label_predicted, scores_predicted)
     labels_true = set(label_true.split(","))
     for key in copy.copy(list(predicted_map.keys())):
         if predicted_map[key] < 0.5 and key not in labels_true:

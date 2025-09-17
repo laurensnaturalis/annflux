@@ -336,20 +336,22 @@ function renderPerformance(data) {
     console.log("performance");
     const test_performance = data["test_performance"];
     if (test_performance !== undefined) {
-        const diff =
-            test_performance[test_performance.length - 1][2] -
-            test_performance[test_performance.length - 2][2];
-        $("#test_performance").html(
-            round(test_performance[test_performance.length - 1][2] * 100.0, 1) +
-            " (" +
-            round(diff * 100.0, 1) +
-            ") %"
-        );
+        if (test_performance.length > 1) {
+            const diff =
+                test_performance[test_performance.length - 1][2] -
+                test_performance[test_performance.length - 2][2];
+            $("#test_performance").html(
+                round(test_performance[test_performance.length - 1][2] * 100.0, 1) +
+                " (" +
+                round(diff * 100.0, 1) +
+                ") %"
+            );
+        }
         $("#percentage_near_labeled").html(
-            round(data["percentage_labeled_possible"] * 100.0, 1)
+            round(data["percentage_near_labeled"] * 100.0, 1)
         );
         $("#percentage_near_labeled").attr("title",
-            `Near most needed ${round(data['percentage_near_labeled'] * 100.0, 1)} %`
+            `With prediction ${round(data['percentage_labeled_possible'] * 100.0, 1)} %`
         );
     }
 }
@@ -405,7 +407,7 @@ controlHtml = `<div id="map_control">
           </td>
         </tr>
         <tr>
-          <td>Space covered </td>
+          <td>Space covered</td>
           <td>
             <span id="percentage_near_labeled"></span> %
           </td>

@@ -17,7 +17,7 @@ import logging
 import os
 import time
 from collections import defaultdict
-from typing import Set, Dict, Any, Tuple, Union, List
+from typing import Set, Any, Tuple, Union, List
 
 import faiss
 import numpy as np
@@ -185,15 +185,14 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     state.g_quick_status = "predicting labeled"
     logger.info(f"make_predictions: labeled_indices_={len(labeled_indices_)}")
     make_predictions(
-        annotations,
         data,
         indices_,
         distances_,
         state.label_array,
         labeled_indices_,
-        list(test_indices),
         skip_first=True,
         knn_rank_exponent=state.knn_rank_exponent,
+        tag="predicting labeled",
     )
 
     #
@@ -249,18 +248,15 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         near_labeled_indices_.extend(test_indices)
     state.g_quick_status = "computing predictions"
     logger.info(f"make_predictions: near_labeled_indices_={len(near_labeled_indices_)}")
-    predicted_test, true_test = make_predictions(
-        annotations,
+    make_predictions(
         data,
         indices_,
         distances_,
         state.label_array,
         near_labeled_indices_,
-        list(test_indices),
         knn_rank_exponent=state.knn_rank_exponent,
+        tag="predicting near labelled",
     )
-    logger.info(f"|predicted_test|={len(predicted_test)}")
-    logger.info(f"make_predictions end={time.time()}")
     data.label_predicted = data.label_predicted.apply(lambda x_: canon_(x_))
     data.label_true = data.label_true.apply(lambda x_: canon_(x_))
     # FRE
@@ -286,6 +282,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         data["most_needed"] = data["dp_most_needed"]
 
         data_ = data[data["dp_most_needed"] < data["dp_most_needed"].max()]
+        print("bloep", data_[data["labeled"] == 0])
         logger.info(f"|data most needed| = {len(data_)}")
         near_labeled_perc = len(data_[data["labeled"] == 1]) / len(data_)
 
@@ -300,19 +297,20 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
         ].index.values.tolist()
         make_predictions(
-            annotations,
             data,
             dp_indices[unpredicted_idx],
             dp_distances[unpredicted_idx],
             state.label_array[dp_most_needed_idx],
             unpredicted_idx,
-            None,
             knn_rank_exponent=state.knn_rank_exponent,
+            tag="computing predictions for unpredicted using DP cluster",
         )
         unpredicted_idx = data[
             pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
         ].index.values
         print(f"{len(unpredicted_idx)=} after make_predictions")
+    logger.info(f"make_predictions end={time.time()}")
+
     write_performance_key_val(
         state.performance_path,
         "percentage_labeled_possible",
@@ -327,16 +325,12 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     )
     #
     state.g_quick_status = "computing performance"
-    # print(f"{predicted_test=}, {true_test=}")
-    performance_data = {
-        "predicted_test": predicted_test,
-        "true_test": true_test,
-        "state": state,
-        "annotations": annotations,
-        "data": data,
-    }
-
-    # Dump the dictionary to a pickle file
+    labeled_predicted_test_data = data[(data.in_test==1) & (data.labeled==1) & ~pandas.isna(data.label_predicted)]
+    predicted_test = [canon_(x_, remove_unknown=True, remove_sys=True).split(",") for x_ in labeled_predicted_test_data.label_predicted]
+    true_test = [canon_(x_, remove_unknown=True, remove_sys=True).split(",") for x_ in labeled_predicted_test_data.label_true]
+    logger.info(f"|predicted_test|={len(predicted_test)}")
+    print(f"{predicted_test=}, {true_test=}")
+    compute_performance(predicted_test, true_test, state, annotations, data)
     state.g_quick_status = "coloring and labelling"
 
     class_to_color, class_to_count = color_and_label(
@@ -384,10 +378,18 @@ def make_class_to_color(class_cluster_to_count, class_to_color, out_path):
     ).to_csv(out_path)
 
 
-def load_data(state: AnnFluxState, logger: logging.Logger):
+def load_data(state: AnnFluxState, logger: logging.Logger, no_linear_features=False):
     start_time = time.time()
     repo = Repository(os.path.join(state.annflux_folder, "datarepo"))
-    result_set = repo.get(label=Resultset, tag="unseen").last()
+    if no_linear_features:
+        for resultset in repo.get(label=Resultset, tag="unseen")[::-1]:
+            print(resultset, resultset.entry, resultset.entry.message)
+            if "linear" not in resultset.entry.message == "":
+                result_set = resultset
+                break
+    else:
+        result_set = repo.get(label=Resultset, tag="unseen").last()
+    print(f"load data {result_set.entry.message=}")
     folder = result_set.path
     data = pandas.read_csv(
         os.path.join(state.project_folder, "annflux", "annflux.csv"),
@@ -600,15 +602,14 @@ def quick_reclassification_group(knn_type, state, logger):
     logger.info(f"group labeled_indices={len(labeled_indices)}")
     state.g_quick_status = "predicting group labeled"
     make_predictions(
-        annotations,
         data,
         indices,
         distances,
         state.group_label_array,
         labeled_indices,
-        test_indices,
         skip_first=True,
         knn_rank_exponent=state.knn_rank_exponent,
+        tag="predicting group labeled",
     )
 
     # - make predictions for near labeled
@@ -622,14 +623,13 @@ def quick_reclassification_group(knn_type, state, logger):
 
     state.g_quick_status = "computing predictions"
     out_predicted_test, out_true_test, _ = make_predictions(
-        annotations,
         data,
         indices_,
         distances_,
         state.group_label_array,
         near_labeled_indices_,
-        test_indices,
         knn_rank_exponent=state.knn_rank_exponent,
+        tag="predicting group near labelled",
     )
     logger.info(f"|predicted_test|={len(out_predicted_test)}")
     logger.info(f"make_predictions end={time.time()}")
@@ -672,21 +672,19 @@ def get_label_array(annotations, data, include_uids):
 
 
 def make_predictions(
-    annotations: Dict[str, str],
     data: pandas.DataFrame,
     indices: NDArray,
     distances: NDArray,
     train_labels: NDArray,
     data_indices: list[int],
-    test_indices: list[int] | None,
     skip_first=False,
     knn_rank_exponent=0.5,
-) -> Tuple[list[list[str]], list[list[str]]]:
+    tag=None,
+):
     """
     The predictions are made for the knn results in (`indices`, `distances`) which correspond to the indices in data defined
      by `org_map`
      Results are written in `data`
-    :param annotations: map from uid to true label string
     :param data: AnnFlux data frame
     :param indices: matrix with rows corresponding to predicted samples and columns to indices of neighbors in knn
     training set
@@ -694,13 +692,9 @@ def make_predictions(
     training set
     :param train_labels: array with labels of knn training set
     :param data_indices: maps index of (indices, distances) to original index
-    :param test_indices: test_indices in original dataset
     :param skip_first: skip first neighbor for computing predictions, typically used when making predictions on labelled data
     :param knn_rank_exponent:
-    :return: a list of (distance, probability) tuples for labeled non-test data
     """
-    predicted_test = []
-    true_test = []
     update: dict[str, list[Tuple[int, Any]]] = {}  # key -> [(data_index, value), ...]
     for key in [
         "score_possible",
@@ -710,6 +704,7 @@ def make_predictions(
         "scores_predicted",
         "entropy",
         "score_true",
+        "num_labeled_nn",
     ]:
         update[key] = [
             (-1, None),
@@ -717,33 +712,44 @@ def make_predictions(
     data["scores_predicted"] = data["scores_predicted"].astype(str)
     data["score_possible"] = data["score_possible"].astype(str)
     org_index_to_uid = dict(zip(data.index, data.uid))
+    if "num_labeled_nn" not in data.columns:
+        data["num_labeled_nn"] = None
     time_probabilities = 0
     time_rest = 0
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
         start_time = time.time()
         org_index = data_indices[i]
 
-        is_labeled = False
         probabilities = defaultdict(lambda: 0)
         # knn class histogram
         max_mass = 0
         multilabel_: List[str]
+        num_labeled_nn = 0
         for i2, multilabel_ in enumerate(train_labels[indices_for_i]):
             if skip_first and i2 == 0:
                 continue
             if multilabel_ is not None and len(multilabel_) > 0:
                 distance_weight = 1 / max(1e-8, distances[i][i2] ** knn_rank_exponent)  # noqa
-                if distance_weight < 0.01 * max_mass:
-                    continue
+                # if distance_weight < 0.01 * max_mass:
+                #     continue
                 for label_ in multilabel_:
                     probabilities[label_] += distance_weight
                 max_mass += distance_weight
+                num_labeled_nn += 1
+
+
 
         for label_ in probabilities:
             probabilities[label_] /= max_mass
+
+        # if num_labeled_nn > 1 and len(probabilities) > 1:
+        #     print("BLAAAAT", tag, probabilities, org_index_to_uid[org_index])
         time_probabilities += time.time() - start_time
         start_time = time.time()
+        update["num_labeled_nn"][i] = (org_index, num_labeled_nn)
         #
+        if org_index_to_uid[org_index] == "GBIF_2834960618_0":
+            print("oemboe", tag, "GBIF_2834960618_0", probabilities)
         if len(probabilities) > 0:
             max_labels = [
                 label_ for label_, prob_ in probabilities.items() if prob_ > 0.5
@@ -766,6 +772,7 @@ def make_predictions(
             )
 
             update["label_possible"][i] = (org_index, ",".join(possible_labels))
+
             if len(max_labels) > 0:
                 update["label_predicted"][i] = (org_index, ",".join(max_labels))
                 update["score_predicted"][i] = (
@@ -777,33 +784,14 @@ def make_predictions(
                     org_index,
                     ",".join([f"{probabilities[label_]:.2f}" for label_ in max_labels]),
                 )
-
-                # entropy
-                # p = np.array(list(probabilities.values()))
-                # update["entropy"].append((org_index, -1 * (p * np.log2(p)).sum()))
-                # test data
-                if test_indices is not None and org_index in test_indices:
-                    test_uid = org_index_to_uid[org_index] # data.at[org_index, "uid"]  # TODO(opt): cache
-                    if test_uid in annotations.keys():
-                        predicted_test.append(max_labels)
-                        true_test.append(annotations[test_uid].split(","))
-                elif is_labeled:  # labelled data
-                    update["score_true"].append(
-                        (
-                            org_index,
-                            probabilities.get(
-                                annotations[data.at[org_index, "uid"]], -1
-                            ),
-                        )
-                    )
             else:
                 update["label_predicted"][i] = (org_index, None)
                 update["score_predicted"][i] = (org_index, 0)
                 update["scores_predicted"][i] = (org_index, None)
         time_rest += time.time() - start_time
 
-        if i % 100 == 0:
-            print(time_rest, time_probabilities)
+        # if i % 100 == 0:
+        #     print(time_rest, time_probabilities)
     #
     for key in update:
         update_for_key = update[key]
@@ -817,5 +805,3 @@ def make_predictions(
             current_values = data[key].values
         current_values[np.array(indices)] = values
         data[key] = current_values
-
-    return predicted_test, true_test
