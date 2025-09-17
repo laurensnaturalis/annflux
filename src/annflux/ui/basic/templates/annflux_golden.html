@@ -315,27 +315,44 @@ limitations under the License.
         });
     }
 
-    function createQuickLabel(imageId, class_, labels, bla) {
+    function createQuickLabel(imageId, class_, labels, bla, probabilities) {
         d3.select("div#gallery-label-" + imageId)
             .selectAll("*")
             .remove();
         if (bla) {
-            d3.select("div#gallery-label-" + imageId)
-                .selectAll("a")
-                .data(labels)
-                .enter()
-                .append("a")
-                .html(function (d) {
-                    return `${d}`;
-                })
-                .attr("class", function (d) {
-                    return `${class_} label_${d.replace(" ", "_")}`;
-                })
-                // .attr("class", class_)
-                .attr("onclick", function (d) {
-                    return `labelInGallery('${imageId}', '${d}', false)`;
-                })
-                .attr("href", `javascript:void(0)`);
+            if (probabilities) {
+                d3.select("div#gallery-label-" + imageId)
+                    .selectAll("a")
+                    .data(zip(labels, probabilities))
+                    .enter()
+                    .append("a")
+                    .html(function (d) {
+                        return `${d[0]}(${Math.round(d[1]*100)}%)`;
+                    })
+                    .attr("class", function (d) {
+                        return `${class_} label_${d[0].replace(" ", "_")}`;
+                    })
+                    .attr("onclick", function (d) {
+                        return `labelInGallery('${imageId}', '${d[0]}', false)`;
+                    })
+                    .attr("href", `javascript:void(0)`);
+            } else {
+                d3.select("div#gallery-label-" + imageId)
+                    .selectAll("a")
+                    .data(labels)
+                    .enter()
+                    .append("a")
+                    .html(function (d) {
+                        return `${d}`;
+                    })
+                    .attr("class", function (d) {
+                        return `${class_} label_${d.replace(" ", "_")}`;
+                    })
+                    .attr("onclick", function (d) {
+                        return `labelInGallery('${imageId}', '${d}', false)`;
+                    })
+                    .attr("href", `javascript:void(0)`);
+            }
         }
         addSpaces();
     }
@@ -398,18 +415,34 @@ limitations under the License.
         }
 
         galleryImages.each((d2, i) => {
+
+            let isUnlabeled = Number(d2.labeled) == 0;
+            console.log(d2.uid, isUnlabeled)
             let labelsFor = ((
-                Number(d2.labeled) == 0 ? d2.label_predicted : d2.label_true
+                isUnlabeled ? d2.label_predicted : d2.label_true
             ) ?? "").split(",");
             if (labelsFromStorage && d2.uid in labelsFromStorage) {
                 labelsFor = labelsFromStorage[d2.uid].split(",");
+                isUnlabeled = false;
             }
-            createQuickLabel(
-                d2.uid,
-                Number(d2.labeled) == 0 ? "quick_label_predicted" : "quick_label_true",
-                labelsFor,
-                true
-            );
+            if (isUnlabeled) {
+                createQuickLabel(
+                    d2.uid,
+                    "quick_label_predicted",
+                    labelsFor,
+                    true,
+                    (d2.score_predicted ?? "").toString().split(",")
+                );
+            } else {
+                createQuickLabel(
+                    d2.uid,
+                    "quick_label_true",
+                    labelsFor,
+                    true,
+
+                );
+            }
+
         });
         // button for removing all labels
         galleryImages.each((d, i) => {
@@ -431,14 +464,37 @@ limitations under the License.
         // predicted (possible) labels
         try {
             galleryImages.each((d2, i) => {
-                if (d2.label_possible) {
+                if (d2.label_possible && d2.score_possible) {
+                    let localData = zip(d2.label_possible.toString().split(","), d2.score_possible.toString().split(","));
                     d3.select("div#labels-" + d2.uid)
                         .selectAll("a")
-                        .data(zip(d2.label_possible.split(","), d2.score_possible.split(",")))
+                        .data(localData)
                         .enter()
                         .append("a")
                         .html(function (d) {
-                            return `${d[0]}(${d[1]})`;
+                            return `${d[0]}(${Math.round(d[1]*100)}%)`;
+                        })
+                        .attr("class", "quick_label")
+                        .attr("onclick", function (d) {
+                            return `labelInGallery('${d2.uid}', '${d[0]}', false, event)`;
+                        })
+
+                        .attr("href", `javascript:void(0)`);
+                } else if (d2.labeled == 1 && d2.label_predicted) {
+                    let localData = [];
+                    let labelPredicted = d2.label_predicted.toString();
+                    let scorePredicted = d2.score_predicted.toString();
+                    let labelsTrue = (d2.label_true ?? "").toString().split(",");
+
+                    localData = zip(labelPredicted.split(","), scorePredicted.split(",")).filter(a => labelsTrue.indexOf(a[0]) == -1);
+                    console.log(localData);
+                    d3.select("div#labels-" + d2.uid)
+                        .selectAll("a")
+                        .data(localData)
+                        .enter()
+                        .append("a")
+                        .html(function (row_) {
+                            return `${row_[0]}(${Math.round(row_[1]*100)}%)`;
                         })
                         .attr("class", "quick_label")
                         .attr("onclick", function (d) {
@@ -1163,7 +1219,7 @@ limitations under the License.
                     massLabelInGallery(shortcuts.get(key));
                     typedText = "";
                 }
-                 return;
+                return;
             }
             // let matchedLabels = new Array();
             // g_labels.forEach((val, _) => {

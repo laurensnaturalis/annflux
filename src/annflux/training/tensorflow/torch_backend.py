@@ -142,7 +142,7 @@ def linear_retraining(state, status_callback):
         status_callback(epoch, val_loss)
 
     # Load best weights
-    model.load_state_dict(torch.load(weights_path))
+    # model.load_state_dict(torch.load(weights_path))
 
     # Test
     with torch.no_grad():

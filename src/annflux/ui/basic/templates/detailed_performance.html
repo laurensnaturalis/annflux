@@ -58,9 +58,6 @@ limitations under the License.
     <tbody></tbody>
 </table>
 <button id="fetch-array">Fetch Array</button>
-<button id="save-array">Save Array</button>
-<button id="add-row">Add Row</button>
-<button id="add-column">Add Column</button>
 
 <script>
     function convertToFloat(input) {
@@ -93,8 +90,25 @@ limitations under the License.
               labeled_url = encodeURI(`/annflux?not_label_true=on&label_predicted=${row[0].toLowerCase()}&label_true=${row[0].toLowerCase()}&as_ranking_column=score_predicted&show_labeled=labeled`);
               unlabeled_url = encodeURI(`/annflux?label_predicted=${row[0].toLowerCase()}&as_ranking_column=score_predicted`);
             }
+            else if (columns[colIndex] == "num_predicted_uncertain") {
+                unlabeled_url = encodeURI(`/annflux?label_predicted=${row[0].toLowerCase()}&as_ranking_column=score_predicted`);
+            }
+            else if (columns[colIndex] == "num_predicted_certain") {
+                unlabeled_url = encodeURI(`/annflux?label_predicted=${row[0].toLowerCase()}&as_ranking_column=score_predicted&invert_ranking=on`);
+            }
             if (type === "display") {
-              return `<a href="${labeled_url}" data-row="${meta.row}" data-col="${meta.col}">${convertToFloat(data)}</a> <a href="${unlabeled_url}"><img src="/static/unlabeled.svg" width="24px"></a>`;
+                if (unlabeled_url.length == 0 && labeled_url.length == 0) {
+                    return `${convertToFloat(data)}`;
+                }
+                if (unlabeled_url.length > 0 && labeled_url.length > 0) {
+                    return `<a href="${labeled_url}" data-row="${meta.row}" data-col="${meta.col}">${convertToFloat(data)}</a> <a href="${unlabeled_url}"><img src="/static/unlabeled.svg" width="24px"></a>`;
+                }
+                else if (labeled_url.length > 0) {
+                    return `<a href="${labeled_url}" data-row="${meta.row}" data-col="${meta.col}">${convertToFloat(data)}</a>`;
+                }
+                else if (unlabeled_url.length > 0) {
+                    return `<a href="${unlabeled_url}" data-row="${meta.row}" data-col="${meta.col}">${convertToFloat(data)}</a>`;
+                }
             }
             return data;
           },

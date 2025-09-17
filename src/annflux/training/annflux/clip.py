@@ -26,7 +26,7 @@ import torch
 import zarr
 from numpy._typing import NDArray
 from openvino.runtime import properties
-from PIL import Image
+from PIL import Image, ImageOps
 from sklearn.model_selection import train_test_split
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -237,6 +237,22 @@ def print_trainable_parameters(model):
         f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param:.2f}"
     )
 
+def pad_to_square(image, fill_color=(0, 0, 0)):
+    # Get original dimensions
+    width, height = image.size
+
+    # Calculate target size (max of width/height)
+    target_size = max(width, height)
+
+    # Calculate padding (left, top, right, bottom)
+    left = (target_size - width) // 2
+    top = (target_size - height) // 2
+    right = target_size - width - left
+    bottom = target_size - height - top
+
+    # Pad the image (default: black background)
+    padded_image = ImageOps.expand(image, border=(left, top, right, bottom), fill=fill_color)
+    return padded_image
 
 class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMixin):
     def __init__(
@@ -419,6 +435,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                     try:
                         image = Image.open(filename)
                         image.load()
+                        pad_to_square(image)
                     except:  # noqa
                         print(f"Failed to read {filename}")
                         image = Image.new("RGB", (299, 299))

@@ -295,7 +295,7 @@ class Repository(object):
 
     @property
     def entries(self):
-        table = pandas.read_csv(self.index_path, dtype={"date": str}).values
+        table = pandas.read_csv(self.index_path, dtype={"date": str}).fillna("").values
         # table, _ = read_table(self.index_path, return_as_dict=False)
 
         result = []
