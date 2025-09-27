@@ -281,10 +281,13 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         data["direct_most_needed"] = data["most_needed"]
         data["most_needed"] = data["dp_most_needed"]
 
+        labeled_uids = set(annotations.keys())
+        data["labeled"] = data["uid"].apply(lambda x_: int(x_ in labeled_uids))
         data_ = data[data["dp_most_needed"] < data["dp_most_needed"].max()]
-        print("bloep", data_[data["labeled"] == 0])
+        # print("bloep", data_[data["labeled"] == 0])
         logger.info(f"|data most needed| = {len(data_)}")
         near_labeled_perc = len(data_[data["labeled"] == 1]) / len(data_)
+        print(f"has_density_peak: {near_labeled_perc=}")
 
         write_performance_key_val(
             state.performance_path, "percentage_near_labeled", near_labeled_perc
@@ -325,9 +328,20 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     )
     #
     state.g_quick_status = "computing performance"
-    labeled_predicted_test_data = data[(data.in_test==1) & (data.labeled==1) & ~pandas.isna(data.label_predicted)]
-    predicted_test = [canon_(x_, remove_unknown=True, remove_sys=True).split(",") for x_ in labeled_predicted_test_data.label_predicted]
-    true_test = [canon_(x_, remove_unknown=True, remove_sys=True).split(",") for x_ in labeled_predicted_test_data.label_true]
+    labeled_predicted_test_data = data[
+        (data.in_test == 1)
+        & (data.labeled == 1)
+        & ~pandas.isna(data.label_predicted)
+        & ~pandas.isna(data.label_true)
+    ]
+    predicted_test = [
+        canon_(x_, remove_unknown=True, remove_sys=True).split(",")
+        for x_ in labeled_predicted_test_data.label_predicted
+    ]
+    true_test = [
+        canon_(x_, remove_unknown=True, remove_sys=True).split(",")
+        for x_ in labeled_predicted_test_data.label_true
+    ]
     logger.info(f"|predicted_test|={len(predicted_test)}")
     print(f"{predicted_test=}, {true_test=}")
     compute_performance(predicted_test, true_test, state, annotations, data)
@@ -705,6 +719,7 @@ def make_predictions(
         "entropy",
         "score_true",
         "num_labeled_nn",
+        "min_distance",
     ]:
         update[key] = [
             (-1, None),
@@ -714,6 +729,8 @@ def make_predictions(
     org_index_to_uid = dict(zip(data.index, data.uid))
     if "num_labeled_nn" not in data.columns:
         data["num_labeled_nn"] = None
+    if "min_distance" not in data.columns:
+        data["min_distance"] = None
     time_probabilities = 0
     time_rest = 0
     for i, indices_for_i in tqdm(enumerate(indices), desc="making knn predictions"):
@@ -725,6 +742,7 @@ def make_predictions(
         max_mass = 0
         multilabel_: List[str]
         num_labeled_nn = 0
+        min_distance = None
         for i2, multilabel_ in enumerate(train_labels[indices_for_i]):
             if skip_first and i2 == 0:
                 continue
@@ -736,8 +754,8 @@ def make_predictions(
                     probabilities[label_] += distance_weight
                 max_mass += distance_weight
                 num_labeled_nn += 1
-
-
+                if min_distance is None:
+                    min_distance = distances[i][i2]
 
         for label_ in probabilities:
             probabilities[label_] /= max_mass
@@ -747,6 +765,7 @@ def make_predictions(
         time_probabilities += time.time() - start_time
         start_time = time.time()
         update["num_labeled_nn"][i] = (org_index, num_labeled_nn)
+        update["min_distance"][i] = (org_index, min_distance)
         #
         if org_index_to_uid[org_index] == "GBIF_2834960618_0":
             print("oemboe", tag, "GBIF_2834960618_0", probabilities)
