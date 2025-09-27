@@ -134,13 +134,13 @@ def color_and_label(
     )
 
     data["label_true"] = label_array
+    data["label_true"] = data["label_true"].apply(lambda x_: canon_(x_))
     labeled_uids = set(annotations.keys())
     data["labeled"] = data["uid"].apply(lambda x_: int(x_ in labeled_uids))
 
     data_to_update.label_predicted = data_to_update.label_predicted.apply(
         lambda x_: canon_(x_)
     )
-    data.label_true = data.label_true.apply(lambda x_: canon_(x_))
 
     # list of multi-labels (multiple labels in a single string; canonized) and single labels
     unique_predicted_multilabels = set(
