@@ -316,16 +316,17 @@ def color_and_label(
         # TODO: use vector update
         for r, row in data_to_update.iterrows():
             label_possible = str(row.label_possible) if not pandas.isna(row.label_possible) else ""
+            label_true = str(row.label_true) if not pandas.isna(row.label_true) else ""
             score_possible = str(row.score_possible) if not pandas.isna(row.label_possible) else ""
             label_predicted = str(row.label_predicted) if not pandas.isna(row.label_predicted) else ""
             scores_predicted = str(row.scores_predicted) if not pandas.isna(row.scores_predicted) else ""
-            label_true = row.label_true
             if row.uid == "GBIF_2837755165_0":
                 print("incorrect_score", label_possible, score_possible, label_predicted, scores_predicted, label_true)
             if (
                 row.labeled == 0
                 or (len(label_possible) == 0 and len(label_predicted) == 0)
                 or (len(score_possible) == 0 and len(scores_predicted) == 0)
+                or (len(label_true) == 0 and len(label_true) == 0)
             ):
                 continue
             score = compute_incorrect_score(

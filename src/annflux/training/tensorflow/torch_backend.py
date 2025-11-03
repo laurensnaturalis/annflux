@@ -1,19 +1,24 @@
+import keras
+import pandas
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from keras.src.callbacks import Callback
+from numpy._typing import NDArray
 from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from collections import Counter, defaultdict
 import numpy as np
-import math
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
+
 
 def l2_normalize(x, axis=1):
     norm = torch.norm(x, p=2, dim=axis, keepdim=True)
     return x / norm
+
 
 class BalanceDataset(Dataset):
     def __init__(self, x_set, y_set, balance: bool = False):
@@ -42,6 +47,7 @@ class BalanceDataset(Dataset):
             class_ = np.random.choice(self.classes_, p=self.class_weights.numpy())
             idx = np.random.choice(self.class_to_indices[class_])
             return self.x[idx], self.y[idx]
+
 
 def linear_retraining(state, status_callback):
     if state.labeled_indices is None or len(state.labeled_indices) == 0:
@@ -92,7 +98,7 @@ def linear_retraining(state, status_callback):
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=3, min_lr=1e-6, verbose=True
+        optimizer, mode="min", factor=0.5, patience=3, min_lr=1e-6, verbose=True
     )
 
     # DataLoaders
@@ -102,7 +108,7 @@ def linear_retraining(state, status_callback):
     val_loader = DataLoader(val_dataset, batch_size=1024)
 
     # Training loop
-    best_val_loss = float('inf')
+    best_val_loss = float("inf")
     weights_path = os.path.join(state.annflux_folder, "linear.weights.pt")
     patience = 10
     epochs_no_improve = 0
@@ -146,7 +152,9 @@ def linear_retraining(state, status_callback):
 
     # Test
     with torch.no_grad():
-        test_features = torch.tensor(state.features[state.labeled_test_indices], dtype=torch.float32)
+        test_features = torch.tensor(
+            state.features[state.labeled_test_indices], dtype=torch.float32
+        )
         test_predictions = model(test_features).numpy()
         acc_test = accuracy_score(test_targets, (test_predictions > 0.5).astype(int))
         print(f"linear from features acc = {acc_test}")
@@ -154,6 +162,168 @@ def linear_retraining(state, status_callback):
     # Recompute features
     state.g_quick_status = "recomputing features"
     with torch.no_grad():
-        state.features = model.features(torch.tensor(state.features, dtype=torch.float32)).numpy()
+        state.features = model.features(
+            torch.tensor(state.features, dtype=torch.float32)
+        ).numpy()
 
     return weights_path
+
+
+def linear_train_func(
+    train_val_features: NDArray,
+    test_features: NDArray,
+    train_val_labels: List[List[str]],
+    test_labels: List[List[str]],
+    weights_path: str,
+    balance: bool,
+    status_callback: keras.src.callbacks.Callback,
+):
+    binarizer = MultiLabelBinarizer()
+
+    binarizer.fit(train_val_labels)
+    targets = binarizer.transform(train_val_labels)
+    print(f"{train_val_labels=}")
+    print(f"{targets=}")
+    print(f"{len(binarizer.classes_)=}")
+
+    test_targets = binarizer.transform(test_labels)
+
+    x_train, x_val, y_train, y_val = train_test_split(
+        train_val_features, targets, test_size=0.10, random_state=42
+    )
+
+    # PyTorch model definition
+    class LinearModel(nn.Module):
+        def __init__(self, input_dim, num_classes):
+            super().__init__()
+            self.features = nn.Sequential(
+                nn.Linear(input_dim, input_dim),
+                nn.ReLU(),
+            )
+            self.classifier = nn.Linear(input_dim, num_classes)
+
+        def forward(self, x):
+            x = self.features(x)
+            x = l2_normalize(x, axis=1)
+            return torch.sigmoid(self.classifier(x))
+
+    model = LinearModel(train_val_features.shape[1], len(binarizer.classes_))
+    # model2 = nn.Sequential(
+    #     nn.Linear(state.features.shape[1], state.features.shape[1]),
+    #     nn.ReLU(),
+    # )
+
+    # Loss and optimizer
+    criterion = nn.BCELoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.1)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="min", factor=0.5, patience=3, min_lr=1e-6, verbose=True
+    )
+
+    # DataLoaders
+    train_dataset = BalanceDataset(x_train, y_train, balance=balance)
+    train_loader = DataLoader(train_dataset, batch_size=1024, shuffle=True)
+    val_dataset = BalanceDataset(x_val, y_val, balance=False)
+    val_loader = DataLoader(val_dataset, batch_size=1024)
+
+    # Training loop
+    best_val_loss = float("inf")
+    patience = 10
+    epochs_no_improve = 0
+
+    for epoch in range(200):
+        model.train()
+        for x_batch, y_batch in train_loader:
+            optimizer.zero_grad()
+            outputs = model(x_batch)
+            loss = criterion(outputs, y_batch)
+            loss.backward()
+            optimizer.step()
+
+        # Validation
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for x_val, y_val in val_loader:
+                outputs = model(x_val)
+                val_loss += criterion(outputs, y_val).item()
+
+        val_loss /= len(val_loader)
+        scheduler.step(val_loss)
+        print(
+            f"epoch={epoch}, val_loss={val_loss}, lr={scheduler.get_last_lr()}, acc={accuracy_score(y_val, (outputs.numpy() > 0.5).astype(int))}"
+        )
+
+        # Early stopping and checkpointing
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            epochs_no_improve = 0
+            torch.save(model.state_dict(), weights_path)
+        else:
+            epochs_no_improve += 1
+            if epochs_no_improve >= patience:
+                print("Early stopping triggered.")
+                break
+
+        status_callback(epoch, val_loss)
+
+    # Load best weights
+    # model.load_state_dict(torch.load(weights_path))
+
+    # Test
+    with torch.no_grad():
+        test_features = torch.tensor(test_features, dtype=torch.float32)
+        test_predictions = model(test_features).numpy()
+        acc_test = accuracy_score(test_targets, (test_predictions > 0.5).astype(int))
+        print(f"linear from features acc = {acc_test}")
+
+
+class DummyCallBack(Callback):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, epoch, logs=None):
+        print(epoch)
+
+    def on_epoch_end(self, epoch, logs=None):
+        print(epoch)
+
+
+def _test_linear_train():
+    features = np.load(
+        "/mnt/big/indeed/lepisea/annflux/datarepo/resultset-20250820141224-f854819d/last_full.npz"
+    )["lastFull"]
+    data = pandas.read_csv("/mnt/big/indeed/lepisea/annflux/annflux.csv")
+    test_indices = np.where(data["in_test"] == 1)[0]
+    train_val_indices = np.where(data["in_test"] == 0)[0]
+
+    labeled_indices = np.where(data["labeled"] == 1)[0]
+    train_val_indices = sorted(
+        list(set(train_val_indices).intersection(set(labeled_indices)))
+    )
+    test_indices = sorted(list(set(test_indices).intersection(set(labeled_indices))))
+
+    train_val_features = features[train_val_indices]
+    test_features = features[test_indices]
+    label_true = data["label_true"]
+    train_val_labels = [
+        [y_ for y_ in x_.split(",") if y_.endswith("ae") and len(y_.split()) == 1]
+        for x_ in label_true[train_val_indices]
+    ]
+    test_labels = [
+        [y_ for y_ in x_.split(",") if y_.endswith("ae") and len(y_.split()) == 1]
+        for x_ in label_true[test_indices]
+    ]
+    linear_train_func(
+        train_val_features,
+        test_features,
+        train_val_labels,
+        test_labels,
+        "tmp.weights.h5",
+        False,
+        DummyCallBack(),
+    )
+
+
+if __name__ == "__main__":
+    _test_linear_train()

@@ -17,13 +17,22 @@ import os
 from collections import defaultdict, Counter
 from typing import Dict, List
 
+import keras.src.callbacks
 import numpy as np
+import pandas
 from keras import Input, Model
-from keras.src.callbacks import ReduceLROnPlateau, ModelCheckpoint, EarlyStopping
+from keras.src.callbacks import (
+    ReduceLROnPlateau,
+    ModelCheckpoint,
+    EarlyStopping,
+    Callback,
+)
 from keras.src.layers import Dense, Lambda
 from keras.src.legacy.backend import l2_normalize
+from keras.src.optimizers import Adam
 
 from keras.src.trainers.data_adapters.py_dataset_adapter import PyDataset
+from numpy._typing import NDArray
 
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
@@ -34,49 +43,82 @@ from annflux.tools.core import AnnFluxState
 logger = logging.getLogger("annflux_server")
 
 
-def linear_retraining(state: AnnFluxState, status_callback):
-    if state.labeled_indices is None or len(state.labeled_indices) == 0:
+def linear_retraining_logic(state: AnnFluxState, status_callback):
+    labeled_indices = state.labeled_indices
+    if labeled_indices is None or len(labeled_indices) == 0:
         return
-    logger.info(f"{len(state.labeled_indices)=}")
+    logger.info(f"{len(labeled_indices)=}")
     balance = True
-    binarizer = MultiLabelBinarizer()
+    test_labels = state.label_array_test[state.labeled_test_indices]
+    train_val_labels = state.label_array[labeled_indices]
     no_label_for_labeled_idx = np.where(
-        state.label_array[state.labeled_indices] == None  # noqa
+        train_val_labels == None  # noqa
     )[0]
     if len(no_label_for_labeled_idx) > 0:
         raise RuntimeError(
-            f"no label for idx {np.array(state.labeled_indices)[no_label_for_labeled_idx]}"
+            f"no label for idx {np.array(labeled_indices)[no_label_for_labeled_idx]}"
         )
-    binarizer.fit(state.label_array[state.labeled_indices])
-    targets = binarizer.transform(state.label_array[state.labeled_indices])
 
-    test_targets = binarizer.transform(
-        state.label_array_test[state.labeled_test_indices]
+    features = state.features
+    train_val_features = features[labeled_indices]
+    weights_path = os.path.join(state.annflux_folder, "linear.weights.h5")
+    test_features = features[state.labeled_test_indices]
+
+    model2 = linear_train_func(
+        train_val_features,
+        test_features,
+        train_val_labels,
+        test_labels,
+        weights_path,
+        balance,
+        status_callback,
     )
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        state.features[state.labeled_indices], targets, test_size=0.10, random_state=42
+    state.g_quick_status = "recomputing features"
+    state.features = model2.predict(features)
+
+    return weights_path
+
+
+def linear_train_func(
+    train_val_features: NDArray,
+    test_features: NDArray,
+    train_val_labels: List[List[str]],
+    test_labels: List[List[str]],
+    weights_path: str,
+    balance: bool,
+    status_callback: keras.src.callbacks.Callback,
+) -> Model:
+    binarizer = MultiLabelBinarizer()
+
+    binarizer.fit(train_val_labels)
+    targets = binarizer.transform(train_val_labels)
+    print(f"{train_val_labels=}")
+    print(f"{len(binarizer.classes_)=}")
+
+    test_targets = binarizer.transform(test_labels)
+
+    x_train, x_val, y_train, y_val = train_test_split(
+        train_val_features, targets, test_size=0.10, random_state=42
     )
-    input_ = Input(shape=(state.features.shape[1],))
+    # make the linear model
+    features_size = train_val_features.shape[1]
+    input_ = Input(shape=(features_size,))
     dense = input_
-    activation = "relu"
-    features_ = Dense(state.features.shape[1], activation=activation, name="features")(
-        dense
-    )
+    features_ = Dense(features_size, activation="relu", name="features")(dense)
     features_ = Lambda(lambda x: l2_normalize(x, axis=1))(features_)
     predictions = Dense(len(binarizer.classes_), activation="sigmoid")(features_)
+    # for predictions, to train
     model = Model(inputs=[input_], outputs=[predictions])
-
+    # to compute features
     model2 = Model(inputs=[input_], outputs=[features_])
     reduce_lr = ReduceLROnPlateau(
         monitor="val_loss", factor=0.5, patience=3, min_lr=0.000001, verbose=1
     )
     model.summary()
 
-    loss_ = "binary_crossentropy"
-    model.compile(loss=loss_, optimizer="adam", metrics=["accuracy"])
+    model.compile(loss="binary_crossentropy", optimizer=Adam(learning_rate=0.1), metrics=["accuracy"])
 
-    weights_path = os.path.join(state.annflux_folder, "linear.weights.h5")
     checkpointer = ModelCheckpoint(
         weights_path,
         monitor="val_loss",
@@ -88,7 +130,7 @@ def linear_retraining(state: AnnFluxState, status_callback):
     model.fit(
         x=BalanceSequence(x_train, y_train, 1024, balance=balance),
         batch_size=1024,
-        validation_data=(x_test, y_test),
+        validation_data=(x_val, y_val),
         epochs=200,
         verbose=1,
         callbacks=[
@@ -99,14 +141,10 @@ def linear_retraining(state: AnnFluxState, status_callback):
         ],
     )
     model.load_weights(weights_path)
-    test_predictions = model.predict(state.features[state.labeled_test_indices])
+    test_predictions = model.predict(test_features)
     acc_test = accuracy_score(test_targets, (test_predictions > 0.5).astype(int))
-    logger.info(f"linear from features acc = {acc_test}")
-
-    state.g_quick_status = "recomputing features"
-    state.features = model2.predict(state.features)
-
-    return weights_path
+    print(f"linear from features accuracy = {acc_test}")
+    return model2
 
 
 class BalanceSequence(PyDataset):
@@ -135,5 +173,39 @@ class BalanceSequence(PyDataset):
             class_ = np.random.choice(self.classes_, p=self.class_weights)
             indices_batch.append(np.random.choice(self.class_to_indices[class_]))
 
-        print(type(self.x[indices_batch]))
+        # print(type(self.x[indices_batch]))
         return self.x[indices_batch], self.y[indices_batch]
+
+
+
+class DummyCallBack(Callback):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, epoch, logs=None):
+        print(epoch)
+
+    def on_epoch_end(self, epoch, logs=None):
+        print(epoch)
+
+
+def _test_linear_train():
+    features = np.load("/mnt/big/indeed/lepisea/annflux/datarepo/resultset-20251030124355-7a3d7e2f/last_full.npz")["lastFull"]
+    data = pandas.read_csv("/mnt/big/indeed/lepisea/annflux/annflux.csv")
+    test_indices = np.where(data["in_test"]==1)[0]
+    train_val_indices = np.where(data["in_test"]==0)[0]
+
+    labeled_indices = np.where(data["labeled"]==1)[0]
+    train_val_indices = sorted(list(set(train_val_indices).intersection(set(labeled_indices))))
+    test_indices = sorted(list(set(test_indices).intersection(set(labeled_indices))))
+
+    train_val_features = features[train_val_indices]
+    test_features = features[test_indices]
+    label_true = data["label_true"]
+    train_val_labels = [[y_ for y_ in x_.split(",") if y_.endswith("ae") and len(y_.split()) == 1] for x_ in label_true[train_val_indices]]
+    test_labels = [[y_ for y_ in x_.split(",") if y_.endswith("ae") and len(y_.split()) == 1] for x_ in label_true[test_indices]]
+    linear_train_func(train_val_features, test_features, train_val_labels, test_labels, "tmp.weights.h5", False, DummyCallBack())
+
+
+if __name__ == '__main__':
+    _test_linear_train()

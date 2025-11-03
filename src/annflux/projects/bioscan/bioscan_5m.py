@@ -1,3 +1,4 @@
+import pandas
 from bioscan_dataset import BIOSCAN5M
 from transformers import AutoTokenizer, AutoModel
 import numpy as np
@@ -31,9 +32,11 @@ def m():
 
     # n = 500
     embeddings = []
+    labels = []
     for i_ in range(1000):
         image, dna_barcode, label = dataset[i_]
         image.save(f"/mnt/big/datasets/bioannflux/images/image_{i_}.jpg")
+        labels.append(label)
         print(image, label)
         embeddings.append(dnafeature(dna_barcode))
         # image.show()
@@ -42,6 +45,7 @@ def m():
 
     x = np.vstack(embeddings)
     print(x.shape)
+    pandas.DataFrame({"label": labels}).to_csv("/mnt/big/datasets/bioannflux/labels.csv")
     np.savez("/mnt/big/datasets/bioannflux/features/embeddings.npz", lastFull=x)
 
 

@@ -430,9 +430,9 @@ def load_data(state: AnnFluxState, logger: logging.Logger, no_linear_features=Fa
         state.features = numpy_load(f"{folder}/last_full.npz", "lastFull")
     assert len(data) == len(state.features), f"{len(data)=}, {len(state.features)=}"
     annotated_uids = set(annotations.keys())
-    most_needed_first = annotated_uids - test_uids
+    train_val_uids = annotated_uids - test_uids
     state.labeled_indices = sorted(
-        [i for i, uid in enumerate(data.uid.values) if uid in most_needed_first]
+        [i for i, uid in enumerate(data.uid.values) if uid in train_val_uids]
     )
     logger.info(f"instant_reclassification 4={time.time() - start_time}")
     #

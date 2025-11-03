@@ -73,7 +73,7 @@ from annflux.training.annflux.quick import (
     group_classification,
     load_data,
 )
-from annflux.training.tensorflow.tf_backend import linear_retraining
+from annflux.training.tensorflow.tf_backend import linear_retraining_logic
 # from annflux.training.tensorflow.torch_backend import linear_retraining
 
 project_root: Optional[str] = None
@@ -604,7 +604,7 @@ def detailed_performance():
 def retrain_job(state: AnnFluxState):
     state.g_quick_status = "training"
     load_data(state, logger, no_linear_features=True)
-    weights_path = linear_retraining(state, StatusUpdate(state))
+    weights_path = linear_retraining_logic(state, StatusUpdate(state))
     shutil.copy(
         weights_path,
         os.path.join(state.annflux_folder, state.version_for_recompute + ".weights.h5"),

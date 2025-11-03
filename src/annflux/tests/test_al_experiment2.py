@@ -76,7 +76,10 @@ def client(app):
 def runner(app):
     return app.test_cli_runner()
 
-
+@pytest.mark.skipif(
+    not os.getenv("RUN_SLOW_TESTS"),
+    reason="Skipping because RUN_SLOW_TESTS is not set"
+)
 def test_al_strategies(client):
     true_labels = json.load(open(data_source.true_labels_path))
     client.post(
