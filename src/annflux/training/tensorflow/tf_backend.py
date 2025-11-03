@@ -202,6 +202,7 @@ def _test_linear_train():
     train_val_features = features[train_val_indices]
     test_features = features[test_indices]
     label_true = data["label_true"]
+    # use family level labels
     train_val_labels = [[y_ for y_ in x_.split(",") if y_.endswith("ae") and len(y_.split()) == 1] for x_ in label_true[train_val_indices]]
     test_labels = [[y_ for y_ in x_.split(",") if y_.endswith("ae") and len(y_.split()) == 1] for x_ in label_true[test_indices]]
     linear_train_func(train_val_features, test_features, train_val_labels, test_labels, "tmp.weights.h5", False, DummyCallBack())
