@@ -99,7 +99,7 @@ def compute_performance(
             predicted_labels = row.label_predicted.split(",")
             predicted_probs = map(float, row.scores_predicted.split(","))
             for label_, prob_ in zip(predicted_labels, predicted_probs):
-                if prob_ > certain_threshold and row["num_labeled_nn"] > 1:
+                if prob_ > certain_threshold and row["num_labeled_nn"] is not None and row["num_labeled_nn"] > 1:
                     num_certain[label_] += 1
                 else:
                     num_uncertain[label_] += 1
