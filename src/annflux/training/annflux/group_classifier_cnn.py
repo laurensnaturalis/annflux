@@ -1,3 +1,4 @@
+import json
 import os
 import itertools
 import sys
@@ -33,6 +34,7 @@ def classify_path(
     feature_image_out_folder: str,
     group_data_path_or_data: str | pandas.DataFrame,
     test_uids: list[str] = None,
+    cache_feature_image=True
 ) -> tuple[NDArray, float, pandas.DataFrame]:
     features = (
         np.load(features_path_or_features)["lastFull"]
@@ -61,14 +63,14 @@ def classify_path(
         record_to_label,
         test_uids=test_uids,
         num_epochs=30,
-        cache_feature_image=True
+        cache_feature_image=cache_feature_image
     )
 
 
 def make_feature_image_advanced(features, image_dim, record_instance_data, min_value):
     # tmp = record_instance_data.copy().sort_values(by="minute", inplace=True)
     taken: set[int] = set()
-    patch = np.ones((image_dim, image_dim)) * min_value
+    patch = np.ones((len(record_instance_data), image_dim)) * min_value
     patch_i = 0  # int(row.minute / 60 * 223) # TODO: this will run over the boundary of another 10-minute section
     for r, row in record_instance_data.iterrows():
         while patch_i in taken and patch_i < 223:
@@ -135,6 +137,7 @@ def classify(
     predicted_label_matrix = PCA(n_components=num_components).fit_transform(
         labels_to_matrix(all_labels, name_to_index, instance_data, predicted_labels)
     )
+    num_components = 0
 
     image_dim = 224
 
@@ -144,21 +147,21 @@ def classify(
 
     principal_features = pca.transform(features)
 
-    all_features = np.zeros((principal_features.shape[0], image_dim))
+    all_features = np.zeros((principal_features.shape[0], principal_features.shape[1]))
     all_features[:, :feature_reduced_size] = np.log(
         principal_features - principal_features.min() + 1
     )
-    all_features[:, feature_reduced_size : feature_reduced_size + num_components] = (
-        true_label_matrix - predicted_label_matrix
-    )
-    all_features[
-        :,
-        feature_reduced_size + num_components : feature_reduced_size
-        + 2 * num_components,
-    ] = true_label_matrix
-    all_features[:, feature_reduced_size + 2 * num_components :] = (
-        predicted_label_matrix
-    )
+    # all_features[:, feature_reduced_size : feature_reduced_size + num_components] = (
+    #     true_label_matrix - predicted_label_matrix
+    # )
+    # all_features[
+    #     :,
+    #     feature_reduced_size + num_components : feature_reduced_size
+    #     + 2 * num_components,
+    # ] = true_label_matrix
+    # all_features[:, feature_reduced_size + 2 * num_components :] = (
+    #     predicted_label_matrix
+    # )
 
     for record_id in tqdm(
         instance_data.record_id.unique(),
@@ -188,7 +191,7 @@ def classify(
 
             feature_image_red = feature_image_for_display.copy()
             plt.imshow(feature_image_red)
-            # plt.show()
+            plt.show()
 
             feature_image_red = normalize(feature_image_red)
             feature_image_red[:, feature_reduced_size:] = feature_image_red.min()
@@ -442,7 +445,9 @@ if __name__ == "__main__":
         features_path_or_features=resultset.last_full_path,
         annflux_path_or_data=source_.data_state_path,
         feature_image_out_folder=os.path.join(source_.folder, "group_feature_images"),
-        group_data_path=source_.group_flux_data_path(),
+        group_data_path_or_data=source_.group_flux_data_path(),
+        test_uids=json.load(open(source_.split_path))["test"],
+        cache_feature_image=False
     )
     print(f"{accuracy_=}")
     np.savez(source_.group_features_path(), lastFull=features_)

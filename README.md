@@ -129,3 +129,10 @@ HIGH
 ## 0.9.2.0
 
 - Preparing for open source
+
+# UI documentation
+
+# Filter
+Server side filtering of dataset
+
+blurry-or-low-res NOT IN row.label_possible AND blurry-or-low-res NOT IN row.label_predicted

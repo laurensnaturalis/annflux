@@ -327,7 +327,7 @@ limitations under the License.
                     .enter()
                     .append("a")
                     .html(function (d) {
-                        return `${d[0]}(${Math.round(d[1]*100)}%)`;
+                        return `${d[0]}(${Math.round(d[1] * 100)}%)`;
                     })
                     .attr("class", function (d) {
                         return `${class_} label_${d[0].replace(" ", "_")}`;
@@ -439,7 +439,6 @@ limitations under the License.
                     "quick_label_true",
                     labelsFor,
                     true,
-
                 );
             }
 
@@ -472,7 +471,7 @@ limitations under the License.
                         .enter()
                         .append("a")
                         .html(function (d) {
-                            return `${d[0]}(${Math.round(d[1]*100)}%)`;
+                            return `${d[0]}(${Math.round(d[1] * 100)}%)`;
                         })
                         .attr("class", "quick_label")
                         .attr("onclick", function (d) {
@@ -494,7 +493,7 @@ limitations under the License.
                         .enter()
                         .append("a")
                         .html(function (row_) {
-                            return `${row_[0]}(${Math.round(row_[1]*100)}%)`;
+                            return `${row_[0]}(${Math.round(row_[1] * 100)}%)`;
                         })
                         .attr("class", "quick_label")
                         .attr("onclick", function (d) {
@@ -926,14 +925,15 @@ limitations under the License.
         RELOAD=YES
         */
         if (urlParams.get("flux_mode") == "active_learning_shard") {
+            console.log(urlParams.get("flux_mode"), force);
             const label_predicted_url = urlParams.get("label_predicted");
             if (
                 label_predicted_url == null ||
-                label_predicted_url === undefined ||
                 force
             ) {
-                const min_ = 100; //TODO
+                const min_ = 1; //TODO
                 let shards = new Array();
+
                 d3.csv("/detailed_performance/data", function (data_) {
                     console.log("detailed_performance", data_);
                     let total = 0;
@@ -947,6 +947,8 @@ limitations under the License.
                     for (row of data_) {
                         console.log(min_, row.num_predicted, max_);
                         if ((row.num_predicted >= min_) & (row.num_predicted <= max_)) {
+                            // figure out how many of this label are unlabeled, TODO: on server?
+
                             shards.push(row);
                         }
                     }
@@ -960,9 +962,11 @@ limitations under the License.
                             break;
                         }
                     }
-
                     console.log("total", total, "shards", shards);
+                    location.reload();
                 });
+            } else {
+                location.reload();
             }
         }
     }
@@ -974,8 +978,8 @@ limitations under the License.
         $.post("/label", JSON.stringify(Object.fromEntries(gLabeled)))
             .done(function (data) {
                 localStorage.removeItem("labeled");
+
                 shardFlux(true);
-                location.reload();
             })
             .fail(function (jqXHR, textStatus, error) {
                 alert(
@@ -1172,7 +1176,7 @@ limitations under the License.
                 }
             }
             //
-            shardFlux();
+            // shardFlux();
             //
             $("#gallery img").on("load", function () {
                 let height = $(this).height();

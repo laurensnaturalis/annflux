@@ -262,7 +262,7 @@ def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
     except Exception as e:
         raise ValueError(f"Failed to evaluate pseudo-SQL: {e}, {boolean_expr}")
 
-    print(mask)
+    print(f"{mask=}")
     return df[mask]
 
 def compute_hash(input_string, algorithm='sha256'):

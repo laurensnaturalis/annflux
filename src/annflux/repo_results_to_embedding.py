@@ -144,6 +144,7 @@ def group_embedding(project_folder):
         data_["uid"] = data_.group_id
         data_.score_predicted = data_.score_predicted.apply(lambda x_: x_ / 100.0)
         del data_["group_id"]
+    print(source_.group_flux_data_path())
     embed_and_prepare_func(
         source_.group_flux_data_path(),
         json.load(open(source_.labels_path)),

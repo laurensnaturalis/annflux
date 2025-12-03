@@ -228,11 +228,12 @@ def annflux_endpoint():
 def data_get():
     """
     http://127.0.0.1:8006/data?filter_query=Papi%20in%20row.label_predicted
+    blurry-or-low-res NOT IN row.label_possible AND blurry-or-low-res NOT IN row.label_predicted
     """
     annflux_data_path = os.path.join(g_state.project_folder, "annflux", "annflux.csv")
     time_start = time.time()
     filter_query = flask.request.args.get("filter_query")
-    print(f"{filter_query=}")
+    print(f"data_get: {filter_query=}")
     hash_ = file_hash(annflux_data_path)
     if filter_query is not None:
         hash_ += compute_hash(filter_query)

@@ -326,6 +326,7 @@ def color_and_label(
                 row.labeled == 0
                 or (len(label_possible) == 0 and len(label_predicted) == 0)
                 or (len(score_possible) == 0 and len(scores_predicted) == 0)
+                or label_true is None
             ):
                 continue
             score = compute_incorrect_score(
