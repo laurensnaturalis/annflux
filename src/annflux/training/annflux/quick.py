@@ -142,6 +142,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         new_labeled_nn_idx = set(state.all_indices[new_labeled_idx].flatten())
         logger.info(f"new_labeled_nn_idx={len(new_labeled_nn_idx)}")
         new_labeled_nn_uids = data[data.index.isin(new_labeled_nn_idx)].uid
+        logger.info(f"new_labeled_nn_uids={new_labeled_nn_uids}")
     #
     if quicker_updates:
         if "score_possible" not in data.columns:
@@ -767,8 +768,8 @@ def make_predictions(
         update["num_labeled_nn"][i] = (org_index, num_labeled_nn)
         update["min_distance"][i] = (org_index, min_distance)
         #
-        if org_index_to_uid[org_index] == "GBIF_2834960618_0":
-            print("oemboe", tag, "GBIF_2834960618_0", probabilities)
+        if org_index_to_uid[org_index] == "358_20230612022602":
+            print("oemboe", tag, "358_20230612022602", probabilities)
         if len(probabilities) > 0:
             max_labels = [
                 label_ for label_, prob_ in probabilities.items() if prob_ > 0.5

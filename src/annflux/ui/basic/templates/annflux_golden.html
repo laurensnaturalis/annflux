@@ -272,14 +272,13 @@ limitations under the License.
     let g = null;
     let width = null;
     let height = null;
-    let lastZoomUpdate = new Date().getTime() / 1000;
     let numUpdatesActive = 0;
     let data = null;
     let group_data = null;
     let gallery = null;
     let galleryImages = null;
     let shortcuts = new Map();
-    let g_labels = []; // list of (child, parent) names
+    let g_labels = []; // list of (child, parent, [category]) names
     var idleTime = 0;
     // localStorage.setItem("activeTime", 0);
     var activeTime = parseInt(localStorage.getItem("activeTime") ?? 0);
@@ -979,7 +978,8 @@ limitations under the License.
             .done(function (data) {
                 localStorage.removeItem("labeled");
 
-                shardFlux(true);
+                //shardFlux(true);
+                location.reload()
             })
             .fail(function (jqXHR, textStatus, error) {
                 alert(
@@ -1067,12 +1067,19 @@ limitations under the License.
         });
         $.get("/label_defs", function (data) {
             g_labels = data["labels"];
-
+            patch_labels = new Array();
             for (const label of g_labels) {
                 if (label[1] != "null") {
                     childToParent.set(label[0], label[1]);
                 }
+                if (label.length > 2 && label[2] == "patch") {
+                    patch_labels.push(label[0]);
+                }
             }
+            if (patch_labels.length > 0 && gLayout == "tileLabel") {
+                g_labels = g_labels.filter((label) => patch_labels.indexOf(label[0]) > -1);
+            }
+            console.log(patch_labels, gLayout);
             console.log(childToParent);
             const parentToChildren = invertMap(childToParent);
             console.log("invertMap", parentToChildren);

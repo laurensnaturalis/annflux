@@ -5,9 +5,14 @@ authors = [
 ]
 version = "1.1.6.0"
 description = "This standalone tool provides a basic interface for interacting with large datasets so that they can be explored and annotated efficiently."
-requires-python = ">=3.11"
-dynamic = ["dependencies"]
+requires-python = " >=3.11"
 readme = "README.md"
+dependencies = [
+    "duckdb>=1.4.3",
+    "ffmpeg-python>=0.2.0",
+    "filetype>=1.2.0",
+    "ruff>=0.14.9",
+]
 
 [project.scripts]
 annflux = "annflux.scripts.annflux_cli:execute"

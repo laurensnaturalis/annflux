@@ -114,6 +114,7 @@ function filterData(
     yName,
     spatialFilterMargin
 ) {
+    console.time("filterData")
     if (localStorage.getItem("debug") === "2") {
         console.log("filterData: transform", transform);
     }
@@ -188,6 +189,7 @@ function filterData(
         console.log("show_data.length", show_data.length);
     }
     // console.log("filterData took", new Date().getTime() / 1000 - now)
+    console.timeEnd("filterData")
     return [show_data, k];
 }
 
