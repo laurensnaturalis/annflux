@@ -58,7 +58,11 @@ def compute_performance(
     predicted_matrix = np.zeros((len(true_test), len(labels)))
     for i_, (true_, predicted_) in enumerate(zip(true_test, predicted_test)):
         for label_true in true_:
-            true_matrix[i_, label_to_index[label_true]] = 1
+            if label_true in label_to_index:
+                true_matrix[i_, label_to_index[label_true]] = 1
+            else:
+                # TOdO
+                pass
         for label_predicted in predicted_:
             predicted_matrix[i_, label_to_index[label_predicted]] = 1
 
@@ -89,8 +93,14 @@ def compute_performance(
     num_certain = defaultdict(lambda: 0)
     num_uncertain = defaultdict(lambda: 0)
     num_labeled = defaultdict(lambda: 0)
+    num_unlabeled_for_label = defaultdict(lambda: 0)
     data.scores_predicted = data.scores_predicted.astype(str)
     for _, row in data.iterrows():
+        true_labels = (
+            row.label_true.split(",")
+            if not pandas.isna(row.label_true) and row.label_true is not None
+            else []
+        )
         if (
             row.label_predicted is not None
             and not pandas.isna(row.label_predicted)
@@ -99,16 +109,18 @@ def compute_performance(
             predicted_labels = row.label_predicted.split(",")
             predicted_probs = map(float, row.scores_predicted.split(","))
             for label_, prob_ in zip(predicted_labels, predicted_probs):
-                if prob_ > certain_threshold and row["num_labeled_nn"] is not None and row["num_labeled_nn"] > 1:
+                if (
+                    prob_ > certain_threshold
+                    and row["num_labeled_nn"] is not None
+                    and row["num_labeled_nn"] > 1
+                ):
                     num_certain[label_] += 1
                 else:
                     num_uncertain[label_] += 1
+                num_unlabeled_for_label[label_] += (len(true_labels) == 0)
         #
-        for label_ in (
-            row.label_true.split(",")
-            if not pandas.isna(row.label_true) and row.label_true is not None
-            else []
-        ):
+
+        for label_ in true_labels:
             num_labeled[label_] += 1
 
     out_table["num_predicted_certain"] = [
@@ -118,6 +130,7 @@ def compute_performance(
         num_uncertain.get(x_, 0) for x_ in out_table.label
     ]
     out_table["num_labeled"] = [num_labeled.get(x_, 0) for x_ in out_table.label]
+    out_table["num_unlabeled"] = [num_unlabeled_for_label.get(x_, 0) for x_ in out_table.label]
     out_table.to_csv(
         os.path.join(state.annflux_folder, "detailed_performance.csv"), index=False
     )

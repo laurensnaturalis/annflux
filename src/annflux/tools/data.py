@@ -614,6 +614,8 @@ def init_folder(
             )  # TODO: image_id
         #
         unseen_data.to_csv(unseen_dataset_path, index=False)
+    else:
+        unseen_data = pandas.read_csv(unseen_dataset_path)
     taxon_mapping_path = os.path.join(source.working_folder, "taxon_mapping.csv")
     if not os.path.exists(taxon_mapping_path):  # TODO: check if this is still necessary
         ids = [str(x_) for x_ in range(1000)]

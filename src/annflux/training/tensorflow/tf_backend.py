@@ -22,6 +22,7 @@ from keras import Input, Model
 from keras.src.callbacks import ReduceLROnPlateau, ModelCheckpoint, EarlyStopping
 from keras.src.layers import Dense, Lambda
 from keras.src.legacy.backend import l2_normalize
+from keras.src.optimizers import Adam
 
 from keras.src.trainers.data_adapters.py_dataset_adapter import PyDataset
 
@@ -69,12 +70,12 @@ def linear_retraining(state: AnnFluxState, status_callback):
 
     model2 = Model(inputs=[input_], outputs=[features_])
     reduce_lr = ReduceLROnPlateau(
-        monitor="val_loss", factor=0.5, patience=3, min_lr=0.000001, verbose=1
+        monitor="val_loss", factor=0.5, patience=3, min_lr=0.000001, verbose=1, min_delta=1e-3
     )
     model.summary()
 
     loss_ = "binary_crossentropy"
-    model.compile(loss=loss_, optimizer="adam", metrics=["accuracy"])
+    model.compile(loss=loss_, optimizer=Adam(learning_rate=0.01), metrics=["accuracy"])
 
     weights_path = os.path.join(state.annflux_folder, "linear.weights.h5")
     checkpointer = ModelCheckpoint(
