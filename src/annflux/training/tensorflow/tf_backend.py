@@ -130,11 +130,11 @@ class BalanceSequence(PyDataset):
     def __len__(self):
         return math.ceil(len(self.x) / self.batch_size)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx): # ty: ignore[invalid-method-override]
         indices_batch = []
         for _ in range(self.batch_size):
             class_ = np.random.choice(self.classes_, p=self.class_weights)
             indices_batch.append(np.random.choice(self.class_to_indices[class_]))
 
         print(type(self.x[indices_batch]))
-        return self.x[indices_batch], self.y[indices_batch]
+        return self.x[indices_batch], self.y[indices_batch] # ty: ignore[invalid-return-type]

@@ -19,13 +19,14 @@ from typing import List
 
 import numpy as np
 from faiss import pairwise_distances
+from numpy._typing import NDArray
 from tqdm import tqdm
 
 logger = logging.getLogger("annflux_server")
 
 
 def diversify(
-    features_sorted: np.array, diversify_from: int = None, fraction_others=0.1
+    features_sorted: NDArray, diversify_from: int | None = None, fraction_others=0.1
 ) -> list[int]:
     if diversify_from is None:
         diversify_from = len(features_sorted)
@@ -41,13 +42,13 @@ def diversify(
             features_sorted[list(sorted(result))], features_sorted[others]
         )
         sum_distances = np.sum(distances, axis=0)
-        result.append(np.argmin(sum_distances))
+        result.append(int(np.argmin(sum_distances)))
 
     return result
 
 
 def compute_most_needed(
-    all_nn_indices: np.array, labeled_indices: List[int], all_features: np.array
+    all_nn_indices: NDArray, labeled_indices: List[int], all_features: NDArray
 ):
     set_labeled_indices = set(labeled_indices)
     not_near_labeled_indices = []
@@ -98,7 +99,7 @@ def compute_most_needed(
     return counter_of_most_need, near_labeled_indices, perc_near_labeled
 
 def compute_near_labeled(
-    all_nn_indices: np.array, labeled_indices: List[int]
+    all_nn_indices: NDArray, labeled_indices: List[int]
 ):
     """
     Compute points that are near labeled points

@@ -22,6 +22,7 @@ import pandas
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
+from numpy._typing import NDArray
 from tqdm import tqdm
 
 from annflux.shared import AnnfluxSource
@@ -32,7 +33,7 @@ def numpy_load(
     key,
     check_for_split_format: bool = True,
     split_indices=None,
-    select_per_split: List[List[int]] = None,
+    select_per_split: List[List[int]] | None = None,
 ) -> np.ndarray:
     """
     Load implementation of numpy.load that supports split files
@@ -54,7 +55,7 @@ def numpy_load(
         for split_index, part_path in tqdm(
             enumerate(paths_to_load), desc=f"Reading {path}"
         ):
-            data: np.array = np.load(part_path)[key]
+            data: NDArray = np.load(part_path)[key]
             if select_per_split is not None:
                 # noinspection PyTypeChecker
                 data = data[select_per_split[split_index]]
@@ -161,7 +162,6 @@ def to_js_arrow(annflux_data_path, annflux_pq_cache_path):
     ).to_parquet(annflux_pq_cache_path)
 
 import pandas as pd
-import operator
 
 def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
     """

@@ -1,11 +1,14 @@
+from typing import Tuple
+
 import numpy as np
 import open_clip
+import pandas
 import torch
 from PIL import Image
+from numpy._typing import NDArray
 from torch.multiprocessing import Pool
 from tqdm import tqdm
 
-from annflux.repository.dataset import Dataset
 from annflux.training.annflux.feature_extractor import BaseFeatureExtractor
 
 
@@ -53,10 +56,17 @@ class BioClipFeatureExtractor(BaseFeatureExtractor):
 
 
     def compute_features(
-            self, dataset: Dataset, multi=False, batch_size=32
-    ) -> np.array:
+            self,
+            dataset: pandas.DataFrame,
+            classes_: list[str],
+            multi=False,
+            batch_size=32,
+            feature_cache_path: str | None = None,
+            flush=True,
+            other_feature_cache_path: str | None = None,
+    ) -> Tuple[NDArray, NDArray | None]:
         if multi:
-            df = dataset.as_dataframe()
+            df = dataset
             with Pool(4) as pool:
                 image_features = pool.starmap(
                     compute_feature,
@@ -81,4 +91,4 @@ class BioClipFeatureExtractor(BaseFeatureExtractor):
                     total=int(len(df) / batch_size),
             ):
                 image_features.extend(compute_batch(batch_paths, self.model, self.preprocess_val))
-        return np.vstack(image_features)
+        return np.vstack(image_features), None

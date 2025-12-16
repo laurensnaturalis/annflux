@@ -21,7 +21,6 @@ def tile_and_save_image_with_padding(
     pad_color=(0, 0, 0),
     prefix="",
     skip_existing: bool | int = False,
-    original_label=None,
 ):
     """
     Split an image into square patches with optional overlap and padding, then save them.
@@ -101,7 +100,7 @@ def tile_and_save(
     prefix="",
     skip_existing=1,
     tile_size=512,
-    original_label: dict[str, str] = None,
+    original_label: dict[str, str] | None = None,
 ) -> pandas.DataFrame:
     file_paths = sorted(
         set(glob.glob(os.path.join(input_folder, "*.jpg"))) - existing_original_paths
@@ -122,7 +121,6 @@ def tile_and_save(
                     pad_color=(0, 0, 0),  # Black padding
                     prefix=prefix,
                     skip_existing=skip_existing,
-                    original_label=original_label.get(basename_no_extension(fn)),
                 )
             )
         except UnidentifiedImageError:
@@ -140,7 +138,7 @@ def tile_and_save(
             "label",
             "patch_path",
             # "label_original",
-        ),
+        ), # ty: ignore
     )
     result["record_id"] = result["original_id"]
     return result
@@ -187,7 +185,7 @@ def link_files(
             "original_id",
             "path",
             "image_id",
-        ),
+        ), # ty: ignore
     )
     return result
 
@@ -197,9 +195,9 @@ def download_files(
     output_folder: str,
     existing_original_paths: set[str],  # TODO: implement
     batch_size: int = 10000,
-    label_column: str = None,
+    label_column: str | None  = None,
     resize_width: int = 512,
-    url_column: str = None,
+    url_column: str | None = None,
     uid_column="image_id",
     sleep_seconds: float = 1.0,
 ) -> pandas.DataFrame:
@@ -221,7 +219,7 @@ def download_files(
 def execute(
     folder,
     original_data_path: str | None = None,  # Path to CSV file containing metadata
-    output_folder: str = None,  # Folder where patches will be saved
+    output_folder: str | None = None,  # Folder where patches will be saved
     patch_size: int = 512,
 ) -> pandas.DataFrame:
     if output_folder is None:
@@ -237,8 +235,9 @@ def execute(
 
     file_paths: list[str] = glob.glob(f"{folder}/original/*.jpg")
     table = tile_and_save(
+        input_folder=folder,
         output_folder=output_folder,
-        file_paths=file_paths,
+        existing_original_paths=set(),
         tile_size=patch_size,
         original_label=original_label,
         skip_existing=2,

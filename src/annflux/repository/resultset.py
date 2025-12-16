@@ -141,7 +141,7 @@ class Resultset(RepositoryObject):
         :return: value if found in cache, else "N/A
         """
         if custom_specifier is not None:
-            self.set_analysis_directory(custom_specifier)
+            self.set_analysis_directory()
             print("self.analysisDirectory", self.analysis_directory)
         stats_path = os.path.join(self.analysis_directory, "basic_stats.csv")
         if not os.path.exists(stats_path):
@@ -154,7 +154,7 @@ class Resultset(RepositoryObject):
         else:
             result = "N/A"
 
-        self.set_analysis_directory(None)
+        self.set_analysis_directory()
 
         return result
 
@@ -171,7 +171,7 @@ class Resultset(RepositoryObject):
 
         headers = ("name", "value")
         if not os.path.exists(basic_stats_path):
-            table = pandas.DataFrame(data=[], columns=headers)
+            table = pandas.DataFrame(data=[], columns=headers) # ty: ignore
             names = []
         else:
             table = pandas.read_csv(basic_stats_path)
@@ -179,7 +179,7 @@ class Resultset(RepositoryObject):
 
         if name not in names:
             table = pandas.concat(
-                [table, pandas.DataFrame(data=(name, value), columns=headers)]
+                [table, pandas.DataFrame(data=(name, value), columns=headers)] # ty: ignore
             )
         else:
             table.at[table[table.name == name].index, "value"] = value

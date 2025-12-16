@@ -53,7 +53,7 @@ def peak_merge(source_or_folder: str | AnnfluxSource):
         parent_to_children[parent].append(child)
     #
     r_: int
-    for r_, row in t.iterrows():
+    for r_, row in t.iterrows(): # ty: ignore
         t.at[r_, "num_children_alt"] = len(parent_to_children.get(r_, []))
     # assign merge clusters
     n = 0
@@ -83,7 +83,7 @@ def peak_merge(source_or_folder: str | AnnfluxSource):
 
         #
     # merge
-    cluster_counts = t.groupby("dp_cluster").size().reset_index(name="counts")
+    cluster_counts = t.groupby("dp_cluster").size().reset_index(name="counts") # ty: ignore
     print(f"{cluster_counts['counts'].sum()=}")
     print(len(t))
     print(t["num_children_alt"].sum())
@@ -203,7 +203,7 @@ def peak_merge(source_or_folder: str | AnnfluxSource):
                         break
             if done:  # break the for loop, the while condition breaks the whole loop
                 break
-        cluster_counts = t.groupby("dp_cluster").size().reset_index(name="counts")
+        cluster_counts = t.groupby("dp_cluster").size().reset_index(name="counts") # ty: ignore
         if reduced_in_loop < 5:
             sum_tail_factor *= 1.1
             tail_factor *= 0.9
@@ -229,7 +229,7 @@ def peak_merge(source_or_folder: str | AnnfluxSource):
     for rank_, (_, row) in enumerate(
         t.groupby("dp_cluster")
         .size()
-        .reset_index(name="counts")
+        .reset_index(name="counts") # ty: ignore
         .sort_values("counts", ascending=False)
         .iterrows()
     ):

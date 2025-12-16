@@ -34,4 +34,4 @@ python-dateutil~=2.9.0.post0
 #ffmpeg-python~=0.2.0
 pytz~=2025.2
 zarr~=3.0.7
-pyarrow~=20.0.0
+pyarrow~=20.0.0pi

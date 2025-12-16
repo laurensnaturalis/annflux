@@ -17,7 +17,7 @@ import logging
 import os
 import time
 from collections import defaultdict
-from typing import Set, Any, Tuple, Union, List
+from typing import Set, Any, Tuple, List
 
 import faiss
 import numpy as np
@@ -71,7 +71,7 @@ def quick_reclassification(
     if not group:
         quick_reclassification_instance(knn_type, state, logger)
     else:
-        quick_reclassification_group(knn_type, state)
+        quick_reclassification_group(knn_type, state, logger)
 
 
 def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
@@ -91,9 +91,9 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     )
 
     has_dp_cluster = "dp_cluster" in data.columns
-    dp_most_needed_idx: Union[NDArray, None] = None
-    dp_distances: Union[NDArray, None] = None
-    dp_indices: Union[NDArray, None] = None
+    dp_most_needed_idx: NDArray
+    dp_distances: NDArray
+    dp_indices: NDArray
     if has_dp_cluster:
         # compute 1-nearest-neighbor to density peak clusters
         dp_most_needed_idx = data[
@@ -131,7 +131,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     )
 
     # - figure out neighbors of updated uids
-    new_labeled_nn_idx: Set[int] | None = None
+    new_labeled_nn_idx: Set[int] = set()
     new_labeled_nn_uids = None
     if quicker_updates:
         # get indices of new_labeled_uids
@@ -382,11 +382,11 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
 def make_class_to_color(class_cluster_to_count, class_to_color, out_path):
     pandas.DataFrame(
         data=zip(class_to_color.keys(), class_to_color.values()),
-        columns=("class", "color"),
+        columns=("class", "color"),  # ty: ignore
     ).merge(
         pandas.DataFrame(
             data=zip(class_cluster_to_count.keys(), class_cluster_to_count.values()),
-            columns=("class", "count"),
+            columns=("class", "count"),  # ty: ignore
         ),
         on="class",
         how="left",
@@ -432,8 +432,8 @@ def load_data(state: AnnFluxState, logger: logging.Logger, no_linear_features=Fa
     assert len(data) == len(state.features), f"{len(data)=}, {len(state.features)=}"
     annotated_uids = set(annotations.keys())
     most_needed_first = annotated_uids - test_uids
-    state.labeled_indices = sorted(
-        [i for i, uid in enumerate(data.uid.values) if uid in most_needed_first]
+    state.labeled_indices = np.array(
+        sorted([i for i, uid in enumerate(data.uid.values) if uid in most_needed_first])
     )
     logger.info(f"instant_reclassification 4={time.time() - start_time}")
     #
@@ -445,12 +445,14 @@ def load_data(state: AnnFluxState, logger: logging.Logger, no_linear_features=Fa
     test_indices = set([i for i, uid in enumerate(data.uid.values) if uid in test_uids])
     logger.debug(f"|test_uids|={len(test_uids)}")
     logger.debug(f"|test_indices|={len(test_indices)}")
-    state.labeled_test_indices = sorted(
-        [
-            i
-            for i, uid in enumerate(data.uid.values)
-            if uid in test_uids and uid in annotations
-        ]
+    state.labeled_test_indices = np.array(
+        sorted(
+            [
+                i
+                for i, uid in enumerate(data.uid.values)
+                if uid in test_uids and uid in annotations
+            ]
+        )
     )
     logger.debug(f"|labeled_test_indices|={len(state.labeled_test_indices)}")
     logger.debug(f"instant_reclassification 5={time.time() - start_time}")
@@ -637,25 +639,27 @@ def quick_reclassification_group(knn_type, state, logger):
     near_labeled_indices_ = near_labeled_indices
 
     state.g_quick_status = "computing predictions"
-    out_predicted_test, out_true_test, _ = make_predictions(
+    make_predictions(
         data,
         indices_,
         distances_,
         state.group_label_array,
-        near_labeled_indices_,
+        near_labeled_indices_.tolist(),
         knn_rank_exponent=state.knn_rank_exponent,
         tag="predicting group near labelled",
     )
-    logger.info(f"|predicted_test|={len(out_predicted_test)}")
     logger.info(f"make_predictions end={time.time()}")
     data.label_predicted = data.label_predicted.apply(lambda x_: canon_(x_))
     data.label_true = data.label_true.apply(lambda x_: canon_(x_))
     #
-    compute_performance(out_predicted_test, out_true_test, state, annotations, data)
+    # compute_performance(out_predicted_test, out_true_test, state, annotations, data)
     state.g_quick_status = "coloring and labelling"
     class_to_color = color_and_label(
         data,
         annotations,
+        json.load(open(os.path.join(state.annflux_folder, "label_defs.json")))[
+            "labels"
+        ],
     )
 
     data.to_csv(group_annflux_path, index=False)
@@ -665,7 +669,7 @@ def quick_reclassification_group(knn_type, state, logger):
     logger.info(f"quick_reclassification_group done = {time.time() - start_time}")
     pandas.DataFrame(
         data=zip(class_to_color.keys(), class_to_color.values()),
-        columns=("class", "color"),
+        columns=("class", "color"),  # ty: ignore[invalid-argument-type]
     ).to_csv(os.path.join(state.project_folder, "annflux", "class_to_color_group.csv"))
     state.g_quick_status = "idle"
 
@@ -691,7 +695,7 @@ def make_predictions(
     indices: NDArray,
     distances: NDArray,
     train_labels: NDArray,
-    data_indices: list[int],
+    data_indices: List[int] | NDArray,
     skip_first=False,
     knn_rank_exponent=0.5,
     tag=None,

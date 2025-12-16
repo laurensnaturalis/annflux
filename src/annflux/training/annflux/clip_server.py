@@ -26,7 +26,8 @@ from flask import abort, make_response
 from torch.utils.data import DataLoader
 from transformers import CLIPModel, CLIPProcessor
 
-from clip_shared import test, Image_dataset
+from annflux.tools.mixed import str2bool
+from clip_shared import test, Image_dataset # ty: ignore
 import numpy as np
 
 

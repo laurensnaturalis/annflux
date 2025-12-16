@@ -208,7 +208,7 @@ def go_command(
         source,
         architecture=architecture,
         train_model=False,
-        feature_cache=feature_cache,
+        # feature_cache=feature_cache
     )
     embed_and_prepare(source)
 
@@ -352,15 +352,6 @@ def stream(
             and (stream_process_table.model_version != model_version)
         )
     ]
-    # - subsample for time-based streams
-    if subsample:
-        subsample_seconds = time_string_to_seconds(subsample)  # TODO
-        if subsample_seconds % 3600 == 0:
-            table_to_predict = subsample_hour(subsample, table_to_predict)
-        elif subsample_seconds % 60 == 0:
-            table_to_predict = subsample_minute(subsample, table_to_predict)
-        else:
-            raise NotImplementedError  # TODO
     #
     print(f"{len(table_to_predict)=}")
     tmp_path = stream_process_path + ".tmp.csv"
@@ -606,7 +597,7 @@ def inference_edge_server(
         ):
             print(f"RemoteDisconnected for {row.patch_path}")
             continue
-        prediction = j_out["predictions"][0]["classes"]["items"][0]
+        prediction = j_out["predictions"][0]["classes"]["items"][0] # ty: ignore
         # print(prediction)
         stream_process_table.loc[r, "label_possible"] = prediction["name"]
         stream_process_table.loc[r, "label_probability"] = prediction["probability"]

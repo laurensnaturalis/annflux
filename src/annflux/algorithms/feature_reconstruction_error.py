@@ -19,6 +19,7 @@ from typing import List, Dict, Iterable
 
 import numpy as np
 import pandas
+from numpy._typing import NDArray
 from sklearn.decomposition import PCA
 from tqdm import tqdm
 
@@ -31,10 +32,10 @@ agg_to_pca = {} # TODO: reset when features are updated
 def compute_fre(
     annotations: Dict[str, str],
     data: pandas.DataFrame,
-    features: np.array,
+    features: NDArray,
     labeled_indices: List[int],
     test_uids: Iterable[str],
-    new_labeled_indices: List[int] = None,
+    new_labeled_indices: List[int] | None = None,
 ):
     """
     Compute feature reconstruction error

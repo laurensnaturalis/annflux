@@ -19,10 +19,10 @@ def extract_test_results(input_path: str, out_path:str):
         time_taken = passed_match.group(3)
         failed = 0
     elif failed_match:
-        failed = int(passed_match.group(1))
-        passed = int(passed_match.group(2))
-        warnings = int(passed_match.group(3))
-        time_taken = passed_match.group(4)
+        failed = int(failed_match.group(1))
+        passed = int(failed_match.group(2))
+        warnings = int(failed_match.group(3))
+        time_taken = failed_match.group(4)
     else:
         raise RuntimeError("Unknown test output format")
 

@@ -5,6 +5,7 @@ from typing import Dict, Set
 import faiss
 import numpy as np
 import pandas
+from numpy._typing import NDArray
 from sklearn.metrics import pairwise_distances
 
 from annflux.shared import AnnfluxSource
@@ -154,15 +155,12 @@ def fast_density_peak_clustering(source_or_folder: str | AnnfluxSource, show=Fal
         species_true = data.label_true
 
         if features.shape[1] != 2:
-            tsne_model = nptsne.TextureTsne(verbose=False)
-            features = tsne_model.fit_transform(features)
-            features = np.reshape(features, (int(features.shape[0] / 2), 2))
-
+            raise NotImplementedError
         from matplotlib.pyplot import cm
 
         plt.subplot(221)
         plt.title(f"|ldp| = {len(local_density_peaks)}")
-        color = iter(cm.rainbow(np.linspace(0, 1, len(local_density_peaks))))
+        color = iter(cm.rainbow(np.linspace(0, 1, len(local_density_peaks)))) # ty: ignore
         ldp_parent_to_children = defaultdict(lambda: [])
         for child, parent in child_to_ldp_parent.items():
             ldp_parent_to_children[parent].append(child)
@@ -176,7 +174,7 @@ def fast_density_peak_clustering(source_or_folder: str | AnnfluxSource, show=Fal
             # print(p.get_facecolors()[0])
         plt.subplot(222)
 
-        color = iter(cm.rainbow(np.linspace(0, 1, len(set(species_true)))))
+        color = iter(cm.rainbow(np.linspace(0, 1, len(set(species_true))))) # ty: ignore
         for species in set(species_true):
             sel = np.where(species_true == species)[0]
             centroid = np.mean(features[sel], axis=0)
@@ -211,7 +209,7 @@ def fast_density_peak_clustering(source_or_folder: str | AnnfluxSource, show=Fal
         global_to_local = dict(list(zip(children, range(len(children)))))
         x = features[children, 0]
         y = [child_to_parent_ldp_depth[x_] for x_ in children]
-        color = iter(cm.rainbow(np.linspace(0, 1, len(local_density_peaks))))
+        color = iter(cm.rainbow(np.linspace(0, 1, len(local_density_peaks)))) # ty: ignore
         for c, child in enumerate(children):
             if child_to_parent_ldp[child] in children:
                 local_parent_index = global_to_local[child_to_parent_ldp[child]]
@@ -227,7 +225,7 @@ def fast_density_peak_clustering(source_or_folder: str | AnnfluxSource, show=Fal
 
 
 def find_local_density_peak(
-    densities: np.array, p1: Set[int], knn_indices: np.array, knn_distances: np.array
+    densities: NDArray, p1: Set[int], knn_indices: NDArray, knn_distances: NDArray
 ):
     local_density_peaks: Set[int] = set()
     child_to_parent: Dict[int, int] = {}
@@ -244,7 +242,7 @@ def find_local_density_peak(
             # p1 -= set(nn_i)
             # print("ldp")
         else:
-            # from NN with higher density pick the one with smallest distance to i as parent
+            # from NN with higher density pick the one with the smallest distance to i as parent
             i_nn_has_higher_density = np.where(nn_densities > densities[i])[0]
             min_d = np.inf
             min_i_nn = None
@@ -256,7 +254,7 @@ def find_local_density_peak(
                 print(knn_distances[i])
                 print("oemba")
             j = knn_indices[i, min_i_nn]
-            child_to_parent[i] = j
+            child_to_parent[i] = int(j)
             delta[i] = min_d
     return local_density_peaks, child_to_parent
 

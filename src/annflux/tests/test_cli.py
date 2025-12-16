@@ -17,7 +17,6 @@ from annflux.scripts.run_tests import run_cli_tests
 
 
 
-import unittest
 
 
 class TestCli(unittest.TestCase):
