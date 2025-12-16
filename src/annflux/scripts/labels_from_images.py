@@ -2,7 +2,6 @@ import argparse
 from collections import Counter
 import json
 
-import numpy as np
 import pandas
 
 

@@ -7,13 +7,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from collections import Counter, defaultdict
 import numpy as np
-import math
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
+
+from torch.utils.data.dataset import _T_co
+
 
 def l2_normalize(x, axis=1):
     norm = torch.norm(x, p=2, dim=axis, keepdim=True)
     return x / norm
+
 
 class BalanceDataset(Dataset):
     def __init__(self, x_set, y_set, balance: bool = False):
@@ -35,13 +38,14 @@ class BalanceDataset(Dataset):
     def __len__(self):
         return len(self.x)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> _T_co:  # ty: ignore[invalid-method-override]
         if self.class_weights is None:
-            return self.x[idx], self.y[idx]
+            return self.x[idx], self.y[idx]  # ty: ignore[invalid-return-type]
         else:
             class_ = np.random.choice(self.classes_, p=self.class_weights.numpy())
             idx = np.random.choice(self.class_to_indices[class_])
-            return self.x[idx], self.y[idx]
+            return self.x[idx], self.y[idx]  # ty: ignore[invalid-return-type]
+
 
 def linear_retraining(state, status_callback):
     if state.labeled_indices is None or len(state.labeled_indices) == 0:
@@ -92,7 +96,7 @@ def linear_retraining(state, status_callback):
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=3, min_lr=1e-6, verbose=True
+        optimizer, mode="min", factor=0.5, patience=3, min_lr=1e-6
     )
 
     # DataLoaders
@@ -102,7 +106,7 @@ def linear_retraining(state, status_callback):
     val_loader = DataLoader(val_dataset, batch_size=1024)
 
     # Training loop
-    best_val_loss = float('inf')
+    best_val_loss = float("inf")
     weights_path = os.path.join(state.annflux_folder, "linear.weights.pt")
     patience = 10
     epochs_no_improve = 0
@@ -146,7 +150,9 @@ def linear_retraining(state, status_callback):
 
     # Test
     with torch.no_grad():
-        test_features = torch.tensor(state.features[state.labeled_test_indices], dtype=torch.float32)
+        test_features = torch.tensor(
+            state.features[state.labeled_test_indices], dtype=torch.float32
+        )
         test_predictions = model(test_features).numpy()
         acc_test = accuracy_score(test_targets, (test_predictions > 0.5).astype(int))
         print(f"linear from features acc = {acc_test}")
@@ -154,6 +160,8 @@ def linear_retraining(state, status_callback):
     # Recompute features
     state.g_quick_status = "recomputing features"
     with torch.no_grad():
-        state.features = model.features(torch.tensor(state.features, dtype=torch.float32)).numpy()
+        state.features = model.features(
+            torch.tensor(state.features, dtype=torch.float32)
+        ).numpy()
 
     return weights_path

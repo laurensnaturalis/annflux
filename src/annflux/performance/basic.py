@@ -86,7 +86,7 @@ def compute_performance(
             )
     out_table = pandas.DataFrame(
         data=detailed_performance_table,
-        columns=("label", "precision", "recall", "support"),
+        columns=("label", "precision", "recall", "support"), # ty: ignore
     )
 
     # compute how many are certain according to a threshold

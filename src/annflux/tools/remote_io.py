@@ -3,6 +3,7 @@ import os
 import shutil
 import threading
 import time
+from typing import Tuple
 
 from PIL import Image
 import pandas
@@ -19,7 +20,7 @@ def fetch_images(
     max_width=None,
     max_num_concurrent_threads=32,
 sleep_seconds:float=0.1
-) -> (list[str], list[str]):
+) -> Tuple[list[str], list[str]]:
     failed_uids = []
     photo_paths = []
     download_threads = []
@@ -54,7 +55,7 @@ sleep_seconds:float=0.1
 
 
 def store_image(
-    image_url_or_path: str, photo_save_path: str, max_image_width: int = None
+    image_url_or_path: str, photo_save_path: str, max_image_width: int | None = None
 ) -> bool:
     """
     Copies or downloads images and saves them

@@ -2,7 +2,6 @@ import glob
 from time import sleep
 
 import pandas
-import pandas as pd
 import requests
 from PIL import Image
 from io import BytesIO

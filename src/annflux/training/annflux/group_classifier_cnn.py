@@ -4,6 +4,7 @@ import itertools
 import sys
 from collections import Counter
 from datetime import datetime
+from typing import Tuple, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -33,8 +34,8 @@ def classify_path(
     annflux_path_or_data: str | pandas.DataFrame,
     feature_image_out_folder: str,
     group_data_path_or_data: str | pandas.DataFrame,
-    test_uids: list[str] = None,
-    cache_feature_image=True
+    test_uids: Optional[list[str]] = None,
+    cache_feature_image=True,
 ) -> tuple[NDArray, float, pandas.DataFrame]:
     features = (
         np.load(features_path_or_features)["lastFull"]
@@ -63,7 +64,7 @@ def classify_path(
         record_to_label,
         test_uids=test_uids,
         num_epochs=30,
-        cache_feature_image=cache_feature_image
+        cache_feature_image=cache_feature_image,
     )
 
 
@@ -92,7 +93,7 @@ def classify(
     record_to_label: dict[str, str],
     num_epochs=10,
     cache_feature_image=False,
-    test_uids: list[str] = None,
+    test_uids: Optional[list[str]] = None,
 ) -> tuple[NDArray, float, pandas.DataFrame]:
     """
     :return features, accuracy, out_table
@@ -101,7 +102,7 @@ def classify(
     # if "label_original" not in instance_data.columns:
     #     return
     # # TODO: check if there's fewer groups than images, otherwise skip step
-    test_uids = set(test_uids)
+    test_uids = list(set(test_uids)) if test_uids is not None else []
     grouped_labels = []
     grouped_images = []
     group_ids = []
@@ -131,10 +132,10 @@ def classify(
 
     #
     num_components = min(len(set(itertools.chain.from_iterable(true_labels))), 12)
-    true_label_matrix = PCA(n_components=num_components).fit_transform(
+    PCA(n_components=num_components).fit_transform(
         labels_to_matrix(all_labels, name_to_index, instance_data, true_labels)
     )
-    predicted_label_matrix = PCA(n_components=num_components).fit_transform(
+    PCA(n_components=num_components).fit_transform(
         labels_to_matrix(all_labels, name_to_index, instance_data, predicted_labels)
     )
     num_components = 0
@@ -230,7 +231,7 @@ def classify(
         assert feature_image.shape == (image_dim, image_dim, 3), feature_image.shape
 
         grouped_labels.append(record_to_label[record_id])
-        is_test.append(record_id in test_uids)
+        is_test.append(record_id in test_uids) # ty: ignore
         grouped_images.append(feature_image.astype(np.float32))
 
     tmp = np.vstack(grouped_images)
@@ -272,7 +273,7 @@ def normalize(feature_image_for_display):
     return feature_image_for_display
 
 
-def get_labels(instance_data, label_field) -> (list[str], set[str]):
+def get_labels(instance_data, label_field) -> Tuple[list[list[str | None]], set[str]]:
     labels = [
         x_.split(",")
         if not pandas.isna(x_)
@@ -309,18 +310,22 @@ class InMemoryDataset(Dataset):
     def __len__(self):
         return len(self.images)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx):  # ty: ignore[invalid-method-override]
         image = self.images[idx]
         label = self.labels[idx]
 
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return image, label  # ty: ignore[invalid-return-type]
 
 
 def train_pytorch(
-    images, labels: list[int], is_test: list[bool], num_epochs=10, min_number_of_examples=4
+    images,
+    labels: list[int],
+    is_test: list[bool],
+    num_epochs=10,
+    min_number_of_examples=4,
 ) -> tuple[NDArray, float, NDArray]:
     """
     return features, accuracy, probability vectors
@@ -343,9 +348,13 @@ def train_pytorch(
     ignore = [
         t_[0] for t_ in Counter(labels).most_common() if t_[1] < min_number_of_examples
     ]
-    selection_for_train_val = np.array([x_ not in set(ignore) for x_ in y]) * (1 - np.array(is_test)) > 0
+    selection_for_train_val = (
+        np.array([x_ not in set(ignore) for x_ in y]) * (1 - np.array(is_test)) > 0
+    )
     assert len(selection_for_train_val) == len(images)
-    print(f"{len(selection_for_train_val)=}, {selection_for_train_val[:10]}, {sum(selection_for_train_val)=}")
+    print(
+        f"{len(selection_for_train_val)=}, {selection_for_train_val[:10]}, {sum(selection_for_train_val)=}"
+    )
     X_sufficient_labeled = X[selection_for_train_val]  # noqa
     y_sufficient_labeled = y[selection_for_train_val]
     print(f"{len(X_sufficient_labeled)=}, {len(y_sufficient_labeled)=}")
@@ -416,7 +425,7 @@ def train_pytorch(
     )
 
 
-def predict(device, model, loader) -> (np.array, list[NDArray]):
+def predict(device, model, loader) -> Tuple[list[NDArray], list[NDArray]]:
     """
     :return group_features, probability vectors
     """
@@ -447,7 +456,7 @@ if __name__ == "__main__":
         feature_image_out_folder=os.path.join(source_.folder, "group_feature_images"),
         group_data_path_or_data=source_.group_flux_data_path(),
         test_uids=json.load(open(source_.split_path))["test"],
-        cache_feature_image=False
+        cache_feature_image=False,
     )
     print(f"{accuracy_=}")
     np.savez(source_.group_features_path(), lastFull=features_)

@@ -93,7 +93,7 @@ def color_and_label(
     data: pandas.DataFrame,
     annotations: dict[str, str],
     label_definitions: list[tuple[str, str]],
-    display_update_uids: list[str] = None,
+    display_update_uids: list[str] | None = None,
     logger: logging.Logger = get_basic_logger("color_and_label"),
 ):
     individual_labels = list(
@@ -370,7 +370,7 @@ def color_and_label(
 
 
 def compute_incorrect_score(
-    label_possible: str | float,
+    label_possible: str,
     label_true: str,
     score_possible: str | float,
     label_predicted: str | float,
@@ -470,7 +470,7 @@ def add_group_to_exclusivity(group_children: List[str], exclusivity_path: str):
     Add an exclusivity group to the exclusivity database
     """
     exclusivity_relations = itertools.combinations(group_children, 2)
-    update = pandas.DataFrame(exclusivity_relations, columns=["left", "right"])
+    update = pandas.DataFrame(exclusivity_relations, columns=["left", "right"])  # ty: ignore
     if os.path.exists(exclusivity_path):
         exclusivity_table = pandas.read_csv(exclusivity_path)
         exclusivity_table = pandas.concat(
@@ -524,7 +524,7 @@ def init_folder(
     source: AnnfluxSource,
     label_column_name=None,
     start_labels=None,
-    exclusivity_groups: List[List[str]] = None,
+    exclusivity_groups: List[List[str]] | None = None,
     refresh_media=False,
     import_stream_metadata=False,
     random_seed=None,
@@ -557,7 +557,7 @@ def init_folder(
         os.makedirs(working_folder)
         with open(os.path.join(working_folder, "label_defs.json"), "w") as f:
             json.dump({"labels": start_labels}, f)
-        pandas.DataFrame(data=exclusivity, columns=["left", "right"]).to_csv(
+        pandas.DataFrame(data=exclusivity, columns=["left", "right"]).to_csv(  # ty: ignore
             os.path.join(working_folder, "exclusivity.csv"), index=False
         )
 
@@ -581,7 +581,7 @@ def init_folder(
                     ]
                     * len(image_ids),
                 ),
-                columns=[id_column, label_column_for_unseen],
+                columns=[id_column, label_column_for_unseen], # ty: ignore
             )
             images_table.to_csv(data_path, index=False)
 
@@ -619,7 +619,7 @@ def init_folder(
     taxon_mapping_path = os.path.join(source.working_folder, "taxon_mapping.csv")
     if not os.path.exists(taxon_mapping_path):  # TODO: check if this is still necessary
         ids = [str(x_) for x_ in range(1000)]
-        pandas.DataFrame(data=list(zip(ids, ids)), columns=["label", "taxon"]).to_csv(
+        pandas.DataFrame(data=list(zip(ids, ids)), columns=["label", "taxon"]).to_csv( # ty: ignore
             taxon_mapping_path
         )
 

@@ -20,7 +20,8 @@ def estimate_duration(annflux_state: AnnFluxState, step_state: Tuple[str, int, i
         states = []
         transitions = []
         durations = []
-        for r, row in timings.iterrows():
+        r: int
+        for r, row in timings.iterrows(): # ty: ignore
             if (
                 r > 0
                 and row.status != "idle"

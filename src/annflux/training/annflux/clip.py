@@ -18,14 +18,13 @@ import random
 import time
 from collections import defaultdict, Counter
 from pathlib import Path
+from typing import Tuple
 
 import numpy as np
-import openvino as ov
 import pandas
 import torch
 import zarr
 from numpy._typing import NDArray
-from openvino.runtime import properties
 from PIL import Image, ImageOps
 from sklearn.model_selection import train_test_split
 from torch import nn, optim
@@ -84,7 +83,7 @@ def make_batches(data_train):
             new_images.append(train_img[index_])
 
     data_train = pandas.DataFrame(
-        data=zip(new_images, new_captions), columns=["filename", "caption"]
+        data=zip(new_images, new_captions), columns=["filename", "caption"] # ty: ignore
     )
     return batch_size, data_train
 
@@ -206,7 +205,7 @@ def train_model(
                 "train_loss": train_loss,
                 "val_loss": val_loss,
             }
-            df = pandas.DataFrame(data, index=[0])
+            df = pandas.DataFrame(data, index=[0]) # ty: ignore
             df.to_csv(my_file, header=False, index=False)
         # print()
 
@@ -275,8 +274,8 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
             self.adapter_folder = None
         self.configuration = json.load(open(os.path.join(self.folder, "model.json")))
         self.clip_variant = self.configuration["model_variant"]
-        self.model: CLIPModel | None = None
-        self.processor = None
+        self.model: CLIPModel
+        self.processor: CLIPProcessor
         self.index_to_label: dict[int, str] | None = None
         self.label_to_index: dict[str, int] | None = None
         self.load_model()
@@ -320,10 +319,10 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         classes_: list[str],
         multi=False,
         batch_size=512,
-        feature_cache_path: str = None,
+        feature_cache_path: str | None = None,
         flush=True,
-        other_feature_cache_path: str = None,
-    ) -> (np.array, np.array):
+        other_feature_cache_path: str | None = None,
+    ) -> Tuple[NDArray, NDArray]:
         """
         Compute features, probability tensors for `dataset`
         """
@@ -337,9 +336,9 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         #     # traceback.print_exc()
         #     ov_model = None
         # TODO: implement skip_positions with batching
-        other_filenames = None
-        other_features = None
-        other_probs = None
+        other_filenames: NDArray
+        other_features: NDArray
+        other_probs: NDArray
         print("other_feature_cache_path", other_feature_cache_path)
         if other_feature_cache_path is not None:
             other_feature_cache = zarr.open_group(other_feature_cache_path)
@@ -353,9 +352,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
             other_probs = other_feature_cache.get("probs")
 
         do_batched = True
-        if ov_model:
-            features = self.compute_ov_features(dataset, ov_model)
-        elif do_batched:
+        if do_batched:
             filenames = dataset.filename
             num_batches = len(filenames) // batch_size + 1
             features_per_batch: list[NDArray] | list[None] = [
@@ -473,12 +470,11 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                         feature_cache = None
                 batch_i += 1
             # end - batch loop
-            features = np.vstack(features_per_batch)
-            probs = np.vstack(probs_per_batch)
+            features = np.vstack(features_per_batch) # ty: ignore[no-matching-overload]
+            probs = np.vstack(probs_per_batch) # ty: ignore[no-matching-overload]
 
         else:
             raise NotImplementedError("probs")  # TODO
-            features = self.compute_features_single(dataset)
         return features, probs
 
     def compute_outputs(self, images_, text: list[str]):
@@ -491,72 +487,12 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         inputs.to(self.device)
         outputs = self.model(**inputs)
 
-        # al_acc, predicted_captions, max_probs, hierarchical_probs = test(
-        #     model, test_loader, test_set, unique_labels
-        # )
-
         return outputs
-
-    def compute_features_single(self, dataset):
-        features = []
-        for image_path_ in tqdm(
-            dataset.as_dataframe().filename, desc="Computing CLIP features"
-        ):
-            with torch.no_grad():
-                with torch.autocast(self.device):
-                    try:
-                        image = Image.open(image_path_)
-                    except:  # noqa
-                        raise
-                        print(f"Failed to read {image_path_}")
-                        image = Image.new("RGB", (299, 299))
-                    outputs = self.compute_outputs(image)
-            features.append(outputs[3].cpu().numpy())
-        features = np.vstack(features)
-        return features
-
-    def compute_ov_features(self, dataset, ov_model):
-        #
-        core = ov.Core()
-        print(f"{core.available_devices=}")
-        device = "MULTI:GPU,CPU"  # core.available_devices[0]
-        # compile model for loading on device
-        config = {
-            # hints.performance_mode: hints.PerformanceMode.CUMULATIVE_THROUGHPUT,
-            properties.inference_num_threads(): 8,
-            properties.hint.enable_cpu_pinning(): False,
-        }
-        self.compiled_model = core.compile_model(ov_model, device, config)
-        # obtain output tensor for getting predictions
-        features = []
-        for image_path_ in tqdm(
-            dataset.as_dataframe().filename,
-            desc="Computing CLIP features using OpenVINO",
-        ):
-            feature = self.compute_ov_feature(image_path_)
-            features.append(feature)
-        features = np.vstack(features)
-        return features
-
-    def compute_ov_feature(self, image_path_):
-        try:
-            image = Image.open(image_path_)
-        except:  # noqa
-            print(f"Failed to read {image_path_}")
-            image = Image.new("RGB", (299, 299))
-        inputs = self.processor(
-            text=["a photo of a cat", "a photo of a dog"],
-            images=image,
-            return_tensors="pt",
-            padding=True,
-        )
-        feature = self.compiled_model(dict(inputs))[self.compiled_model.output(3)]
-        return feature
 
     def train_peft(
         self,
         data: pandas.DataFrame,
-        out_folder: os.PathLike | str,
+        out_folder: Path | str,
         train_parameters: TrainParameters,
         logger=get_basic_logger("clip:train_peft"),
     ):
@@ -614,7 +550,6 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         test_set = Image_dataset(
             root_dir="Images", data_frame=data_test, processor=self.processor
         )
-        test_true_vals = list(x[1] for x in test_set)
         unique_labels = list(data_test.caption.unique())
 
         def custom_batch_builder(samples):
@@ -662,7 +597,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
             collate_fn=test_batch_builder,
         )
 
-        model = model.to(self.device)
+        model = model.to(self.device) # ty: ignore
         inputs = next(iter(val_loader))
         for key in inputs.keys():
             print("Sample {} shape ".format(key), inputs[key].shape)

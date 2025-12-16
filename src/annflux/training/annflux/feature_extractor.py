@@ -15,10 +15,12 @@ import abc
 import shutil
 import tempfile
 from dataclasses import dataclass
-from os import PathLike
+from pathlib import Path
+from typing import Tuple
 
 import numpy as np
 import pandas
+from numpy._typing import NDArray
 
 from annflux.repository.dataset import Dataset
 from annflux.repository.model import Model
@@ -26,7 +28,9 @@ from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
 
 
-def make_resultset(dataset: Dataset, features: np.array, repo: Repository, message=None) -> Resultset:
+def make_resultset(
+    dataset: Dataset, features: NDArray, repo: Repository, message=None
+) -> Resultset:
     data = dataset.as_dataframe()
     tmp_folder = tempfile.mkdtemp()
     try:
@@ -44,7 +48,7 @@ def make_resultset(dataset: Dataset, features: np.array, repo: Repository, messa
             ancestors=[dataset] + ([model] if model is not None else []),
             tag="unseen",
             allow_mixed_tags=True,
-            message=message
+            message=message,
         )
     except:  # noqa
         print(f"{tmp_folder=}")
@@ -62,11 +66,20 @@ class BaseFeatureExtractor(abc.ABC):
     def load_model(self):
         pass
 
+    @abc.abstractmethod
     def compute_features(
-        self, dataset: Dataset, classes_: list[str], multi=False, batch_size=32
-    ) -> np.array:
+        self,
+        dataset: pandas.DataFrame,
+        classes_: list[str],
+        multi=False,
+        batch_size=32,
+        feature_cache_path: str | None = None,
+        flush=True,
+        other_feature_cache_path: str | None = None,
+    ) -> Tuple[NDArray, NDArray | None]:
         pass
 
+    @abc.abstractmethod
     def get_feature_size(self) -> int:
         pass
 
@@ -75,8 +88,9 @@ class PeftTrainableMixin(abc.ABC):
     def train_peft(
         self,
         data: pandas.DataFrame,
-        out_folder: PathLike | str,
+        out_folder: Path | str,
         train_parameters: TrainParameters,
+        logger,
     ):
         pass
 

@@ -12,6 +12,7 @@ from typing import Set, Callable, Tuple
 import numpy as np
 import pandas
 import zarr
+from numpy._typing import NDArray
 from sklearn.model_selection import train_test_split
 
 from annflux.repository.dataset import Dataset
@@ -19,20 +20,12 @@ from annflux.repository.model import KerasModel, Model, ClipModel
 from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
 from annflux.shared import AnnfluxSource
-from annflux.tools.data import init_folder
 from annflux.training.annflux.feature_extractor import (
     make_resultset,
     TrainParameters,
 )
 
 
-def execute(source: AnnfluxSource, architecture="efficientnetb0"):
-    source, repo = init_folder(source)
-
-    train_then_features(
-        source,
-        architecture=architecture,
-    )
 
 
 def get_repo_model(
@@ -60,7 +53,7 @@ def get_repo_model(
         model = model_type(str(tmp_dir))
         pandas.DataFrame(
             data=list(zip(range(2), ["foo", "bar"])),
-            columns=["index", "class_name"],
+            columns=["index", "class_name"], # ty: ignore
         ).to_csv(model.class_to_label_path, index=False)
         repo.commit(model, tag="untrained")
         shutil.rmtree(tmp_dir)
@@ -70,16 +63,15 @@ def get_repo_model(
 
 def train_then_features(
     source: AnnfluxSource,
-    dataset: Dataset | pandas.DataFrame = None,
+    dataset: Dataset | pandas.DataFrame | None = None,
     architecture="clip",
     backend="annflux",
-    train_method: str = None,
+    train_method: str | None = None,
     train_parameters=TrainParameters(num_epochs=15),
     train_model=True,
     model_variant="wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M",
-    cache_name: str = None,
-    feature_cache: str = None,  # TODO(implement)
-) -> Tuple[np.array, np.array, Model]:
+    cache_name: str | None = None,
+) -> Tuple[NDArray, NDArray, Model]:
     """
     Returns (features, probs) of `dataset`
     """
@@ -94,10 +86,11 @@ def train_then_features(
     repo = source.repository
     labels_path = source.labels_path
     if backend == "naturalis-ai":
+        raise NotImplementedError
         if not os.path.exists(labels_path):
             dataset, model = get_untrained_model(repo, architecture)
         else:
-            train(source, architecture, repo, train_folder)
+            #train(source, architecture, repo, train_folder)
             model = repo.get(label=KerasModel, tag="seen").last()
             shutil.rmtree(train_folder)
         extract_and_store_features(dataset, model, repo)
@@ -254,7 +247,7 @@ def get_untrained_model(repo: Repository, architecture="efficientnetb0"):
         model = KerasModel(str(tmp_dir))
         pandas.DataFrame(
             data=list(zip(range(2), ["foo", "bar"])),
-            columns=["index", "class_name"],
+            columns=["index", "class_name"],  # ty: ignore
         ).to_csv(model.class_to_label_path, index=False)
         repo.commit(model, tag="untrained")
         shutil.rmtree(tmp_dir)
@@ -311,7 +304,7 @@ def train(
     )
     print("unique_labels", unique_labels)
     pandas.DataFrame(
-        data=list(zip(unique_labels, unique_labels)), columns=["label", "taxon"]
+        data=list(zip(unique_labels, unique_labels)), columns=["label", "taxon"] # ty: ignore
     ).to_csv(seen_taxon_mapping_path)
     labeled_ids = [
         x_

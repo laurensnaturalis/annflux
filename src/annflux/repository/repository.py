@@ -14,7 +14,7 @@
 import json
 import os
 from json import JSONDecodeError
-from typing import Any, Tuple, Union
+from typing import Any, Union
 
 import datetime
 
@@ -144,7 +144,7 @@ class Repository(object):
         if not os.path.exists(path):
             create_directory(path)
             # write_table(self.index_path, [], self.headers)
-            pandas.DataFrame(data=[], columns=self.headers).to_csv(
+            pandas.DataFrame(data=[], columns=self.headers).to_csv( # ty: ignore
                 self.index_path, index=False
             )
 
@@ -152,7 +152,7 @@ class Repository(object):
         return f"{self.__class__.__name__}:{self.path},size={len(self.entries)}"
 
     @staticmethod
-    def entry_to_path(entry: RepositoryEntry):
+    def entry_to_path(entry: list[str]):
         """
         Gives the folder name for a RepositoryEntry
         :param entry:
@@ -285,7 +285,7 @@ class Repository(object):
         pandas.concat(
             [
                 pandas.read_csv(self.index_path),
-                pandas.DataFrame(data=[entry], columns=self.headers),
+                pandas.DataFrame(data=[entry], columns=self.headers), # ty: ignore
             ]
         ).to_csv(self.index_path, index=False)
 

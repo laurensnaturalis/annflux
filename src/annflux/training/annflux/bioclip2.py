@@ -1,8 +1,11 @@
+from typing import Tuple
+
 import numpy as np
 import open_clip
 import pandas
 import torch
 from PIL import Image
+from numpy._typing import NDArray
 from torch.multiprocessing import Pool
 from tqdm import tqdm
 
@@ -56,15 +59,29 @@ class BioClip2FeatureExtractor(BaseFeatureExtractor):
         self.model.to("cuda")
         # tokenizer = open_clip.get_tokenizer("hf-hub:imageomics/bioclip")
 
+    def get_feature_size(self) -> int:
+        self.load_model()
+        image_size = (
+            self.model.encode_image(
+                self.preprocess_train(Image.new("RGB", (299, 299))).unsqueeze(0).to("cuda")
+            )
+            .detach()
+            .cpu()
+            .numpy()
+            .shape
+        )
+        return image_size[1]
+
     def compute_features(
         self,
         dataset: pandas.DataFrame,
         classes_: list[str],
         multi=False,
         batch_size=32,
-        feature_cache_path=None,
-        other_feature_cache_path=None,
-    ) -> np.array:
+        feature_cache_path: str | None = None,
+        flush=True,
+        other_feature_cache_path: str | None = None,
+    ) -> Tuple[NDArray, NDArray | None]:
         if multi:
             with Pool(4) as pool:
                 image_features = pool.starmap(
@@ -92,16 +109,3 @@ class BioClip2FeatureExtractor(BaseFeatureExtractor):
                     compute_batch(batch_paths, self.model, self.preprocess_val).cpu()
                 )
         return np.vstack(image_features), None
-
-    def get_feature_size(self) -> int:
-        self.load_model()
-        image_size = (
-            self.model.encode_image(
-                self.preprocess_train(Image.new("RGB", (299, 299))).unsqueeze(0).to("cuda")
-            )
-            .detach()
-            .cpu()
-            .numpy()
-            .shape
-        )
-        return image_size[1]

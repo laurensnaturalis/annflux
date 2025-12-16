@@ -76,18 +76,18 @@ from annflux.training.annflux.quick import (
 from annflux.training.tensorflow.tf_backend import linear_retraining
 # from annflux.training.tensorflow.torch_backend import linear_retraining
 
-project_root: Optional[str] = None
-images_path: Optional[str] = None
-thumb_path_: Optional[str] = None
-failed_images_path: Optional[str] = None
-group_images_path: Optional[str] = None
-working_folder: Optional[str] = None
-exclusivity_path: Optional[str] = None
-label_definitions_path: Optional[str] = None
-label_provider_path: Optional[str] = None
-g_state: Optional[AnnFluxState] = None
-g_layout: Optional[str] = None
-logger: Optional[logging.Logger] = None
+project_root: Optional[str]
+images_path: str
+thumb_path_: str
+failed_images_path: str
+group_images_path: str
+working_folder: str
+exclusivity_path: str
+label_definitions_path: str
+label_provider_path: str
+g_state: AnnFluxState
+g_layout: str
+logger: logging.Logger
 
 
 class NoStatus(logging.Filter):
@@ -187,7 +187,7 @@ users = dict([x_.split("|") for x_ in os.getenv("USERS", "").split()])
 @auth.verify_password
 def verify_password(username, password):
     if len(users) == 0 or (
-        username in users and check_password_hash(users.get(username), password)
+        username in users and check_password_hash(users.get(username, ""), password)
     ):
         return username
     return None
@@ -537,7 +537,7 @@ def detailed_performance_data():
 @app.route("/exclusivity/data")
 def exclusivity_data():
     if not os.path.exists(exclusivity_path):
-        pandas.DataFrame(data={}, columns=["left", "right"]).to_csv(
+        pandas.DataFrame(data={}, columns=["left", "right"]).to_csv(  # ty: ignore[invalid-argument-type]
             exclusivity_path, index=False
         )
 
@@ -570,7 +570,7 @@ def labels_css():
 
 @app.route("/exclusivity/data", methods=["POST"])
 def exclusivity_data_post():
-    pandas.DataFrame(data=request.get_json(), columns=["left", "right"]).to_csv(
+    pandas.DataFrame(data=request.get_json(), columns=("left", "right")).to_csv( # ty: ignore[invalid-argument-type]
         exclusivity_path, index=False
     )
     return {"success": True}
@@ -633,7 +633,7 @@ def retrain_job(state: AnnFluxState):
     data["e_0"] = embedding[:, 0]
     data["e_1"] = embedding[:, 1]
     data.to_csv(state.annflux_path, index=False)
-    state.trained_for_version_pre = len(state.labeled_indices)
+    state.trained_for_version_previous = len(state.labeled_indices)
     #
     state.g_quick_status = "computing density peak"
     fast_density_peak_clustering(state.project_folder)
@@ -814,11 +814,9 @@ def general_server_error(e):
 
 
 def ui_script_entry():
-    os.environ["PROJECT_ROOT"] = (
-        os.path.expanduser(sys.argv[1])
-        if os.getenv("PROJECT_ROOT") is None
-        else os.getenv("PROJECT_ROOT")
-    )
+    if os.getenv("PROJECT_ROOT") is None:
+        os.environ["PROJECT_ROOT"] = os.path.expanduser(sys.argv[1])
+
     _init()
     app.run(
         debug=str2bool(os.getenv("APP_DEBUG", False)),

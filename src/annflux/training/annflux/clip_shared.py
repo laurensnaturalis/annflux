@@ -18,6 +18,8 @@ from typing import Dict, Tuple
 import numpy as np
 import torch
 from PIL import Image
+from torch.utils.data import Dataset
+from torch.utils.data.dataset import _T_co
 from tqdm import tqdm
 
 
@@ -72,7 +74,7 @@ def test(
                             probs_per_level[l_][name_] += class_prob_
                     new_probs_per_level: Dict[int, Tuple[str, float]] = {}
                     for l_, probs_ in probs_per_level.items():
-                        max_name = max(probs_, key=probs_.get)
+                        max_name = max(probs_, key=probs_.get) # ty: ignore
                         new_probs_per_level[l_] = (max_name, float(probs_[max_name]))
                     hier_predictions.append(new_probs_per_level)
 
@@ -84,7 +86,7 @@ def test(
     return val_acc, predicted_captions, max_probs, hier_predictions
 
 
-class Image_dataset(object):
+class Image_dataset(Dataset):
     def __init__(self, root_dir, data_frame, processor):  # noqa
         self.root_dir = root_dir
         self.data_frame = data_frame
@@ -101,19 +103,18 @@ class Image_dataset(object):
     def __len__(self):
         return len(self.data_list)
 
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
+    def __getitem__(self, index) -> _T_co:
 
-        image_name, captions = self.data_list[idx]
+        if torch.is_tensor(index):
+            index = index.tolist()
+
+        image_name, captions = self.data_list[index]
         try:
             img = Image.open(os.path.join(self.root_dir, image_name))
         except Exception as e:
             print(e)
             img = Image.new("RGB", size=(224, 224))
 
-        # load caption randomly
-        # print(captions)
         caption = captions[0]
 
-        return img, caption
+        return img, caption # ty: ignore[invalid-return-type]

@@ -4,11 +4,7 @@ from pycocotools.coco import COCO
 from tqdm import tqdm
 
 
-import os
-import cv2
 import csv
-from pycocotools.coco import COCO
-from tqdm import tqdm
 
 def extract_crops_and_labels(coco_annotation_file, images_dir, output_dir, csv_path):
     # Create output directory if it doesn't exist

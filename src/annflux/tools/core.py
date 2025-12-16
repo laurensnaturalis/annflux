@@ -15,7 +15,6 @@
 import time
 from pathlib import Path
 
-import numpy as np
 from numpy._typing import NDArray
 
 
@@ -71,27 +70,27 @@ class AnnFluxState(object):
         with open(timings_path, mode) as f:
             f.write(f"{key},{val},{num_total or ''},{num_labeled or ''}\n")
 
-    cache_for: str = None
-    features: NDArray = None
+    cache_for: str | None = None
+    features: NDArray
     knn_index = None
     all_distances = None
     all_indices = None
     opt_knn_rank_exponent = None
     knn_rank_exponent = 3
-    label_array: NDArray[list[str]] | None = None
-    label_array_test = None
-    labeled_indices = None
-    labeled_test_indices = None
-    version_for_recompute = None
+    label_array: NDArray
+    label_array_test: NDArray
+    labeled_indices: NDArray
+    labeled_test_indices: NDArray
+    version_for_recompute: str
     g_quick_status_ = None
     new_labeled_uids = None
     train_thread = None
     trained_for_version_previous = None
-    linear_status_epoch: int = None
-    trained_for_version: int = None
+    linear_status_epoch: int
+    trained_for_version: int
     optimize_weight_exponent: bool = False
-    labels_path: str = None
-    doublecheck_path: str = None
-    performance_path: str = None
+    labels_path: str
+    doublecheck_path: str
+    performance_path: str
 
 

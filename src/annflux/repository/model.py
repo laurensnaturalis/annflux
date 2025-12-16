@@ -36,7 +36,7 @@ from .repository import Repository, RepositoryEntry
 class Model(object):
     label = "model"
 
-    def __init__(self, path_or_entry: str | RepositoryEntry, class_to_label_path=None):
+    def __init__(self, path_or_entry: str | RepositoryEntry, class_to_label_path: str | None=None):
         """
 
         :type path_or_entry: RepositoryEntry
@@ -44,7 +44,7 @@ class Model(object):
         :param class_to_label_path:
         """
         self.index_to_class_name: dict[int, str] | None = None
-        if isinstance(path_or_entry, str):
+        if isinstance(path_or_entry, str) and class_to_label_path:
             self._path = path_or_entry
             self.source_path = self._path
             self.class_to_label_path = class_to_label_path
@@ -63,7 +63,7 @@ class Model(object):
 
     @property
     def model(self):
-        return Repository.get_ancestors(self.entry, "model", Model)
+        return Repository.get_ancestors(self.entry, "model", Model) # ty: ignore # TODO
 
     @abstractmethod
     def get_uid(self):
@@ -75,7 +75,7 @@ class Model(object):
 
     @property
     def dataset(self) -> Dataset:
-        return Repository.get_ancestors(self.entry, "dataset", Dataset)
+        return Repository.get_ancestors(self.entry, "dataset", Dataset) # ty: ignore # TODO
 
     @property
     def index_to_class(self) -> dict[int, str]:
@@ -127,21 +127,19 @@ class ClipModel(Model):
 
 
 class KerasModel(Model):
-    def save_protobuffer(self):
-        pass
-
     def __init__(
         self,
-        model_folder_path_or_entry: (str, RepositoryEntry),
-        classid_to_class_path=None,
+        model_folder_path_or_entry: str | RepositoryEntry,
+        class_id_to_class_path=None,
         model_configuration_path=None,
     ):
         """
         A multiclass classification model which can be stored in a Repository
         :param model_folder_path_or_entry: model folder where temporary results are stored OR RepositoryEntry object
-        :param classid_to_class_path: obsolete, for backwards compatibility
+        :param class_id_to_class_path: obsolete, for backwards compatibility
         """
         super().__init__(model_folder_path_or_entry)
+        self.class_to_label_path: str
         if isinstance(model_folder_path_or_entry, str):
             self.entry = None
             self._path = model_folder_path_or_entry
@@ -158,9 +156,9 @@ class KerasModel(Model):
                 if stage == 1:
                     self.weights_path = None
 
-            if classid_to_class_path is None:
-                classid_to_class_path = os.path.join(self.source_path, "labels.txt")
-            self.class_to_label_path = classid_to_class_path
+            if class_id_to_class_path is None:
+                class_id_to_class_path = os.path.join(self.source_path, "labels.txt")
+            self.class_to_label_path = class_id_to_class_path
 
         elif hasattr(model_folder_path_or_entry, "path"):
             self.entry = model_folder_path_or_entry
@@ -173,7 +171,7 @@ class KerasModel(Model):
             self.class_to_label_path = os.path.join(self._path, "labels.txt")
             pass
 
-        self.model_configuration_path = (
+        self.model_configuration_path: str = (
             os.path.join(self._path, "model.json")
             if hasattr(self, "path")
             else model_configuration_path
@@ -214,7 +212,7 @@ class KerasModel(Model):
             else file_hash(self.model_configuration_path)
         )
 
-    def store_contents(self, directory, mode):
+    def store_contents(self, directory: str, mode):
         shutil.copy(self.class_to_label_path, os.path.join(directory, "labels.txt"))
         if self.weights_path is not None:
             shutil.copy(self.weights_path, os.path.join(directory, "weights.h5"))

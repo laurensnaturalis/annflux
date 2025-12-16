@@ -17,7 +17,7 @@ def call_predict(
     api_url: str,
     api_user=None,
     api_password=None,
-) -> (JSONType, Dict[str, Any]):
+) -> tuple[JSONType, dict[str, Any]]:
     files = []
     for image_path in images:
         files.append(("image", open(image_path, "rb")))
@@ -37,7 +37,6 @@ def call_predict(
     except:
         # TODO:
         raise
-        pass
 
     if request.status_code >= 400:
         print(request)

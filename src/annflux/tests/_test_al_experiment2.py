@@ -25,14 +25,13 @@ import pytest
 
 from annflux.data.bombus_plant_test.data import (
     DataSource,
-    StreetSurfaceVis,
     DiopsisPublic,
 )
 from annflux.scripts.annflux_cli import go_command
 from annflux.shared import AnnfluxSource
 from annflux.ui.basic.run_server import _init, get_app
 
-annflux_data_path: str | None = None
+annflux_data_path: str | None | Path = None
 data_source: DataSource | None = None
 
 

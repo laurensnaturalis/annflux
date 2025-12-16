@@ -18,7 +18,6 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Optional, List
 
-import annflux
 
 
 def remove_sys(list_: Optional[List[str]]):

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import datetime
 import glob
 import os.path
@@ -21,7 +19,7 @@ def get_datetime(path: str) -> datetime.datetime | None:
     match = re.match(r"^\d+_(\d{10})\.mp4$", path)
     if match:
         timestamp = match.group(1)
-        result = datetime.datetime.utcfromtimestamp(int(timestamp))
+        result = datetime.datetime.fromtimestamp(int(timestamp))
         result = result.replace(tzinfo=pytz.utc)
         return result
     else:
@@ -29,7 +27,7 @@ def get_datetime(path: str) -> datetime.datetime | None:
 
 
 def frame_capture(
-    input_folder: str, output_folder: str, existing_original_paths: set[str]
+    input_folder: str | Path, output_folder: str | Path, existing_original_paths: set[str]
 ) -> pandas.DataFrame:
     input_folder = Path(input_folder)
     output_folder = Path(output_folder)
@@ -48,6 +46,8 @@ def frame_capture(
         parent_folder = tokens[-1]
         num_frames = ffmpeg.probe(video_path.strip())["streams"][0]["nb_frames"]
         date_time = get_datetime(basename)
+        if date_time is None:
+            raise RuntimeError()
         basename = f"{parent_folder}_{basename}"
 
         num_extracted_frames = int(num_frames) / frame_rate
@@ -135,4 +135,4 @@ if __name__ == "__main__":
 
     os.makedirs(args.out_folder, exist_ok=True)
 
-    frame_capture(args.video_paths, args.out_folder)
+    frame_capture(args.video_paths, args.out_folder, set())
