@@ -31,6 +31,7 @@ from torch import nn, optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import CLIPModel, CLIPProcessor
+from zarr import Group
 
 from annflux.repository.model import Model
 from annflux.tools.data import canon_
@@ -83,7 +84,8 @@ def make_batches(data_train):
             new_images.append(train_img[index_])
 
     data_train = pandas.DataFrame(
-        data=zip(new_images, new_captions), columns=["filename", "caption"] # ty: ignore
+        data=zip(new_images, new_captions),
+        columns=["filename", "caption"],  # ty: ignore
     )
     return batch_size, data_train
 
@@ -205,7 +207,7 @@ def train_model(
                 "train_loss": train_loss,
                 "val_loss": val_loss,
             }
-            df = pandas.DataFrame(data, index=[0]) # ty: ignore
+            df = pandas.DataFrame(data, index=[0])  # ty: ignore
             df.to_csv(my_file, header=False, index=False)
         # print()
 
@@ -236,6 +238,7 @@ def print_trainable_parameters(model):
         f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param:.2f}"
     )
 
+
 def pad_to_square(image, fill_color=(0, 0, 0)):
     # Get original dimensions
     width, height = image.size
@@ -250,8 +253,11 @@ def pad_to_square(image, fill_color=(0, 0, 0)):
     bottom = target_size - height - top
 
     # Pad the image (default: black background)
-    padded_image = ImageOps.expand(image, border=(left, top, right, bottom), fill=fill_color)
+    padded_image = ImageOps.expand(
+        image, border=(left, top, right, bottom), fill=fill_color
+    )
     return padded_image
+
 
 class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMixin):
     def __init__(
@@ -274,8 +280,8 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
             self.adapter_folder = None
         self.configuration = json.load(open(os.path.join(self.folder, "model.json")))
         self.clip_variant = self.configuration["model_variant"]
-        self.model: CLIPModel
-        self.processor: CLIPProcessor
+        self.model: CLIPModel = None
+        self.processor: CLIPProcessor = None
         self.index_to_label: dict[int, str] | None = None
         self.label_to_index: dict[str, int] | None = None
         self.load_model()
@@ -336,20 +342,28 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         #     # traceback.print_exc()
         #     ov_model = None
         # TODO: implement skip_positions with batching
-        other_filenames: NDArray
-        other_features: NDArray
+        other_filenames: NDArray | None = None
+        other_features: NDArray | None = None
         other_probs: NDArray
         print("other_feature_cache_path", other_feature_cache_path)
         if other_feature_cache_path is not None:
             other_feature_cache = zarr.open_group(other_feature_cache_path)
             other_filenames = np.array(
                 [
-                    basename_no_extension(x_)
-                    for x_ in other_feature_cache.get("filenames")[:]
+                    basename_no_extension(x_)  # ty:ignore[invalid-argument-type]
+                    for x_ in other_feature_cache.get(
+                        "filenames"
+                    )[  # ty:ignore[invalid-argument-type]
+                        :
+                    ]  # ty:ignore[invalid-argument-type, non-subscriptable, not-iterable]
                 ]
             )
-            other_features = other_feature_cache.get("features")
-            other_probs = other_feature_cache.get("probs")
+            other_features = other_feature_cache.get(
+                "features"
+            )  # ty:ignore[invalid-assignment]
+            other_probs = other_feature_cache.get(
+                "probs"
+            )  # ty:ignore[invalid-assignment]
 
         do_batched = True
         if do_batched:
@@ -365,24 +379,38 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
             print(f"{len(filenames)=}")
             batch_i = 0
             feature_cache = None
+
+            def get_sliced_array(
+                feature_cache_: Group, name_: str, start_: int, end_: int
+            ) -> NDArray:
+                return feature_cache_.get(name_)[start_:end_]  # ty: ignore
+
             for batch in tqdm(
                 batched(filenames, batch_size),
                 total=num_batches,
                 desc="Computing features",
             ):
                 if feature_cache_path is not None:
-                    start = batch_i * batch_size
-                    end = start + batch_size
+                    start: int = batch_i * batch_size
+                    end: int = start + batch_size
                     if feature_cache is None:
                         feature_cache = zarr.open_group(feature_cache_path)
-                    cache_filenames = feature_cache.get("filenames")[start:end]
+                    cache_filenames = get_sliced_array(
+                        feature_cache, "filenames", start, end
+                    )
+
                     if cache_filenames[0] != "0":
                         if len(cache_filenames) == len(filenames[start:end]) and np.all(
                             cache_filenames == filenames[start:end]
                         ):
-                            cache_batch_features = feature_cache.get("features")[
-                                start:end
-                            ]
+                            cache_batch_features = get_sliced_array(
+                                feature_cache, "features", start, end
+                            )
+                            # cache_batch_features = feature_cache.get(
+                            #     "features"
+                            # )[  # ty: ignore
+                            #     start:end
+                            # ]
                             feature_sum = np.all(
                                 np.sum(cache_batch_features, axis=1) != 0
                             )
@@ -393,9 +421,9 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                                     f"Features already in cache, skipping batch, {cache_batch_features.shape=}, {feature_sum=}, {batch_i=}"
                                 )
                                 features_per_batch[batch_i] = cache_batch_features
-                                probs_per_batch[batch_i] = feature_cache.get("probs")[
-                                    start:end
-                                ][:, :2]  # TODO(BUG)
+                                probs_per_batch[batch_i] = get_sliced_array(
+                                    feature_cache, "probs", start, end
+                                )[:, :2]
 
                                 batch_i += 1
                                 continue
@@ -458,9 +486,21 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                     end = start + batch_size
                     if feature_cache is None:
                         feature_cache = zarr.open_group(feature_cache_path)
-                    feature_cache.get("features")[start:end, :] = features_for_batch
-                    feature_cache.get("probs")[start:end, :] = probs_for_batch
-                    feature_cache.get("filenames")[start:end] = batch
+                    feature_cache.get("features")[
+                        start:end, :
+                    ] = (  # ty:ignore[invalid-assignment]
+                        features_for_batch  # ty:ignore[invalid-assignment]
+                    )
+                    feature_cache.get("probs")[
+                        start:end, :
+                    ] = (  # ty:ignore[invalid-assignment]
+                        probs_for_batch  # ty:ignore[invalid-assignment]
+                    )
+                    feature_cache.get("filenames")[
+                        start:end
+                    ] = (  # ty:ignore[invalid-assignment]
+                        batch  # ty:ignore[invalid-assignment]
+                    )
                     print(
                         f"writing {len(features_for_batch)=} to {feature_cache_path=} at {(start, end)}"
                     )
@@ -470,24 +510,26 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                         feature_cache = None
                 batch_i += 1
             # end - batch loop
-            features = np.vstack(features_per_batch) # ty: ignore[no-matching-overload]
-            probs = np.vstack(probs_per_batch) # ty: ignore[no-matching-overload]
+            features = np.vstack(features_per_batch)  # ty: ignore[no-matching-overload]
+            probs = np.vstack(probs_per_batch)  # ty: ignore[no-matching-overload]
 
         else:
             raise NotImplementedError("probs")  # TODO
         return features, probs
 
     def compute_outputs(self, images_, text: list[str]):
-        inputs = self.processor(
-            text=text,
-            images=images_,
-            return_tensors="pt",
-            padding=True,
-        )
-        inputs.to(self.device)
-        outputs = self.model(**inputs)
+        if self.processor is not None and self.model is not None:
+            inputs = self.processor(
+                text=text,
+                images=images_,
+                return_tensors="pt",
+                padding=True,
+            )
+            inputs.to(self.device)
+            outputs = self.model(**inputs)
 
-        return outputs
+            return outputs
+        raise RuntimeError("compute_outputs called on uninitialized object")
 
     def train_peft(
         self,
@@ -499,12 +541,18 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         """
         Assumes columns 'filename', 'label_true'
         """
+        if self.processor is None:
+            raise RuntimeError("train_peft called on uninitialized object")
         if isinstance(out_folder, str):
             out_folder = Path(out_folder)
         print(f"{Counter(data['label_true'])=}")
         data["caption"] = data["label_true"].apply(
             lambda x_: canon_(
-                x_, remove_unknown=True, output_separator=" ", replace_space=True, remove_sys=True
+                x_,
+                remove_unknown=True,
+                output_separator=" ",
+                replace_space=True,
+                remove_sys=True,
             )
         )
         print(f"{data.caption=}")
@@ -555,8 +603,9 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         def custom_batch_builder(samples):
             img, caption = zip(*samples)
 
+            # noinspection PyCallingNonCallable
             inputs_ = self.processor(
-                text=caption, images=img, return_tensors="pt", padding=True
+                text=caption, images=list(img), return_tensors="pt", padding=True
             )
             inputs_["caption"] = np.array(caption, dtype=object)
             return inputs_
@@ -564,8 +613,9 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         def test_batch_builder(samples):
             img, caption = zip(*samples)
 
+            # noinspection PyCallingNonCallable
             inputs_ = self.processor(
-                text=unique_labels, images=img, return_tensors="pt", padding=True
+                text=unique_labels, images=list(img), return_tensors="pt", padding=True
             )
             inputs_["caption"] = np.array(caption, dtype=object)
             return inputs_
@@ -597,7 +647,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
             collate_fn=test_batch_builder,
         )
 
-        model = model.to(self.device) # ty: ignore
+        model = model.to(self.device)  # ty: ignore
         inputs = next(iter(val_loader))
         for key in inputs.keys():
             print("Sample {} shape ".format(key), inputs[key].shape)

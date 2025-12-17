@@ -26,7 +26,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 
 from annflux.tools.core import AnnFluxState
 
-MultilabelPrediction = List[Tuple[str]]
+MultilabelPrediction = List[Tuple[str] | List[str]]
 
 logger = logging.getLogger("annflux_server")
 

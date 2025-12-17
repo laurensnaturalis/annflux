@@ -10,9 +10,6 @@ import numpy as np
 import os
 from typing import Dict, List
 
-from torch.utils.data.dataset import _T_co
-
-
 def l2_normalize(x, axis=1):
     norm = torch.norm(x, p=2, dim=axis, keepdim=True)
     return x / norm
@@ -38,7 +35,7 @@ class BalanceDataset(Dataset):
     def __len__(self):
         return len(self.x)
 
-    def __getitem__(self, idx) -> _T_co:  # ty: ignore[invalid-method-override]
+    def __getitem__(self, idx):  # ty: ignore[invalid-method-override]
         if self.class_weights is None:
             return self.x[idx], self.y[idx]  # ty: ignore[invalid-return-type]
         else:

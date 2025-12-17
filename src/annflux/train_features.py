@@ -20,6 +20,7 @@ from annflux.repository.model import KerasModel, Model, ClipModel
 from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
 from annflux.shared import AnnfluxSource
+from annflux.tools.data import init_folder
 from annflux.training.annflux.feature_extractor import (
     make_resultset,
     TrainParameters,
@@ -40,6 +41,8 @@ def get_repo_model(
     print(f"{model=}")
     if model is None:
         tmp_dir = Path("tmp")
+        if os.path.isdir("tmp"):
+            shutil.rmtree("tmp")
         tmp_dir.mkdir(exist_ok=False)
         with open(tmp_dir / "model.json", "w") as f:
             json.dump(
