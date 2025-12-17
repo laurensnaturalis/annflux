@@ -336,13 +336,16 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
         & ~pandas.isna(data.label_true)
     ]
     predicted_test = [
-        canon_(x_, remove_unknown=True, remove_sys=True).split(",")
+        canon_(x_, remove_unknown=True, remove_sys=True)
         for x_ in labeled_predicted_test_data.label_predicted
     ]
+
+    predicted_test = [x_.split(",") if x_ is not None else [] for x_ in predicted_test]
     true_test = [
-        canon_(x_, remove_unknown=True, remove_sys=True).split(",")
+        canon_(x_, remove_unknown=True, remove_sys=True)
         for x_ in labeled_predicted_test_data.label_true
     ]
+    true_test = [x_.split(",") if x_ is not None else [] for x_ in true_test]
     logger.info(f"|predicted_test|={len(predicted_test)}")
     print(f"{predicted_test=}, {true_test=}")
     compute_performance(predicted_test, true_test, state, annotations, data)
@@ -396,6 +399,7 @@ def make_class_to_color(class_cluster_to_count, class_to_color, out_path):
 def load_data(state: AnnFluxState, logger: logging.Logger, no_linear_features=False):
     start_time = time.time()
     repo = Repository(os.path.join(state.annflux_folder, "datarepo"))
+    result_set = None
     if no_linear_features:
         for resultset in repo.get(label=Resultset, tag="unseen")[::-1]:
             print(resultset, resultset.entry, resultset.entry.message)
@@ -404,6 +408,8 @@ def load_data(state: AnnFluxState, logger: logging.Logger, no_linear_features=Fa
                 break
     else:
         result_set = repo.get(label=Resultset, tag="unseen").last()
+    if result_set is None:
+        raise RuntimeError("result_set cannot be none")
     print(f"load data {result_set.entry.message=}")
     folder = result_set.path
     data = pandas.read_csv(
@@ -511,10 +517,10 @@ def compute_knn(
 ):
     if not os.path.exists(knn_results_path):
         state.g_quick_status = "computing knn index"
-        knn_index = faiss.index_factory(
+        knn_index = faiss.index_factory(  # ty:ignore[possibly-missing-attribute]
             features_train.shape[1],
             "Flat",
-            {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
+            {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],  # ty:ignore[possibly-missing-attribute]
         )
         features_train *= 1 - 1e-2 * np.random.rand(
             features_train.shape[0], features_train.shape[1]
@@ -563,6 +569,7 @@ def quick_reclassification_group(knn_type, state, logger):
     assert len(data) == len(state.group_features), (
         f"{len(data)=}, {len(state.group_features)=}"
     )
+    # noinspection PyArgumentList
     uids, labels = zip(*annotations.items())
     train_uids, test_uids = train_test_split(uids, test_size=0.10, stratify=labels)
     test_uids = set(test_uids)
@@ -588,10 +595,10 @@ def quick_reclassification_group(knn_type, state, logger):
     k = 30  # the magic number that should be investigated
 
     state.g_quick_status = "computing group knn index"
-    knn_index = faiss.index_factory(
+    knn_index = faiss.index_factory(  # ty:ignore[possibly-missing-attribute]
         state.group_features.shape[1],
         "Flat",
-        {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
+        {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],  # ty:ignore[possibly-missing-attribute]
     )
     state.group_features *= 1 - 1e-2 * np.random.rand(
         state.group_features.shape[0], state.group_features.shape[1]
@@ -822,6 +829,7 @@ def make_predictions(
         if len(update_for_key) == 0 or key not in data.columns:
             continue
         update_for_key = sorted(update_for_key, key=lambda t_: t_[0])
+        # noinspection PyArgumentList
         indices, values = zip(*update_for_key)
         if not data[key].values.flags["OWNDATA"]:  # need in test environment
             current_values = data[key].values.copy()

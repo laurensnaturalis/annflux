@@ -19,7 +19,6 @@ import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
-from torch.utils.data.dataset import _T_co
 from tqdm import tqdm
 
 
@@ -103,7 +102,7 @@ class Image_dataset(Dataset):
     def __len__(self):
         return len(self.data_list)
 
-    def __getitem__(self, index) -> _T_co:
+    def __getitem__(self, index):
 
         if torch.is_tensor(index):
             index = index.tolist()

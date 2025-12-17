@@ -33,10 +33,10 @@ def fast_density_peak_clustering(source_or_folder: str | AnnfluxSource, show=Fal
     features = t_[["e_0", "e_1"]].values
 
     print("features.shape", features.shape)
-    knn_index = faiss.index_factory(
+    knn_index = faiss.index_factory(  # ty:ignore[possibly-missing-attribute]
         features.shape[1],
         "Flat",
-        {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],
+        {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],  # ty:ignore[possibly-missing-attribute]
     )
 
     features *= 1 - 1e-2 * np.random.rand(features.shape[0], features.shape[1])
@@ -136,7 +136,7 @@ def fast_density_peak_clustering(source_or_folder: str | AnnfluxSource, show=Fal
         int(combined[r]) if combined[r] is not None else -1 for r in indices_
     ]
 
-    display_order = [
+    display_order: list[int | None] = [
         None,
     ] * len(data)
 
@@ -167,11 +167,10 @@ def fast_density_peak_clustering(source_or_folder: str | AnnfluxSource, show=Fal
         for ldp in sorted(local_density_peaks):
             children = ldp_parent_to_children[ldp]
             c = next(color).reshape(1, -1)
-            p = plt.scatter(features[children, 0], features[children, 1], c=c)
-            p = plt.scatter(
-                features[ldp : ldp + 1, 0], features[ldp : ldp + 1, 1], c=c, marker="x"
-            )  # c=p.get_facecolors()[0].reshape(1,-1), marker="x")
-            # print(p.get_facecolors()[0])
+            plt.scatter(features[children, 0], features[children, 1], c=c)
+            plt.scatter(
+                features[ldp: ldp + 1, 0], features[ldp: ldp + 1, 1], c=c, marker="x"
+            )
         plt.subplot(222)
 
         color = iter(cm.rainbow(np.linspace(0, 1, len(set(species_true))))) # ty: ignore
@@ -180,7 +179,7 @@ def fast_density_peak_clustering(source_or_folder: str | AnnfluxSource, show=Fal
             centroid = np.mean(features[sel], axis=0)
             # print(centroid)
             c = next(color).reshape(1, -1)
-            p = plt.scatter(features[sel, 0], features[sel, 1], c=c)
+            plt.scatter(features[sel, 0], features[sel, 1], c=c)
             plt.annotate(species, centroid)
 
         plt.subplot(223)

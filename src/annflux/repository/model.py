@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 
 import matplotlib
 import pandas
@@ -33,10 +33,14 @@ except ImportError:
 from .repository import Repository, RepositoryEntry
 
 
-class Model(object):
+class Model(object, metaclass=ABCMeta):
     label = "model"
-
-    def __init__(self, path_or_entry: str | RepositoryEntry, class_to_label_path: str | None=None):
+    class_to_label_path: str | None
+    def __init__(
+        self,
+        path_or_entry: str | RepositoryEntry,
+        class_to_label_path: str | None = None,
+    ):
         """
 
         :type path_or_entry: RepositoryEntry
@@ -44,7 +48,7 @@ class Model(object):
         :param class_to_label_path:
         """
         self.index_to_class_name: dict[int, str] | None = None
-        if isinstance(path_or_entry, str) and class_to_label_path:
+        if isinstance(path_or_entry, str):
             self._path = path_or_entry
             self.source_path = self._path
             self.class_to_label_path = class_to_label_path
@@ -63,7 +67,7 @@ class Model(object):
 
     @property
     def model(self):
-        return Repository.get_ancestors(self.entry, "model", Model) # ty: ignore # TODO
+        return Repository.get_ancestors(self.entry, "model", Model)  # ty: ignore # TODO
 
     @abstractmethod
     def get_uid(self):
@@ -75,17 +79,23 @@ class Model(object):
 
     @property
     def dataset(self) -> Dataset:
-        return Repository.get_ancestors(self.entry, "dataset", Dataset) # ty: ignore # TODO
+        return Repository.get_ancestors(
+            self.entry, "dataset", Dataset
+        )  # ty: ignore # TODO
 
     @property
     def index_to_class(self) -> dict[int, str]:
-        if self.index_to_class_name is None:
+        if self.index_to_class_name is None and isinstance(self.class_to_label_path, str):
             tmp_ = pandas.read_csv(self.class_to_label_path, dtype={"class_name": str})
             self.index_to_class_name = dict(zip(tmp_["index"], tmp_["class_name"]))
+        else:
+            raise RuntimeError("index_to_class not available")
         return self.index_to_class_name
 
 
 class ClipModel(Model):
+    class_to_label_path: str
+
     def __init__(self, path_or_entry: RepositoryEntry | str, class_to_label_path=None):
         super().__init__(path_or_entry, class_to_label_path)
         self.folder = (
@@ -213,10 +223,11 @@ class KerasModel(Model):
         )
 
     def store_contents(self, directory: str, mode):
-        shutil.copy(self.class_to_label_path, os.path.join(directory, "labels.txt"))
+        if self.class_to_label_path is not None:
+            shutil.copy(self.class_to_label_path, os.path.join(directory, "labels.txt"))
         if self.weights_path is not None:
             shutil.copy(self.weights_path, os.path.join(directory, "weights.h5"))
         shutil.copy(self.model_configuration_path, directory)
 
     def __repr__(self):
-        return f"Model(uid={self.entry.uid},tag=uid={self.entry.tag})"
+        return f"Model(uid={self.entry.uid},tag=uid={self.entry.tag})"  # ty:ignore[possibly-missing-attribute]
