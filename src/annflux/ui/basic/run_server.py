@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from numba.tests.compile_with_pycc import div
 import math
 import os
 import shutil
@@ -376,6 +377,7 @@ class StatusUpdate(Callback):
     def on_epoch_end(self, epoch, logs=None):
         self.state.linear_status_epoch = epoch
 
+
 @app.route("/v1/label_definitions/sort", methods=["GET"])
 def label_defs_sort():
     if not os.path.exists(label_definitions_path):
@@ -538,7 +540,9 @@ def detailed_performance_data():
 @app.route("/exclusivity/data")
 def exclusivity_data():
     if not os.path.exists(exclusivity_path):
-        pandas.DataFrame(data={}, columns=["left", "right"]).to_csv(  # ty: ignore[invalid-argument-type]
+        pandas.DataFrame(
+            data={}, columns=["left", "right"]
+        ).to_csv(  # ty: ignore[invalid-argument-type]
             exclusivity_path, index=False
         )
 
@@ -571,7 +575,9 @@ def labels_css():
 
 @app.route("/exclusivity/data", methods=["POST"])
 def exclusivity_data_post():
-    pandas.DataFrame(data=request.get_json(), columns=("left", "right")).to_csv( # ty: ignore[invalid-argument-type]
+    pandas.DataFrame(
+        data=request.get_json(), columns=("left", "right")
+    ).to_csv(  # ty: ignore[invalid-argument-type]
         exclusivity_path, index=False
     )
     return {"success": True}
@@ -692,7 +698,6 @@ def group_train_job(state: AnnFluxState):
     state.trained_for_version = len(state.labeled_indices)  # TODO(crit): for group
 
 
-
 @app.route("/status", methods=["POST"])
 def status():
     label_update = request.get_json(force=True)
@@ -756,15 +761,19 @@ def status():
             num_unlabeled_certain = int(
                 detailed_performance_["num_predicted_certain"].sum()
             )
-            perc_likely_certain = detailed_performance_["num_predicted_certain"].sum() / (
-                    detailed_performance_.num_predicted_uncertain.sum()
-                    + num_unlabeled_certain
+            divisor = (
+                detailed_performance_.num_predicted_uncertain.sum()
+                + num_unlabeled_certain
+            )
+            perc_likely_certain = (
+                detailed_performance_["num_predicted_certain"].sum() / divisor
+                if divisor > 0
+                else 0
             )
             average_recall = detailed_performance_.recall.mean()
             average_precision = detailed_performance_.precision.mean()
         except EmptyDataError:
             pass
-
 
     time_remaining_s = estimated_duration_s - status_duration
     return {

@@ -265,6 +265,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         repo_model: Model,
         logger: logging.Logger,
     ):
+        print(f"f{torch.cuda.is_available()=}")
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.logger = logger
         self.repo_model = repo_model
