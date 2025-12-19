@@ -85,11 +85,12 @@ class Model(object, metaclass=ABCMeta):
 
     @property
     def index_to_class(self) -> dict[int, str]:
-        if self.index_to_class_name is None and isinstance(self.class_to_label_path, str):
-            tmp_ = pandas.read_csv(self.class_to_label_path, dtype={"class_name": str})
-            self.index_to_class_name = dict(zip(tmp_["index"], tmp_["class_name"]))
-        else:
-            raise RuntimeError("index_to_class not available")
+        if self.index_to_class_name is None:
+            if isinstance(self.class_to_label_path, str):
+                tmp_ = pandas.read_csv(self.class_to_label_path, dtype={"class_name": str})
+                self.index_to_class_name = dict(zip(tmp_["index"], tmp_["class_name"]))
+            else:
+                raise RuntimeError("index_to_class not available")
         return self.index_to_class_name
 
 

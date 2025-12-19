@@ -253,6 +253,7 @@ function Map2D($container) {
                 as_ranking_column == "score_predicted" ||
                 as_ranking_column == "score_true" ||
                 as_ranking_column == "fre" ||
+                as_ranking_column == "fre_strat" ||
                 as_ranking_column == "most_needed" ||
                 as_ranking_column == "incorrect_score" ||
                 as_ranking_column == "certain_incorrect"
@@ -260,15 +261,6 @@ function Map2D($container) {
                 show_data2 = show_data_start.filter(
                     (row) => row.labeled == (show_labeled == "unlabeled" ? 0 : 1) //&& row.in_test == 1
                 );
-                let filter_query = urlParams.get('filter_query') ?? "";
-                if (filter_query.trim().length > 0 && false) {
-                    try {
-                        eval(`show_data2 = show_data2.filter(row => ${filter_query})`);
-                        console.log(`${show_data2.length} after ${filter_query}`)
-                    } catch {
-                        alert(`invalid filter ${filter_query}`)
-                    }
-                }
                 if (show_labeled === "labeled") {
                     console.log(
                         "ignore_double_checked",

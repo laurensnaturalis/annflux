@@ -63,7 +63,7 @@ class AnnFluxState(object):
             timings_path,
             self.g_quick_status_,
             time.time(),
-            len(self.features) if self.features is not None else None,
+            len(self.features) if self.is_initialized() else None,
             len(self.labeled_indices) if self.labeled_indices is not None else None,
         )
 
@@ -89,7 +89,7 @@ class AnnFluxState(object):
 
     @property
     def features(self) -> NDArray:
-        return self.features_
+        return self.features_ if hasattr(self, "features_") else np.zeros((0,), dtype=np.uint64)
 
     @features.setter
     def features(self, val):
@@ -108,7 +108,7 @@ class AnnFluxState(object):
 
     @property
     def version_for_recompute(self):
-        return self.version_for_recompute_
+        return self.version_for_recompute_ if hasattr(self, "version_for_recompute_") else "N/A"
 
     @version_for_recompute.setter
     def version_for_recompute(self, val):

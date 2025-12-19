@@ -441,6 +441,7 @@ controlHtml = `<div id="map_control">
               <option value="high_label_entropy">High label entropy</option>
               <option value="score_true">True probability</option>
               <option value="fre">FRE</option>
+              <option value="fre_strat">FRE - stratified</option>
               <option value="certain_incorrect">Certain incorrect</option>
               <option value="most_needed" selected="selected">Most needed</option>
               <option value="incorrect_score">Incorrect score</option></select
@@ -532,7 +533,7 @@ controlHtml = `<div id="map_control">
           <td>Num in gallery</td>
           <td>
             <select id="num_in_gallery" onchange="changeOption(this)">
-              <option value="9" selected="selected">10</option>
+              <option value="10" selected="selected">10</option>
               <option value="20">20</option>
               <option value="50">50</option>
               <option value="100">100</option>
@@ -543,7 +544,7 @@ controlHtml = `<div id="map_control">
         </tr>
         <tr>
           <td>
-            <label for="ignore_double_checked">Ignore double checked</label>
+            <label for="ignore_double_checked">Ignore double-checked</label>
           </td>
           <td>
             <input
