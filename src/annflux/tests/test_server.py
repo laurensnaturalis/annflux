@@ -84,7 +84,8 @@ def test_label(client):
     true_labels = json.load(open(data_source.true_labels_path))
     response = client.post("/label", json={})  # TODO(issue): most_needed column not available before refresh
     t = get_annflux_data(client)
-    t.sort_values("most_needed", inplace=True)
+    print(t.columns)
+    t.sort_values("dp_most_needed", inplace=True)
     assert t["labeled"].max() == 0
     active_uids = (t[t["labeled"]==0].uid.values[:50])
     labeling = {}
@@ -100,13 +101,13 @@ def test_label_loop(client):
     true_labels = json.load(open(data_source.true_labels_path))
     response = client.post("/label", json={})  # TODO(issue): most_needed column not available before refresh
     t = get_annflux_data(client)
-    t.sort_values("most_needed", inplace=True)
+    t.sort_values("dp_most_needed", inplace=True)
     assert t["labeled"].max() == 0
     active_set_size = 50
     active_round = 0
     percentage_near_labeled = 0
     while t["labeled"].sum() < len(t):
-        t.sort_values("most_needed", inplace=True)
+        t.sort_values("dp_most_needed", inplace=True)
         active_uids = (t[t["labeled"]==0].uid.values[:active_set_size])
         labeling = {active_uid: true_labels[active_uid] for active_uid in active_uids}
         client.post("/label", json=labeling)
@@ -133,7 +134,7 @@ def test_al_strategies(client):
     active_set_size = 10
     active_round = 0
     percentage_near_labeled = 0
-    active_strategy = "most_needed"
+    active_strategy = "dp_most_needed"
     avg_accuracies = []
     avg_recalls = []
     avg_precisions = []

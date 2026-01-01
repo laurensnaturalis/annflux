@@ -23,7 +23,7 @@ import pandas
 from numpy._typing import NDArray
 
 from annflux.repository.dataset import Dataset
-from annflux.repository.model import Model
+from annflux.repository.model import Model, ClipModel
 from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
 
@@ -32,6 +32,7 @@ def make_resultset(
     dataset: Dataset, features: NDArray, repo: Repository, message=None
 ) -> Resultset:
     data = dataset.as_dataframe()
+    print(f"make_resultset {len(data)} rows")
     tmp_folder = tempfile.mkdtemp()
     try:
         resultset = Resultset(tmp_folder)
@@ -42,7 +43,7 @@ def make_resultset(
             [feature_[0] for feature_ in features], 0.0, 1.0
         )
         data.to_csv(resultset.predictions_path, index=False)
-        model = repo.get(label=Model, tag="trained").first()
+        model = repo.get(label=ClipModel, tag="trained").first()
         repo.commit(
             resultset,
             ancestors=[dataset] + ([model] if model is not None else []),

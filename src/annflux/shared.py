@@ -64,7 +64,7 @@ class AnnfluxSource(object):
         return os.path.join(self.annflux_folder_, "stream_process.csv") # ty: ignore
 
     @property
-    def images_folder(self):
+    def images_folder(self) -> str:
         """
         Folder where images are located
         """

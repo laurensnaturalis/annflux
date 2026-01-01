@@ -70,12 +70,17 @@ def linear_retraining(state: AnnFluxState, status_callback):
 
     model2 = Model(inputs=[input_], outputs=[features_])
     reduce_lr = ReduceLROnPlateau(
-        monitor="val_loss", factor=0.5, patience=3, min_lr=0.000001, verbose=1, min_delta=1e-3
+            monitor="val_loss",
+        factor=0.5,
+        patience=3,
+        min_lr=0.000001,
+        verbose=1,
+        min_delta=1e-3,
     )
     model.summary()
 
     loss_ = "binary_crossentropy"
-    model.compile(loss=loss_, optimizer=Adam(learning_rate=0.01), metrics=["accuracy"])
+    model.compile(loss=loss_, optimizer=Adam(learning_rate=0.05), metrics=["accuracy"])
 
     weights_path = os.path.join(state.annflux_folder, "linear.weights.h5")
     checkpointer = ModelCheckpoint(
@@ -87,15 +92,15 @@ def linear_retraining(state: AnnFluxState, status_callback):
     )
 
     model.fit(
-        x=BalanceSequence(x_train, y_train, 1024, balance=balance),
-        batch_size=1024,
+        x=BalanceSequence(x_train, y_train, 2 * 1024, balance=balance),
+        batch_size=2 * 1024,
         validation_data=(x_test, y_test),
         epochs=200,
         verbose=1,
         callbacks=[
+            EarlyStopping(patience=5),
             reduce_lr,
             checkpointer,
-            EarlyStopping(patience=5),
             status_callback,
         ],
     )
@@ -116,7 +121,13 @@ class BalanceSequence(PyDataset):
         class_counts = Counter(np.argmax(self.y, axis=1))
         self.classes_ = list(class_counts.keys())
         if balance:
-            self.class_weights = None
+            # self.class_weights = None
+            self.class_weights = np.array(
+                [class_counts[x_] for x_ in self.classes_], dtype=float
+            )
+            min_count = self.class_weights.min()
+            self.class_weights = np.clip(self.class_weights, min_count, 10 * min_count)
+            self.class_weights /= self.class_weights.sum()
         else:
             self.class_weights = np.array(
                 [class_counts[x_] for x_ in self.classes_], dtype=float
@@ -130,11 +141,13 @@ class BalanceSequence(PyDataset):
     def __len__(self):
         return math.ceil(len(self.x) / self.batch_size)
 
-    def __getitem__(self, idx): # ty: ignore[invalid-method-override]
+    def __getitem__(self, idx):  # ty: ignore[invalid-method-override]
         indices_batch = []
         for _ in range(self.batch_size):
             class_ = np.random.choice(self.classes_, p=self.class_weights)
             indices_batch.append(np.random.choice(self.class_to_indices[class_]))
 
         print(type(self.x[indices_batch]))
-        return self.x[indices_batch], self.y[indices_batch] # ty: ignore[invalid-return-type]
+        return self.x[indices_batch], self.y[
+            indices_batch
+        ]  # ty: ignore[invalid-return-type]
