@@ -292,24 +292,24 @@ function addImages(
             return d.label_true;
         });
     //
-    if (localStorage.getItem("debug") >= 2) {
-        d3Element.selectAll("text").remove();
-        d3Element
-            .selectAll("text")
-            .data(show_data)
-            .enter()
-            .append("text")
-            .attr("x", function (d) {
-                return renderImageType === "thumbnail" ? x(Number(d[xName])) : 0;
-            })
-            .attr("y", function (d) {
-                return renderImageType === "thumbnail" ? (isTileRendering ? x(Number(d[yName])) : y(Number(d[yName]))) : 0; //TODO: think about this
-            })
-            .attr("style", `fill:red;font-size:0.2em`)
-            .text(function (d) {
-                return Math.round(renderImageType === "thumbnail" ? (isTileRendering ? x(Number(d[yName])) : y(Number(d[yName]))) : 0);
-            });
-    }
+    // if (localStorage.getItem("debug") >= 2) {
+    //     d3Element.selectAll("text").remove();
+    //     d3Element
+    //         .selectAll("text")
+    //         .data(show_data)
+    //         .enter()
+    //         .append("text")
+    //         .attr("x", function (d) {
+    //             return renderImageType === "thumbnail" ? x(Number(d[xName])) : 0;
+    //         })
+    //         .attr("y", function (d) {
+    //             return renderImageType === "thumbnail" ? (isTileRendering ? x(Number(d[yName])) : y(Number(d[yName]))) : 0; //TODO: think about this
+    //         })
+    //         .attr("style", `fill:red;font-size:0.2em`)
+    //         .text(function (d) {
+    //             return Math.round(renderImageType === "thumbnail" ? (isTileRendering ? x(Number(d[yName])) : y(Number(d[yName]))) : 0);
+    //         });
+    // }
     //
 
     d3.selectAll("image").on("click", selectImage);

@@ -325,7 +325,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         dataset: pandas.DataFrame,
         classes_: list[str],
         multi=False,
-        batch_size=512,
+        batch_size=256,
         feature_cache_path: str | None = None,
         flush=True,
         other_feature_cache_path: str | None = None,
@@ -359,6 +359,9 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                     ]  # ty:ignore[invalid-argument-type, non-subscriptable, not-iterable]
                 ]
             )
+            other_filename_to_index = dict(
+                zip(other_filenames, range(len(other_filenames)))
+            )
             other_features = other_feature_cache.get(
                 "features"
             )  # ty:ignore[invalid-assignment]
@@ -369,7 +372,8 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         do_batched = True
         if do_batched:
             filenames = dataset.filename
-            num_batches = len(filenames) // batch_size + 1
+            num_batches = int(np.ceil(len(filenames) / batch_size))
+
             features_per_batch: list[NDArray] | list[None] = [
                 None,
             ] * num_batches
@@ -384,6 +388,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
             def get_sliced_array(
                 feature_cache_: Group, name_: str, start_: int, end_: int
             ) -> NDArray:
+                # noinspection PyTypeChecker
                 return feature_cache_.get(name_)[start_:end_]  # ty: ignore
 
             for batch in tqdm(
@@ -407,11 +412,6 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                             cache_batch_features = get_sliced_array(
                                 feature_cache, "features", start, end
                             )
-                            # cache_batch_features = feature_cache.get(
-                            #     "features"
-                            # )[  # ty: ignore
-                            #     start:end
-                            # ]
                             feature_sum = np.all(
                                 np.sum(cache_batch_features, axis=1) != 0
                             )
@@ -435,15 +435,14 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                     elif other_features is not None:
                         indices = np.array(
                             [
-                                int(np.where(other_filenames == item)[0][0])
-                                if np.any(other_filenames == item)
-                                else -1
+                                other_filename_to_index.get(item, -1)
                                 for item in [
                                     basename_no_extension(x_)
                                     for x_ in filenames[start:end]
                                 ]
                             ]
                         )
+                        # assert np.all(indices1 == indices)
                         if np.all(indices > -1):
                             print(
                                 f"Features already in other cache, skipping batch {batch_i=}, {other_features[indices].shape=}, {other_probs[indices].shape=}"
@@ -511,6 +510,8 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                         feature_cache = None
                 batch_i += 1
             # end - batch loop
+            for x in features_per_batch:
+                print(x.shape)
             features = np.vstack(features_per_batch)  # ty: ignore[no-matching-overload]
             probs = np.vstack(probs_per_batch)  # ty: ignore[no-matching-overload]
 

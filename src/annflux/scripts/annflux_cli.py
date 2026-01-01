@@ -42,7 +42,7 @@ from annflux.shared import AnnfluxSource
 from annflux.tools.api_sdk import is_port_open, call_predict
 from annflux.tools.mixed import get_logger
 from annflux.train_features import train_then_features
-from annflux.tools.data import init_folder
+from annflux.tools.data import init_folder, purge
 from annflux.training.annflux.feature_extractor import TrainParameters
 import annflux
 
@@ -121,6 +121,15 @@ def execute(arg_list: list[str] | None = None):
     export_parser.add_argument(
         "--out_folder", type=str, help="Model package folder", default=None
     )
+    #
+    purge_parser = subparsers.add_parser("purge", help="TODO")
+    purge_parser.add_argument("folder", type=str, help="Data folder")
+    purge_parser.add_argument(
+        "--balance_factor", type=float, help="TODO", default=10.0
+    )
+    purge_parser.add_argument(
+        "--num_to_keep", type=int, help="TODO", default=10000
+    )
 
     args = parser.parse_args(arg_list)
     folder = os.path.expanduser(args.folder)
@@ -134,6 +143,12 @@ def execute(arg_list: list[str] | None = None):
             import_stream_metadata=args.import_stream_metadata,
         )
         print(f"Initialized AnnFlux in folder {source.working_folder}")
+    elif args.command == "purge":
+        purge(
+            source,
+            balance_factor=args.balance_factor,
+            num_to_keep=args.num_to_keep,
+        )
     elif args.command == "train_then_features":
         train_then_features(
             source,
@@ -261,6 +276,7 @@ def stream(
     subsample=None,
     sort_stream=True,
 ):
+    print(f"stream {al_selection_fraction=}")
     stream_logger = get_logger("stream_process.log", "a")
     stream_process_config_path = os.path.join(source.working_folder, "stream.json")
     if os.path.exists(stream_process_config_path):
@@ -363,9 +379,10 @@ def stream(
             model_version, port, stream_process_table, table_to_predict, tmp_path
         )
     else:
+        table_to_predict.rename(columns={"patch_path": "path"}, inplace=True) # TODO: in tile function
         table_to_predict["filename"] = table_to_predict[
             "path"
-        ]  # TODO: patch_path --> path
+        ]
         features, probs, model = train_then_features(
             source,
             table_to_predict,
@@ -433,6 +450,7 @@ def stream(
     data_to_add = stream_process_table[
         stream_process_table["original_id"].isin(al_selection)
     ]
+    data_to_add.rename(columns={"patch_path": "path"}, inplace=True)
     # - Run 'data add'
     # TODO: make atomic operation
     os.makedirs(source.images_folder, exist_ok=True)

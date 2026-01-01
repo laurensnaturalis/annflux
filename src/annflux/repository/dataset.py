@@ -65,6 +65,7 @@ class Dataset(RepositoryObject):
         data = pandas.read_csv(self.path, dtype={"label": str})
 
         filenames = map(lambda x: os.path.split(x)[-1], data["filename"])
+        print(data.columns)
         labels = data["label"].fillna("")
 
         return hashlib.sha224(

@@ -194,7 +194,7 @@ function Map2D($container) {
         }
 
         function dragEnd(event, elementId) {
-            //console.log("dragEnd", event, elementId);
+            console.log("dragEnd", event, elementId);
             let selectedElements = [];
             const uiObject = gReferences.get(elementId);
             const uiElements = dots ? dots : this.images;
@@ -213,11 +213,11 @@ function Map2D($container) {
                 }
             }
             // sort
-            const rank_modifier = urlParams.get("invert_ranking") == "on" ? -1 : +1;
-            let as_ranking_column = urlParams.get("as_ranking_column");
-            show_data = show_data.sort(
-                (a, b) => rank_modifier * (a[as_ranking_column] - b[as_ranking_column])
-            );
+            // const rank_modifier = urlParams.get("invert_ranking") == "on" ? -1 : +1;
+            // let as_ranking_column = urlParams.get("as_ranking_column");
+            // show_data = show_data.sort(
+            //     (a, b) => rank_modifier * (a[as_ranking_column] - b[as_ranking_column])
+            // );
             console.log("dragEnd", show_data.length, show_data);
             drawGallery(show_data);
         }

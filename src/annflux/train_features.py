@@ -79,7 +79,7 @@ def train_then_features(
     Returns (features, probs) of `dataset`
     """
     if dataset is None:
-        dataset = source.repository.get(label=Dataset, tag="unseen").last()
+        dataset: Dataset = source.repository.get(label=Dataset, tag="unseen").last()
     if isinstance(dataset, Dataset):
         data = dataset.as_dataframe()
     else:

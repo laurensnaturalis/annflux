@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from numpy.random import choice
 import copy
 import glob
 import itertools
@@ -19,7 +20,7 @@ import logging
 import os
 import shutil
 import time
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime
 from functools import lru_cache
 from multiprocessing import Pool
@@ -315,13 +316,30 @@ def color_and_label(
         data_to_update["incorrect_score"] = 0.0
         # TODO: use vector update
         for r, row in data_to_update.iterrows():
-            label_possible = str(row.label_possible) if not pandas.isna(row.label_possible) else ""
-            score_possible = str(row.score_possible) if not pandas.isna(row.label_possible) else ""
-            label_predicted = str(row.label_predicted) if not pandas.isna(row.label_predicted) else ""
-            scores_predicted = str(row.scores_predicted) if not pandas.isna(row.scores_predicted) else ""
+            label_possible = (
+                str(row.label_possible) if not pandas.isna(row.label_possible) else ""
+            )
+            score_possible = (
+                str(row.score_possible) if not pandas.isna(row.label_possible) else ""
+            )
+            label_predicted = (
+                str(row.label_predicted) if not pandas.isna(row.label_predicted) else ""
+            )
+            scores_predicted = (
+                str(row.scores_predicted)
+                if not pandas.isna(row.scores_predicted)
+                else ""
+            )
             label_true = row.label_true
             if row.uid == "GBIF_2837755165_0":
-                print("incorrect_score", label_possible, score_possible, label_predicted, scores_predicted, label_true)
+                print(
+                    "incorrect_score",
+                    label_possible,
+                    score_possible,
+                    label_predicted,
+                    scores_predicted,
+                    label_true,
+                )
             if (
                 row.labeled == 0
                 or (len(label_possible) == 0 and len(label_predicted) == 0)
@@ -470,7 +488,9 @@ def add_group_to_exclusivity(group_children: List[str], exclusivity_path: str):
     Add an exclusivity group to the exclusivity database
     """
     exclusivity_relations = itertools.combinations(group_children, 2)
-    update = pandas.DataFrame(exclusivity_relations, columns=["left", "right"])  # ty: ignore
+    update = pandas.DataFrame(
+        exclusivity_relations, columns=["left", "right"]
+    )  # ty: ignore
     if os.path.exists(exclusivity_path):
         exclusivity_table = pandas.read_csv(exclusivity_path)
         exclusivity_table = pandas.concat(
@@ -557,12 +577,13 @@ def init_folder(
         os.makedirs(working_folder)
         with open(os.path.join(working_folder, "label_defs.json"), "w") as f:
             json.dump({"labels": start_labels}, f)
-        pandas.DataFrame(data=exclusivity, columns=["left", "right"]).to_csv(  # ty: ignore
+        pandas.DataFrame(
+            data=exclusivity, columns=["left", "right"]
+        ).to_csv(  # ty: ignore
             os.path.join(working_folder, "exclusivity.csv"), index=False
         )
 
     unseen_dataset_path = os.path.join(working_folder, "unseen_annflux_data.csv")
-    unseen_data = None
     if not os.path.exists(unseen_dataset_path) or refresh_media:
         if not os.path.exists(data_path) or refresh_media:
             make_images(images_path)
@@ -581,7 +602,7 @@ def init_folder(
                     ]
                     * len(image_ids),
                 ),
-                columns=[id_column, label_column_for_unseen], # ty: ignore
+                columns=[id_column, label_column_for_unseen],  # ty: ignore
             )
             images_table.to_csv(data_path, index=False)
 
@@ -608,9 +629,15 @@ def init_folder(
             stream_metadata = pandas.read_csv(
                 os.path.join(source.working_folder, "stream_process.csv")
             )
-
+            stream_metadata["image_id"] = stream_metadata["image_id"].apply(
+                lambda x_: x_.replace("-", "_")
+            )  # TODO: fix in stream code
             unseen_data = pandas.merge(
-                unseen_data, stream_metadata, left_on=id_column, right_on="image_id"
+                unseen_data,
+                stream_metadata,
+                left_on=id_column,
+                right_on="image_id",
+                suffixes=("", "y"),
             )  # TODO: image_id
         #
         unseen_data.to_csv(unseen_dataset_path, index=False)
@@ -619,13 +646,17 @@ def init_folder(
     taxon_mapping_path = os.path.join(source.working_folder, "taxon_mapping.csv")
     if not os.path.exists(taxon_mapping_path):  # TODO: check if this is still necessary
         ids = [str(x_) for x_ in range(1000)]
-        pandas.DataFrame(data=list(zip(ids, ids)), columns=["label", "taxon"]).to_csv( # ty: ignore
+        pandas.DataFrame(
+            data=list(zip(ids, ids)), columns=["label", "taxon"]
+        ).to_csv(  # ty: ignore
             taxon_mapping_path
         )
 
     #
     split_path = os.path.join(working_folder, "split.json")
-    if not os.path.exists(split_path):
+    if (
+        not os.path.exists(split_path) or refresh_media
+    ):  # TODO: keep current test images in split
         np.random.seed(random_seed)
         test_uids = np.random.choice(
             unseen_data.uid.values, int(0.10 * len(unseen_data)), replace=False
@@ -637,6 +668,51 @@ def init_folder(
         dataset = Dataset(unseen_dataset_path, taxon_mapping_path=taxon_mapping_path)
         repo.commit(dataset, tag="unseen")
 
+    return source
+
+
+def purge(
+    source: AnnfluxSource,
+    balance_factor=10.0,
+    num_to_keep=10000,
+) -> AnnfluxSource:
+    #
+    annotations = json.load(open(source.labels_path))
+    basenames_to_keep = []
+    for uid, value in annotations.items():
+        annotations[uid] = canon_(value, remove_unknown=True)
+    num_to_keep -= len(annotations)
+    basenames_to_keep.extend(list(annotations.keys()))
+    data = pandas.read_csv(source.data_state_path)
+    data["label_predicted"] = data["label_predicted"].apply(
+        lambda x_: canon_(x_, remove_unknown=True)
+    )
+    class_to_basenames = defaultdict(lambda: [])
+    for class_, basename in zip(data["label_predicted"], data["uid"]):
+        class_to_basenames[class_].append(basename)
+
+    print(Counter(annotations.values()))
+    pred_counter = Counter(data["label_predicted"])
+    print(pred_counter)
+
+    pred_counts = np.array(list(pred_counter.values()))
+    pred_counts_target = np.clip(pred_counts, 0, balance_factor * np.median(pred_counts))
+
+    while pred_counts_target.sum() < num_to_keep:
+        balance_factor += 1
+        pred_counts_target = np.clip(
+            pred_counts, 0, balance_factor * np.median(pred_counts)
+        )
+    print(pred_counts_target)
+    for class_, target_count in zip(pred_counter.keys(), pred_counts_target):
+        basenames_to_keep.extend(choice(class_to_basenames[class_], int(target_count)))
+    print(len(basenames_to_keep))
+    basenames_to_keep = set(basenames_to_keep)
+    for fn in os.listdir(source.images_folder):
+        if basename_no_extension(fn) not in basenames_to_keep:
+            os.remove(os.path.join(source.images_folder, fn))
+        else:
+            print(f"keeping {basename_no_extension(fn)}")
     return source
 
 
