@@ -97,9 +97,9 @@ class AnnFluxState(object):
 
     knn_index = None
     all_distances = None
-    all_indices = None
+    all_indices: NDArray = None # ty:ignore
     opt_knn_rank_exponent = None
-    knn_rank_exponent = 3
+    knn_rank_exponent = 1
     label_array: NDArray
     label_array_test: NDArray
     labeled_indices_: NDArray

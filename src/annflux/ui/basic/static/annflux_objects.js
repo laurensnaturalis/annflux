@@ -37,6 +37,7 @@ function Map2D($container) {
             //TODO: check mode in known values
             mode = mode_;
         }
+        this.mode = mode;
         if (localStorage.getItem("debug") === "1") {
             console.log("init", elementId_, elementId, mode, mode_);
         }
@@ -88,7 +89,11 @@ function Map2D($container) {
         this.filters = filters_;
     };
 
-    this.setData = function (data, doRender) {
+    this.setData = function (data, doRender, mode, show_labeled, as_ranking_column, ignore_double_checked) {
+        if (mode === undefined) {
+            mode = this.mode;
+        }
+        // alert(mode);
         if (localStorage.getItem("debug") === "1") {
             console.log("setData 2", elementId, mode, doRender);
         }
@@ -225,11 +230,11 @@ function Map2D($container) {
         //
         if (mode === "embedding") {
             // auto suggestion
-            let as_ranking_column = urlParams.get("as_ranking_column") ?? "most_needed";
+            as_ranking_column = as_ranking_column ?? (urlParams.get("as_ranking_column") ?? "most_needed");
             if (localStorage.getItem("debug") === "2") {
                 console.log("as_ranking_column", as_ranking_column);
             }
-            let show_labeled = urlParams.get("show_labeled") ?? "unlabeled";
+            show_labeled = show_labeled ?? (urlParams.get("show_labeled") ?? "unlabeled");
 
             let show_data2 = [];
             let show_data_test = [];
@@ -248,6 +253,10 @@ function Map2D($container) {
                 "e_0",
                 "e_1"
             );
+            if (as_ranking_column == "nn_sort") {
+                show_data_start = data;
+                console.log("show_data_start", show_data_start);
+            }
             let num_in_gallery = urlParams.get("num_in_gallery") ?? 10;
             if (
                 as_ranking_column == "score_predicted" ||
@@ -293,6 +302,16 @@ function Map2D($container) {
                     }
                 }
             }
+            else {
+                // show_data2 = show_data_start;
+                console.log("before filter", show_data_start);
+
+                show_data2 = show_data_start.filter(
+                    (row) => row.labeled == (show_labeled == "unlabeled" ? 0 : 1) //&& row.in_test == 1
+                );
+                show_data2 = [show_data_start[0], ...show_data2]
+                console.log("unsorted data", show_data2);
+            }
             if (show_labeled == "unlabeled") {
                 for (const row of data) {
                     if (Number(row.in_test) == 1 && Number(row.labeled) == 0) {
@@ -325,7 +344,7 @@ function Map2D($container) {
                     .style("stroke", "#ff0000")
                     .style("stroke-width", 2);
             }
-            drawGallery(show_data2);
+            drawGallery(show_data2, as_ranking_column);
             if (localStorage.getItem("debug") === "1") {
                 console.log(show_data2.length, "show_data2");
             }

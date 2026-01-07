@@ -117,238 +117,251 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
     time_start = time.time()
 
     print("knn labeled", time.time() - time_start)
-    distances, indices = (
-        state.all_distances[state.labeled_indices],
-        state.all_indices[state.labeled_indices],
-    )
-    quicker_updates = int(
-        os.getenv("QUICKER_UPDATES", 0)
-    )  # 0 = off, 1 = display only, 2 = display + knn
-    quicker_updates = (
-        quicker_updates
-        if (state.new_labeled_uids is not None and len(state.new_labeled_uids) > 0)
-        else 0
-    )
-
-    # - figure out neighbors of updated uids
-    new_labeled_nn_idx: Set[int] = set()
     new_labeled_nn_uids = None
-    if quicker_updates:
-        # get indices of new_labeled_uids
-        new_labeled_idx = data[data.uid.isin(state.new_labeled_uids)].index
-        logger.info(f"new_labeled_uids={state.new_labeled_uids}")
-        logger.info(f"new_labeled_idx={new_labeled_idx}")
-        # include the nearest neighbors of the newly labeled UIDs
-        new_labeled_nn_idx = set(state.all_indices[new_labeled_idx].flatten())
-        logger.info(f"new_labeled_nn_idx={len(new_labeled_nn_idx)}")
-        new_labeled_nn_uids = data[data.index.isin(new_labeled_nn_idx)].uid
-        logger.info(f"new_labeled_nn_uids={new_labeled_nn_uids}")
-    #
-    if quicker_updates:
-        if "score_possible" not in data.columns:
+
+    if len(state.labeled_indices) > 0:
+    #     return
+        distances, indices = (
+            state.all_distances[state.labeled_indices],
+            state.all_indices[state.labeled_indices],
+        )
+        quicker_updates = int(
+            os.getenv("QUICKER_UPDATES", 0)
+        )  # 0 = off, 1 = display only, 2 = display + knn
+        quicker_updates = (
+            quicker_updates
+            if (state.new_labeled_uids is not None and len(state.new_labeled_uids) > 0)
+            else 0
+        )
+
+        # - figure out neighbors of updated uids
+        new_labeled_nn_idx: Set[int] = set()
+        if quicker_updates:
+            # get indices of new_labeled_uids
+            new_labeled_idx = data[data.uid.isin(state.new_labeled_uids)].index
+            logger.info(f"new_labeled_uids={state.new_labeled_uids}")
+            logger.info(f"new_labeled_idx={new_labeled_idx}")
+            # include the nearest neighbors of the newly labeled UIDs
+            new_labeled_nn_idx = set(state.all_indices[new_labeled_idx].flatten())
+            logger.info(f"new_labeled_nn_idx={len(new_labeled_nn_idx)}")
+            new_labeled_nn_uids = data[data.index.isin(new_labeled_nn_idx)].uid
+            logger.info(f"new_labeled_nn_uids={new_labeled_nn_uids}")
+        #
+        if quicker_updates:
+            if "score_possible" not in data.columns:
+                data["label_predicted"] = None
+                data["scores_predicted"] = None
+                data["label_possible"] = ""
+                data["score_possible"] = None
+            else:
+                data.loc[list(new_labeled_nn_idx), "label_predicted"] = None
+                data.loc[list(new_labeled_nn_idx), "scores_predicted"] = None
+                data.loc[list(new_labeled_nn_idx), "label_possible"] = ""
+                data.loc[list(new_labeled_nn_idx), "score_possible"] = None
+        else:
             data["label_predicted"] = None
             data["scores_predicted"] = None
-            data["label_possible"] = ""
+            data["label_possible"] = None
             data["score_possible"] = None
-        else:
-            data.loc[list(new_labeled_nn_idx), "label_predicted"] = None
-            data.loc[list(new_labeled_nn_idx), "scores_predicted"] = None
-            data.loc[list(new_labeled_nn_idx), "label_possible"] = ""
-            data.loc[list(new_labeled_nn_idx), "score_possible"] = None
-    else:
-        data["label_predicted"] = None
-        data["scores_predicted"] = None
-        data["label_possible"] = None
-        data["score_possible"] = None
 
-    # -- make predictions for labeled indices
-    logger.info(f"Using knn_rank_exponent={state.knn_rank_exponent}")
-    indices_ = indices
-    distances_ = distances
-    labeled_indices_ = state.labeled_indices
-    logger.info(f"labeled_indices_={len(labeled_indices_)}")
-    new_labeled_indices_for_fre = None
-    if quicker_updates > 1:
-        idx_sel = [
-            i_
-            for i_, idx_ in enumerate(state.labeled_indices)
-            if idx_ in new_labeled_nn_idx
-        ]
-        indices_ = indices_[idx_sel]
-        distances_ = distances_[idx_sel]
-        labeled_indices_ = np.array(labeled_indices_)[idx_sel].tolist()
-        new_labeled_indices_for_fre = labeled_indices_
-        logger.info(
-            f"quicker_updates: labeled_indices_ before test_indices={len(labeled_indices_)}"
-        )
-        labeled_indices_.extend(test_indices)
-        logger.info(f"quicker_updates: labeled_indices_={len(labeled_indices_)}")
-    state.g_quick_status = "predicting labeled"
-    logger.info(f"make_predictions: labeled_indices_={len(labeled_indices_)}")
-    make_predictions(
-        data,
-        indices_,
-        distances_,
-        state.label_array,
-        labeled_indices_,
-        skip_first=True,
-        knn_rank_exponent=state.knn_rank_exponent,
-        tag="predicting labeled",
-    )
-
-    #
-    has_density_peak = "dp_most_needed" in data.columns
-    if not has_density_peak:
-        prev_near_labeled_perc = get_performance_key_val(
-            state.performance_path, "percentage_near_labeled", -1.0
-        )
-        if prev_near_labeled_perc < min_prev_near_labeled_perc:
-            state.g_quick_status = "computing most needed"
-            counter_of_most_need, near_labeled_indices, near_labeled_perc = (
-                compute_most_needed(
-                    state.all_indices, state.labeled_indices, state.features
-                )
+        # -- make predictions for labeled indices
+        logger.info(f"Using knn_rank_exponent={state.knn_rank_exponent}")
+        indices_ = indices
+        distances_ = distances
+        labeled_indices_ = state.labeled_indices
+        logger.info(f"labeled_indices_={len(labeled_indices_)}")
+        new_labeled_indices_for_fre = None
+        if quicker_updates > 1:
+            idx_sel = [
+                i_
+                for i_, idx_ in enumerate(state.labeled_indices)
+                if idx_ in new_labeled_nn_idx
+            ]
+            indices_ = indices_[idx_sel]
+            distances_ = distances_[idx_sel]
+            labeled_indices_ = np.array(labeled_indices_)[idx_sel].tolist()
+            new_labeled_indices_for_fre = labeled_indices_
+            logger.info(
+                f"quicker_updates: labeled_indices_ before test_indices={len(labeled_indices_)}"
             )
+            labeled_indices_.extend(test_indices)
+            logger.info(f"quicker_updates: labeled_indices_={len(labeled_indices_)}")
+        state.g_quick_status = "predicting labeled"
+        logger.info(f"make_predictions: labeled_indices_={len(labeled_indices_)}")
+        make_predictions(
+            data,
+            indices_,
+            distances_,
+            state.label_array,
+            labeled_indices_,
+            skip_first=True,
+            knn_rank_exponent=state.knn_rank_exponent,
+            tag="predicting labeled",
+        )
+
+        #
+        has_density_peak = "dp_most_needed" in data.columns
+        if not has_density_peak:
+            prev_near_labeled_perc = get_performance_key_val(
+                state.performance_path, "percentage_near_labeled", -1.0
+            )
+            if prev_near_labeled_perc < min_prev_near_labeled_perc:
+                state.g_quick_status = "computing most needed"
+                counter_of_most_need, near_labeled_indices, near_labeled_perc = (
+                    compute_most_needed(
+                        state.all_indices, state.labeled_indices, state.features
+                    )
+                )
+                write_performance_key_val(
+                    state.performance_path, "percentage_near_labeled", near_labeled_perc
+                )
+            else:
+                logger.warning(
+                    f"Skipping most needed because {prev_near_labeled_perc=}<{min_prev_near_labeled_perc}"
+                )
+                near_labeled_indices = np.arange(len(state.all_distances))
+                counter_of_most_need = {}
+        else:
+            near_labeled_indices, near_labeled_perc = compute_near_labeled(
+                state.all_indices, state.labeled_indices
+            )
+            counter_of_most_need = {}
+        # predictions for near labeled
+        time_start = time.time()
+        distances, indices = (
+            state.all_distances[near_labeled_indices],
+            state.all_indices[near_labeled_indices],
+        )
+        logger.info(f"knn near_labeled={time.time() - time_start}")
+        data["entropy"] = -np.inf
+        data["al_measure"] = len(data) + 1
+        data["most_needed"] = len(data) + 1
+        # - make predictions for near labeled
+        indices_ = indices
+        distances_ = distances
+        near_labeled_indices_ = near_labeled_indices
+        if quicker_updates > 1:
+            idx_sel = [
+                i_
+                for i_, idx_ in enumerate(near_labeled_indices)
+                if idx_ in new_labeled_nn_idx
+            ]
+            indices_ = indices_[idx_sel]
+            distances_ = distances_[idx_sel]
+            near_labeled_indices_ = np.array(near_labeled_indices)[idx_sel].tolist()
+            near_labeled_indices_.extend(test_indices)
+        state.g_quick_status = "computing predictions"
+        logger.info(f"make_predictions: near_labeled_indices_={len(near_labeled_indices_)}")
+        make_predictions(
+            data,
+            indices_,
+            distances_,
+            state.label_array,
+            near_labeled_indices_,
+            knn_rank_exponent=state.knn_rank_exponent,
+            tag="predicting near labelled",
+        )
+        data.label_predicted = data.label_predicted.apply(lambda x_: canon_(x_))
+        data.label_true = data.label_true.apply(lambda x_: canon_(x_))
+        # FRE
+        state.g_quick_status = "computing FRE"
+        compute_fre(
+            annotations,
+            data,
+            state.features,
+            state.labeled_indices,
+            test_uids,
+            new_labeled_indices_for_fre,
+        )
+        #
+        most_needed_first = sorted(counter_of_most_need.items(), key=lambda t_: -t_[1])
+        for i_, (most_needed_i, _) in enumerate(most_needed_first):
+            data.at[most_needed_i, "most_needed"] = i_
+            if i_ > 500:  # TODO(improvement): based on actual page size
+                break
+        #
+        if has_density_peak:
+            logger.info("Using dp_most_needed for most needed")
+            data["direct_most_needed"] = data["most_needed"]
+            data["most_needed"] = data["dp_most_needed"]
+
+            labeled_uids = set(annotations.keys())
+            data["labeled"] = data["uid"].apply(lambda x_: int(x_ in labeled_uids))
+            data_ = data[data["dp_most_needed"] < data["dp_most_needed"].max()]
+            # print("bloep", data_[data["labeled"] == 0])
+            logger.info(f"|data most needed| = {len(data_)}")
+            near_labeled_perc = len(data_[data["labeled"] == 1]) / len(data_)
+            print(f"has_density_peak: {near_labeled_perc=}")
+
             write_performance_key_val(
                 state.performance_path, "percentage_near_labeled", near_labeled_perc
             )
-        else:
-            logger.warning(
-                f"Skipping most needed because {prev_near_labeled_perc=}<{min_prev_near_labeled_perc}"
+        #
+        # use DP cluster to predict unpredicted
+        if has_dp_cluster and len(annotations) > 0:
+            state.g_quick_status = "computing predictions for unpredicted using DP cluster"
+            unpredicted_idx = data[
+                pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
+            ].index.values.tolist()
+            make_predictions(
+                data,
+                dp_indices[unpredicted_idx],
+                dp_distances[unpredicted_idx],
+                state.label_array[dp_most_needed_idx],
+                unpredicted_idx,
+                knn_rank_exponent=state.knn_rank_exponent,
+                tag="computing predictions for unpredicted using DP cluster",
             )
-            near_labeled_indices = np.arange(len(state.all_distances))
-            counter_of_most_need = {}
-    else:
-        near_labeled_indices, near_labeled_perc = compute_near_labeled(
-            state.all_indices, state.labeled_indices
-        )
-        counter_of_most_need = {}
-    # predictions for near labeled
-    time_start = time.time()
-    distances, indices = (
-        state.all_distances[near_labeled_indices],
-        state.all_indices[near_labeled_indices],
-    )
-    logger.info(f"knn near_labeled={time.time() - time_start}")
-    data["entropy"] = -np.inf
-    data["al_measure"] = len(data) + 1
-    data["most_needed"] = len(data) + 1
-    # - make predictions for near labeled
-    indices_ = indices
-    distances_ = distances
-    near_labeled_indices_ = near_labeled_indices
-    if quicker_updates > 1:
-        idx_sel = [
-            i_
-            for i_, idx_ in enumerate(near_labeled_indices)
-            if idx_ in new_labeled_nn_idx
-        ]
-        indices_ = indices_[idx_sel]
-        distances_ = distances_[idx_sel]
-        near_labeled_indices_ = np.array(near_labeled_indices)[idx_sel].tolist()
-        near_labeled_indices_.extend(test_indices)
-    state.g_quick_status = "computing predictions"
-    logger.info(f"make_predictions: near_labeled_indices_={len(near_labeled_indices_)}")
-    make_predictions(
-        data,
-        indices_,
-        distances_,
-        state.label_array,
-        near_labeled_indices_,
-        knn_rank_exponent=state.knn_rank_exponent,
-        tag="predicting near labelled",
-    )
-    data.label_predicted = data.label_predicted.apply(lambda x_: canon_(x_))
-    data.label_true = data.label_true.apply(lambda x_: canon_(x_))
-    # FRE
-    state.g_quick_status = "computing FRE"
-    compute_fre(
-        annotations,
-        data,
-        state.features,
-        state.labeled_indices,
-        test_uids,
-        new_labeled_indices_for_fre,
-    )
-    #
-    most_needed_first = sorted(counter_of_most_need.items(), key=lambda t_: -t_[1])
-    for i_, (most_needed_i, _) in enumerate(most_needed_first):
-        data.at[most_needed_i, "most_needed"] = i_
-        if i_ > 500:  # TODO(improvement): based on actual page size
-            break
-    #
-    if has_density_peak:
-        logger.info("Using dp_most_needed for most needed")
-        data["direct_most_needed"] = data["most_needed"]
-        data["most_needed"] = data["dp_most_needed"]
-
-        labeled_uids = set(annotations.keys())
-        data["labeled"] = data["uid"].apply(lambda x_: int(x_ in labeled_uids))
-        data_ = data[data["dp_most_needed"] < data["dp_most_needed"].max()]
-        # print("bloep", data_[data["labeled"] == 0])
-        logger.info(f"|data most needed| = {len(data_)}")
-        near_labeled_perc = len(data_[data["labeled"] == 1]) / len(data_)
-        print(f"has_density_peak: {near_labeled_perc=}")
+            unpredicted_idx = data[
+                pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
+            ].index.values
+            print(f"{len(unpredicted_idx)=} after make_predictions")
+        logger.info(f"make_predictions end={time.time()}")
 
         write_performance_key_val(
-            state.performance_path, "percentage_near_labeled", near_labeled_perc
+            state.performance_path,
+            "percentage_labeled_possible",
+            1
+            - len(
+                data[
+                    pandas.isna(data["label_possible"])
+                    & pandas.isna(data["label_predicted"])
+                ]
+            )
+            / len(data),
         )
-    #
-    # use DP cluster to predict unpredicted
-    if has_dp_cluster and len(annotations) > 0:
-        state.g_quick_status = "computing predictions for unpredicted using DP cluster"
-        unpredicted_idx = data[
-            pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
-        ].index.values.tolist()
-        make_predictions(
+        #
+        state.g_quick_status = "computing performance"
+        labeled_predicted_test_data = data[
+            (data.in_test == 1)
+            & (data.labeled == 1)
+            & ~pandas.isna(data.label_predicted)
+            & ~pandas.isna(data.label_true)
+        ]
+        predicted_test = [
+            canon_(x_, remove_unknown=True, remove_sys=True)
+            for x_ in labeled_predicted_test_data.label_predicted
+        ]
+
+        predicted_test = [x_.split(",") if x_ is not None else [] for x_ in predicted_test]
+        true_test = [
+            canon_(x_, remove_unknown=True, remove_sys=True)
+            for x_ in labeled_predicted_test_data.label_true
+        ]
+        true_test = [x_.split(",") if x_ is not None else [] for x_ in true_test]
+        logger.info(f"|predicted_test|={len(predicted_test)}")
+        print(f"{predicted_test=}, {true_test=}")
+        compute_performance(
+            predicted_test,
+            true_test,
+            annotations,
             data,
-            dp_indices[unpredicted_idx],
-            dp_distances[unpredicted_idx],
-            state.label_array[dp_most_needed_idx],
-            unpredicted_idx,
-            knn_rank_exponent=state.knn_rank_exponent,
-            tag="computing predictions for unpredicted using DP cluster",
+            len(state.labeled_indices),
+            performance_graph_path=os.path.join(state.annflux_folder, "performance.json"),
+            detailed_performance_path=os.path.join(
+                state.annflux_folder, "detailed_performance.csv"
+            )
         )
-        unpredicted_idx = data[
-            pandas.isna(data.label_predicted) & (pandas.isna(data.label_possible))
-        ].index.values
-        print(f"{len(unpredicted_idx)=} after make_predictions")
-    logger.info(f"make_predictions end={time.time()}")
-
-    write_performance_key_val(
-        state.performance_path,
-        "percentage_labeled_possible",
-        1
-        - len(
-            data[
-                pandas.isna(data["label_possible"])
-                & pandas.isna(data["label_predicted"])
-            ]
-        )
-        / len(data),
-    )
-    #
-    state.g_quick_status = "computing performance"
-    labeled_predicted_test_data = data[
-        (data.in_test == 1)
-        & (data.labeled == 1)
-        & ~pandas.isna(data.label_predicted)
-        & ~pandas.isna(data.label_true)
-    ]
-    predicted_test = [
-        canon_(x_, remove_unknown=True, remove_sys=True)
-        for x_ in labeled_predicted_test_data.label_predicted
-    ]
-
-    predicted_test = [x_.split(",") if x_ is not None else [] for x_ in predicted_test]
-    true_test = [
-        canon_(x_, remove_unknown=True, remove_sys=True)
-        for x_ in labeled_predicted_test_data.label_true
-    ]
-    true_test = [x_.split(",") if x_ is not None else [] for x_ in true_test]
-    logger.info(f"|predicted_test|={len(predicted_test)}")
-    print(f"{predicted_test=}, {true_test=}")
-    compute_performance(predicted_test, true_test, state, annotations, data)
     state.g_quick_status = "coloring and labelling"
 
     class_to_color, class_to_count = color_and_label(
@@ -430,7 +443,7 @@ def load_data(state: AnnFluxState, logger: logging.Logger, no_linear_features=Fa
     logger.info(f"instant_reclassification 3={time.time()}")
     reload_features = state.cache_for != result_set.entry.uid
     logger.info(
-        f"{state.version_for_recompute=}, {result_set.entry.uid=},{state.trained_for_version_previous=}"
+        f"{result_set.entry.uid=},{state.trained_for_version_previous=}"
     )
     if reload_features:
         state.g_quick_status = "Loading features"
@@ -520,7 +533,9 @@ def compute_knn(
         knn_index = faiss.index_factory(  # ty:ignore[possibly-missing-attribute]
             features_train.shape[1],
             "Flat",
-            {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],  # ty:ignore[possibly-missing-attribute]
+            {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}[
+                "l2"
+            ],  # ty:ignore[possibly-missing-attribute]
         )
         features_train *= 1 - 1e-2 * np.random.rand(
             features_train.shape[0], features_train.shape[1]
@@ -598,7 +613,9 @@ def quick_reclassification_group(knn_type, state, logger):
     knn_index = faiss.index_factory(  # ty:ignore[possibly-missing-attribute]
         state.group_features.shape[1],
         "Flat",
-        {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}["l2"],  # ty:ignore[possibly-missing-attribute]
+        {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}[
+            "l2"
+        ],  # ty:ignore[possibly-missing-attribute]
     )
     state.group_features *= 1 - 1e-2 * np.random.rand(
         state.group_features.shape[0], state.group_features.shape[1]
@@ -736,8 +753,8 @@ def make_predictions(
         update[key] = [
             (-1, None),
         ] * len(indices)
-    data["scores_predicted"] = data["scores_predicted"].astype(str)
-    data["score_possible"] = data["score_possible"].astype(str)
+    # data["scores_predicted"] = data["scores_predicted"].astype(str)
+    # data["score_possible"] = data["score_possible"].astype(str)
     org_index_to_uid = dict(zip(data.index, data.uid))
     if "num_labeled_nn" not in data.columns:
         data["num_labeled_nn"] = None
@@ -749,12 +766,17 @@ def make_predictions(
         start_time = time.time()
         org_index = data_indices[i]
 
+        case_debug = org_index_to_uid[org_index] == "AO_NS_1024254"
+
+
         probabilities = defaultdict(lambda: 0)
         # knn class histogram
         max_mass = 0
         multilabel_: List[str]
         num_labeled_nn = 0
         min_distance = None
+        if case_debug:
+            print("CASE_DEBUG", org_index, indices_for_i, train_labels[indices_for_i])
         for i2, multilabel_ in enumerate(train_labels[indices_for_i]):
             if skip_first and i2 == 0:
                 continue
@@ -779,8 +801,6 @@ def make_predictions(
         update["num_labeled_nn"][i] = (org_index, num_labeled_nn)
         update["min_distance"][i] = (org_index, min_distance)
         #
-        if org_index_to_uid[org_index] == "358_20230612022602":
-            print("oemboe", tag, "358_20230612022602", probabilities)
         if len(probabilities) > 0:
             max_labels = [
                 label_ for label_, prob_ in probabilities.items() if prob_ > 0.5

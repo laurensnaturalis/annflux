@@ -42,7 +42,12 @@ class DataSource:
 
     def copy_to(self, folder: str | PathLike):
         shutil.copytree(self.out_folder, folder)
-        logger.warning(f"Copied to {self.out_folder}")
+        # # TMP:
+        # import numpy as np
+        # for fn in os.listdir(os.path.join(folder, "images")):
+        #     if np.random.rand() < 0.9:
+        #         os.remove(os.path.join(folder, "images", fn))
+        logger.warning(f"Copied to {self.folder}")
 
     @property
     def true_labels_path(self):

@@ -489,8 +489,9 @@ def add_group_to_exclusivity(group_children: List[str], exclusivity_path: str):
     """
     exclusivity_relations = itertools.combinations(group_children, 2)
     update = pandas.DataFrame(
-        exclusivity_relations, columns=["left", "right"]
-    )  # ty: ignore
+        exclusivity_relations,
+        columns=["left", "right"],  # ty: ignore
+    )
     if os.path.exists(exclusivity_path):
         exclusivity_table = pandas.read_csv(exclusivity_path)
         exclusivity_table = pandas.concat(
@@ -578,8 +579,8 @@ def init_folder(
         with open(os.path.join(working_folder, "label_defs.json"), "w") as f:
             json.dump({"labels": start_labels}, f)
         pandas.DataFrame(
-            data=exclusivity, columns=["left", "right"]
-        ).to_csv(  # ty: ignore
+            data=exclusivity, columns=["left", "right"] # ty: ignore
+        ).to_csv(
             os.path.join(working_folder, "exclusivity.csv"), index=False
         )
 
@@ -647,8 +648,8 @@ def init_folder(
     if not os.path.exists(taxon_mapping_path):  # TODO: check if this is still necessary
         ids = [str(x_) for x_ in range(1000)]
         pandas.DataFrame(
-            data=list(zip(ids, ids)), columns=["label", "taxon"]
-        ).to_csv(  # ty: ignore
+            data=list(zip(ids, ids)), columns=["label", "taxon"] # ty: ignore
+        ).to_csv(
             taxon_mapping_path
         )
 
@@ -672,15 +673,15 @@ def init_folder(
 
 
 def purge(
-    source: AnnfluxSource,
-    balance_factor=10.0,
-    num_to_keep=10000,
+    source: AnnfluxSource, balance_factor=10.0, num_to_keep=10000, dry_run=True
 ) -> AnnfluxSource:
     #
+    uids_from_disk = set([basename_no_extension(fn) for fn in os.listdir(source.images_folder)])
     annotations = json.load(open(source.labels_path))
     basenames_to_keep = []
     for uid, value in annotations.items():
-        annotations[uid] = canon_(value, remove_unknown=True)
+        if uid in uids_from_disk:
+            annotations[uid] = canon_(value, remove_unknown=True)
     num_to_keep -= len(annotations)
     basenames_to_keep.extend(list(annotations.keys()))
     data = pandas.read_csv(source.data_state_path)
@@ -696,7 +697,9 @@ def purge(
     print(pred_counter)
 
     pred_counts = np.array(list(pred_counter.values()))
-    pred_counts_target = np.clip(pred_counts, 0, balance_factor * np.median(pred_counts))
+    pred_counts_target = np.clip(
+        pred_counts, 0, balance_factor * np.median(pred_counts)
+    )
 
     while pred_counts_target.sum() < num_to_keep:
         balance_factor += 1
@@ -706,13 +709,18 @@ def purge(
     print(pred_counts_target)
     for class_, target_count in zip(pred_counter.keys(), pred_counts_target):
         basenames_to_keep.extend(choice(class_to_basenames[class_], int(target_count)))
-    print(len(basenames_to_keep))
     basenames_to_keep = set(basenames_to_keep)
+    print(len(basenames_to_keep))
+
+    num_kept = 0
     for fn in os.listdir(source.images_folder):
         if basename_no_extension(fn) not in basenames_to_keep:
-            os.remove(os.path.join(source.images_folder, fn))
+            if not dry_run:
+                os.remove(os.path.join(source.images_folder, fn))
         else:
-            print(f"keeping {basename_no_extension(fn)}")
+            # print(f"keeping {basename_no_extension(fn)}")
+            num_kept += 1
+    print(f"keeping {num_kept} images")
     return source
 
 

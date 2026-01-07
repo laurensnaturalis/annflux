@@ -86,13 +86,15 @@ def test_al_strategies(client):
     assert t["in_test"].sum() == num_test_images
     test_labeling = {uid_: true_labels[uid_] for uid_ in t[t["in_test"] == 1]["uid"]}
     client.post("/label", json=test_labeling)
-    print(get_json(client, "/performance"))
-    assert len(get_json(client, "/performance")["test_performance"]) == 0
+    performance_data = get_json(client, "/performance")
+    print(performance_data)
+    assert "test_performance" not in performance_data
     t = get_annflux_data(client)
-    active_set_size = 1000
+    print("HERE", t["labeled"].sum())
+    active_set_size = 50
     active_round = 0
     percentage_near_labeled = 0
-    active_strategy = "most_needed"
+    active_strategy = "dp_most_needed"
     avg_accuracies = []
     avg_recalls = []
     avg_precisions = []
@@ -103,6 +105,7 @@ def test_al_strategies(client):
         labeling = {active_uid: true_labels[active_uid] for active_uid in active_uids}
         client.post("/label", json=labeling)
         t = get_annflux_data(client)
+        print(f"{t['labeled'].sum()=}")
         assert t["labeled"].sum() == (
             active_round + 1
         ) * active_set_size + num_test_images or t["labeled"].sum() == len(t)
@@ -110,15 +113,17 @@ def test_al_strategies(client):
         print(j_performance)
         percentage_near_labeled = j_performance["percentage_near_labeled"]
         if percentage_near_labeled > 0.99:
-            active_strategy = "fre"
+            active_strategy = "fre_strat"
         print(active_strategy)
         detailed_performance = get_data_csv(client, "/detailed_performance/data")
         avg_recalls.append(detailed_performance["recall"].mean())
         avg_precisions.append(detailed_performance["precision"].mean())
+        print(j_performance["test_performance"])
         avg_accuracies.append(j_performance["test_performance"][-1][2])
         strategies.append(active_strategy)
         # trigger linear training
-        if active_round % 10 == 1:
+        if active_round % 1000 == 1:
+        # if active_round == 10:
             client.post(
                 "/status", json={"idleTime": 1800 + 1}
             )  # TODO: replace constant

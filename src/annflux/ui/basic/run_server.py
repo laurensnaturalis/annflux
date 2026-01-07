@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from numba.tests.compile_with_pycc import div
 import math
 import os
 import shutil
@@ -154,7 +153,7 @@ def _init():
     t = pandas.read_csv(g_state.annflux_path)
     columns = t.columns
     has_records = "record_id" in t and len(t.record_id.unique()) < len(t)
-    if "patch_x" in columns or has_records:
+    if "patch_x" in columns: # or has_records:
         g_layout = "tileLabel"
     else:
         g_layout = "originalImageLabel"  # TODO(ENV)
@@ -325,6 +324,20 @@ def thumbnail(uid):
             img.convert("RGB").save(thumb_path)
 
     return send_file(thumb_path, mimetype="image/jpg", as_attachment=False)
+
+@app.route("/data/neighbors/<uid>")
+def nearest_neighbors(uid):
+    """ """
+    state: AnnFluxState = g_state
+    import numpy as np
+    data = pandas.read_csv(state.annflux_path, dtype={"label_predicted": str, "label_true": str}) # TODO: slow
+    index = np.where(data.image_id == uid)[0][0] # TODO: slow
+    print("NEIGHBORS", index, state.all_indices[index])
+    data_neighbors = data.iloc[state.all_indices[index]]
+    data_neighbors["nn_sort"] = range(len(data_neighbors))
+    # data_neighbors = data_neighbors[data_neighbors["labeled"] == 1]
+
+    return Response(data_neighbors.to_csv(index=True), mimetype="text/csv")
 
 
 @app.route("/images/original/thumbnail/<uid>")
@@ -510,12 +523,13 @@ def label():
 
 
 def do_quick_reclassification(is_group: bool):
-    if g_state.train_thread is None or not g_state.train_thread.is_alive():
-        g_state.train_thread = threading.Thread(
-            target=quick_reclassification, args=(g_state, logger, "quick", is_group)
-        )
-        g_state.train_thread.start()
-        g_state.train_thread.join()
+    quick_reclassification(g_state, logger, "quick", is_group)
+    # if g_state.train_thread is None or not g_state.train_thread.is_alive():
+    #     g_state.train_thread = threading.Thread(
+    #         target=quick_reclassification, args=(g_state, logger, "quick", is_group)
+    #     )
+    #     g_state.train_thread.start()
+    #     g_state.train_thread.join()
 
 
 @app.route("/performance")
@@ -541,8 +555,8 @@ def detailed_performance_data():
 def exclusivity_data():
     if not os.path.exists(exclusivity_path):
         pandas.DataFrame(
-            data={}, columns=["left", "right"]
-        ).to_csv(  # ty: ignore[invalid-argument-type]
+            data={}, columns=["left", "right"] # ty: ignore[invalid-argument-type]
+        ).to_csv(
             exclusivity_path, index=False
         )
 
@@ -576,10 +590,9 @@ def labels_css():
 @app.route("/exclusivity/data", methods=["POST"])
 def exclusivity_data_post():
     pandas.DataFrame(
-        data=request.get_json(), columns=("left", "right")
-    ).to_csv(  # ty: ignore[invalid-argument-type]
-        exclusivity_path, index=False
-    )
+        data=request.get_json(),
+        columns=("left", "right"),  # ty: ignore[invalid-argument-type]
+    ).to_csv(exclusivity_path, index=False)
     return {"success": True}
 
 
@@ -613,15 +626,15 @@ def retrain_job(state: AnnFluxState):
     state.g_quick_status = "training"
     load_data(state, logger, no_linear_features=True)
     weights_path = linear_retraining(state, StatusUpdate(state))
-    shutil.copy(
-        weights_path,
-        os.path.join(state.annflux_folder, state.version_for_recompute + ".weights.h5"),
-    )
+    # shutil.copy(
+    #     weights_path,
+    #     os.path.join(state.annflux_folder, state.version_for_recompute + ".weights.h5"),
+    # )
     #
     repo: Repository = AnnfluxSource(state.project_folder).repository
     # TODO: store linear model
     make_resultset(
-        repo.get(label=Dataset).first(),
+        repo.get(label=Dataset).last(),
         state.features,
         repo,
         message=f"linear features from label state={len(state.labeled_indices)}",
