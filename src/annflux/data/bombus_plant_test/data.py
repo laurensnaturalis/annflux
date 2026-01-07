@@ -73,9 +73,37 @@ class StreetSurfaceVis(DataSource):
     def download(self):
         super().download()
         self.true_labels_path_ = os.path.join(self.out_folder, "labels.json")
-        t = pandas.read_csv(self.labels_url, dtype={"mapillary_image_id": str})
+        # url = self.labels_url
+        t = pandas.read_csv(
+            "/home/lhogeweg/annflux/datasources/streetsurfacevis/streetSurfaceVis_v1_0.csv",  # TODO
+            dtype={"mapillary_image_id": str},
+        )
         with open(self.true_labels_path, "w") as f:
             json.dump(dict(zip(t.mapillary_image_id, t.surface_type)), f, indent=2)
+
+        print(len(t))
+
+
+    @property
+    def true_labels_path(self):
+        return self.true_labels_path_
+
+
+class PapBig(DataSource):
+    name = "papbig"
+
+    def __init__(self):
+        super().__init__()
+        self.true_labels_path_ = os.path.join(self.out_folder, "labels.json")
+
+    def download(self):
+        super().download()
+        self.true_labels_path_ = os.path.join(self.out_folder, "labels.json")
+        t = pandas.read_csv(os.path.join(self.out_folder, "meta.csv"))
+        with open(self.true_labels_path, "w") as f:
+            json.dump(dict(zip(t.uid, t.label_true)), f, indent=2)
+
+        print(len(t))
 
         print(len(t))
 
