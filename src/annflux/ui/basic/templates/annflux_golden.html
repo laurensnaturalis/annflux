@@ -356,8 +356,8 @@ limitations under the License.
         addSpaces();
     }
 
-    function drawGallery(show_data) {
-        const as_ranking_column = urlParams.get("as_ranking_column");
+    function drawGallery(show_data, as_ranking_column) {
+        as_ranking_column = as_ranking_column ?? urlParams.get("as_ranking_column");
         //show_data.sort((a, b) => a.score_predicted - b.score_predicted);
         const rank_modifier = urlParams.get("invert_ranking") == "on" ? -1 : +1;
         console.log("drawGallery", as_ranking_column, rank_modifier);
@@ -681,7 +681,7 @@ limitations under the License.
             }
         }
         //
-        if (d3.event.ctrlKey) {
+        if (d3.event.ctrlKey && false) {
             let dot = d3.select("#dot-" + event.uid);
             x_ = embeddingMap.x(event.e_0);
             y_ = embeddingMap.y(event.e_1);
@@ -772,14 +772,24 @@ limitations under the License.
             fullImageTileMap.setData();
             console.log("altImageAction", img);
         } else if (gLayout === "originalImageLabel") {
-            fullImageTileMap.setFilter(
-                new Array([
-                    "uid",
-                    "equals",
-                    event.uid,
-                ])
-            );
-            fullImageTileMap.setData();
+            if(!d3.event.ctrlKey) {
+                fullImageTileMap.setFilter(
+                    new Array([
+                        "uid",
+                        "equals",
+                        event.uid,
+                    ])
+                );
+                fullImageTileMap.setData();
+            }
+            else {
+                d3.csv(`/data/neighbors/${event.uid}`, function (data_) {
+                    console.log("data_", data_);
+                    {#fullImageTileMap.mode = "embedding";#}
+                    fullImageTileMap.setData(data_, true, "embedding", false, "nn_sort", true);
+
+                });
+            }
             console.log("altImageAction", img);
             renderMapAsTable(d3.select(`#gallery-${event.uid}`).data()[0], 'imageInfoContent');
         }

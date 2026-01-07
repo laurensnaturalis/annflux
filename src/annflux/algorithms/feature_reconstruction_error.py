@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import line_profiler
 from pandas import DataFrame
 from pandas.core.api import DataFrame
 import logging
@@ -101,22 +102,29 @@ def compute_fre(
     logger.info(f"pca application took={time.time() - time_start:.2f}")
     data[column_name] /= data[column_name].max()
     data[column_name] = 1 - data[column_name]
-    data[column_name].fillna(0, inplace=True)
+    # data[column_name] = data[column_name].fillna(0)
     logger.info(f"[TIMING] FRE setting in DataFrame took {time.time() - time_start} s")
     #
     # - stratify by predicted label
     # apply only to unlabeled data
     # get count per label
+    stratify_by_label(data, labeled_indices)
+
+
+@line_profiler.profile
+def stratify_by_label(data: DataFrame, labeled_indices: list[int]):
+    time_start = time.time()
     count_per_label = Counter(
         data[~pandas.isna(data.label_true)]["label_true"].values.tolist()
-    ).most_common() # TODO: assumes label_true is canonized
+    ).most_common()  # TODO: assumes label_true is canonized
     label_rare_to_common = list(reversed([t_[0] for t_ in count_per_label]))
     low_to_high_fre_indices = data.sort_values(by="fre", ascending=True).index
     # label aggregate to FRE sorted index
     agg_to_indices_unlabeled: dict[str, list[int]] = defaultdict(lambda: [])
     label_predicted = [canon_(x_) for x_ in data["label_predicted"].values]
+    labeled_indices_set = set(labeled_indices)
     for index_ in low_to_high_fre_indices:
-        if index_ not in labeled_indices and label_predicted[index_] is not None:
+        if index_ not in labeled_indices_set and label_predicted[index_] is not None:
             agg_to_indices_unlabeled[label_predicted[index_]].append(index_)
     #
     if len(agg_to_indices_unlabeled) > 0:
@@ -133,6 +141,7 @@ def compute_fre(
         data["fre_strat"] = len(indices_for_fre_strat) + 1
         update_column_fast("fre_strat", data, update_for_key)
         #
+    logger.info(f"[TIMING] FRE stratify by label took {time.time() - time_start} s")
 
 
 def update_column_fast(column_name: str, data: DataFrame, update_for_key: list[Any]):

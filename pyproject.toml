@@ -19,6 +19,7 @@ dependencies = [
     "flask-limiter~=3.12",
     "h5py~=3.13.0",
     "keras~=3.9.0",
+    "line-profiler>=5.0.0",
     "matplotlib~=3.10.1",
     "numpy~=1.26.4",
     "open-clip-torch>=3.2.0",

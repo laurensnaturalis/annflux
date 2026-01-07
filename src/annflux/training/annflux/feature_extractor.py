@@ -39,6 +39,7 @@ def make_resultset(
         np.savez(resultset.last_full_path, lastFull=features)
         # TODO(use actual prediction when peft/deep training)
         data["label_predicted"] = "foo,bar"
+        print(f"{len(data)} rows, {len(features)}")
         data["score_predicted"] = np.clip(
             [feature_[0] for feature_ in features], 0.0, 1.0
         )
@@ -53,6 +54,7 @@ def make_resultset(
         )
     except:  # noqa
         print(f"{tmp_folder=}")
+        shutil.rmtree(tmp_folder)
         raise
     shutil.rmtree(tmp_folder)
     return resultset

@@ -14,6 +14,10 @@
 # limitations under the License.
 from __future__ import annotations
 
+from os.path import basename
+
+from annflux.tools.io import basename_no_extension
+
 import argparse
 import copy
 import datetime
@@ -130,6 +134,7 @@ def execute(arg_list: list[str] | None = None):
     purge_parser.add_argument(
         "--num_to_keep", type=int, help="TODO", default=10000
     )
+    purge_parser.add_argument("--dry_run", action="store_true")
 
     args = parser.parse_args(arg_list)
     folder = os.path.expanduser(args.folder)
@@ -148,6 +153,7 @@ def execute(arg_list: list[str] | None = None):
             source,
             balance_factor=args.balance_factor,
             num_to_keep=args.num_to_keep,
+            dry_run=args.dry_run
         )
     elif args.command == "train_then_features":
         train_then_features(
@@ -456,7 +462,10 @@ def stream(
     os.makedirs(source.images_folder, exist_ok=True)
     stream_process_table["date_to_project"] = None
     for r, row in data_to_add.iterrows():
-        shutil.copy(row.path, source.images_folder)
+        try:
+            shutil.copy(row.path, os.path.join(source.images_folder, basename(row.path).replace("-", "_")))
+        except FileNotFoundError:
+            stream_logger.error(f"{row.path} not found")
         stream_logger.info(f"Adding {row.path} to project")
         stream_process_table.loc[r, "date_to_project"] = (
             datetime.datetime.now().isoformat()
