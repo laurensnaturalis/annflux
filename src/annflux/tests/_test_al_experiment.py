@@ -24,6 +24,7 @@ import pandas
 from annflux.data.bombus_plant_test.data import (
     DataSource,
     StreetSurfaceVis,
+    PapBig,
 )
 from annflux.scripts.annflux_cli import go_command
 from annflux.shared import AnnfluxSource
@@ -36,7 +37,7 @@ data_source: DataSource | None = None
 def create_app(seed):
     #
     global annflux_data_path, data_source
-    data_source = StreetSurfaceVis()
+    data_source = PapBig()
     data_source.download()
     data_folder = Path(os.path.expanduser(f"~/annflux/data/{data_source.name}"))
     if os.path.isdir(data_folder):
@@ -82,8 +83,8 @@ def _test_al_strategies(
         "/label", json={}
     )  # TODO(issue): most_needed column not available before refresh
     t = get_annflux_data(client)
-    num_test_images = 912
-    assert t["in_test"].sum() == num_test_images
+    num_test_images = t["in_test"].sum()
+    assert int(0.09 * len(t)) < num_test_images < int(0.11 * len(t))
     test_labeling = {uid_: true_labels[uid_] for uid_ in t[t["in_test"] == 1]["uid"]}
     client.post("/label", json=test_labeling)
     performance_data = get_json(client, "/performance")
@@ -190,7 +191,7 @@ def get_json(client, url):
 if __name__ == "__main__":
     end_strategy = "fre_strat"
     active_set_size = 500
-    linear_strategy = ("at", (0, 5, 10))
+    linear_strategy = ("at", (0, 5, 10, 15))
     for seed in range(42, 42 + 5):
         _test_al_strategies(
             create_app(seed).test_client(),
