@@ -17,11 +17,9 @@ import os
 import shutil
 from io import BytesIO
 from pathlib import Path
-from time import sleep
+from time import sleep, time
 
-import flask
 import pandas
-import pytest
 
 from annflux.data.bombus_plant_test.data import (
     DataSource,
@@ -35,7 +33,7 @@ annflux_data_path: str | None | Path = None
 data_source: DataSource | None = None
 
 
-def create_app():
+def create_app(seed):
     #
     global annflux_data_path, data_source
     data_source = StreetSurfaceVis()
@@ -47,7 +45,7 @@ def create_app():
     go_command(
         AnnfluxSource(data_folder),
         start_labels=set(json.load(open(data_source.true_labels_path)).values()),
-        random_seed=42,
+        random_seed=seed,
     )
     annflux_folder = data_folder / "annflux"
     annflux_data_path = annflux_folder / "annflux.csv"
@@ -59,24 +57,26 @@ def create_app():
     return app
 
 
-@pytest.fixture
-def app():
-    app: flask.Flask = create_app()
+# @pytest.fixture
+# def app():
+#     app: flask.Flask = create_app()
+#
+#     yield app
+#
+#
+# @pytest.fixture
+# def client(app):
+#     return app.test_client()
+#
+#
+# @pytest.fixture
+# def runner(app):
+#     return app.test_cli_runner()
 
-    yield app
 
-
-@pytest.fixture
-def client(app):
-    return app.test_client()
-
-
-@pytest.fixture
-def runner(app):
-    return app.test_cli_runner()
-
-
-def test_al_strategies(client):
+def _test_al_strategies(
+    client, out_path, end_strategy, active_set_size=50, linear_strategy=None
+):
     true_labels = json.load(open(data_source.true_labels_path))
     client.post(
         "/label", json={}
@@ -91,13 +91,16 @@ def test_al_strategies(client):
     assert "test_performance" not in performance_data
     t = get_annflux_data(client)
     print("HERE", t["labeled"].sum())
-    active_set_size = 50
     active_round = 0
     percentage_near_labeled = 0
     active_strategy = "dp_most_needed"
     avg_accuracies = []
     avg_recalls = []
     avg_precisions = []
+    labeled_train_set_sizes = []
+    linear_training = []
+    times = []
+    time_start = time()
     strategies = []
     while t["labeled"].sum() < len(t):
         t.sort_values(active_strategy, inplace=True)
@@ -109,11 +112,13 @@ def test_al_strategies(client):
         assert t["labeled"].sum() == (
             active_round + 1
         ) * active_set_size + num_test_images or t["labeled"].sum() == len(t)
+        labeled_train_set_sizes.append(t["labeled"].sum() - num_test_images)
+        times.append(time() - time_start)
         j_performance = get_json(client, "/performance")
         print(j_performance)
         percentage_near_labeled = j_performance["percentage_near_labeled"]
         if percentage_near_labeled > 0.99:
-            active_strategy = "fre_strat"
+            active_strategy = end_strategy
         print(active_strategy)
         detailed_performance = get_data_csv(client, "/detailed_performance/data")
         avg_recalls.append(detailed_performance["recall"].mean())
@@ -122,18 +127,30 @@ def test_al_strategies(client):
         avg_accuracies.append(j_performance["test_performance"][-1][2])
         strategies.append(active_strategy)
         # trigger linear training
-        if active_round % 1000 == 1:
-        # if active_round == 10:
-            client.post(
-                "/status", json={"idleTime": 1800 + 1}
-            )  # TODO: replace constant
-            sleep(5)
-            while client.post("/status", json={"idleTime": 0}).json["status"] == "training":
-                print("=========== waiting for training")
+        if linear_strategy is not None and len(linear_strategy) > 0:
+            mode, when = linear_strategy
+            if mode == "at" and active_round == when or active_round in when:
+                client.post(
+                    "/status", json={"idleTime": 1800 + 1}
+                )  # TODO: replace constant
                 sleep(5)
-            while client.post("/status", json={"idleTime": 0}).json["status"] != "idle":
-                print("=========== waiting to become idle")
-                sleep(1)
+                while (
+                    client.post("/status", json={"idleTime": 0}).json["status"]
+                    == "training"
+                ):
+                    print("=========== waiting for training")
+                    sleep(5)
+                while (
+                    client.post("/status", json={"idleTime": 0}).json["status"]
+                    != "idle"
+                ):
+                    print("=========== waiting to become idle")
+                    sleep(1)
+                linear_training.append(1)
+            else:
+                linear_training.append(0)
+        else:
+            linear_training.append(0)
         active_round += 1
     print(avg_accuracies)
     print(avg_recalls)
@@ -146,10 +163,11 @@ def test_al_strategies(client):
             "recall": avg_recalls,
             "precision": avg_precisions,
             "strategies": strategies,
+            "time_s": times,
+            "labeled_train_set_size": labeled_train_set_sizes,
+            "linear_training": linear_training,
         }
-    ).to_csv(
-        "/home/lhogeweg/Documents/annflux_ln/src/annflux/projects/al_evaluation/test_al_strategies.csv"
-    )
+    ).to_csv(out_path, index=False)
 
 
 def get_annflux_data(client) -> pandas.DataFrame:
@@ -167,3 +185,20 @@ def get_data_csv(client, url) -> pandas.DataFrame:
 def get_json(client, url):
     response = client.get(url)
     return json.loads(response.data)
+
+
+if __name__ == "__main__":
+    end_strategy = "fre_strat"
+    active_set_size = 500
+    linear_strategy = ("at", (0, 5, 10))
+    for seed in range(42, 42 + 5):
+        _test_al_strategies(
+            create_app(seed).test_client(),
+            out_path=os.path.join(
+                "/home/lhogeweg/Documents/annflux_ln/src/annflux/projects/al_evaluation/experiments",
+                f"papbig_step_{active_set_size}_strategy_{end_strategy}_linear_{'_'.join(map(str, linear_strategy))}_seed={seed}.csv",
+            ),
+            end_strategy=end_strategy,
+            active_set_size=active_set_size,
+            linear_strategy=linear_strategy,
+        )
