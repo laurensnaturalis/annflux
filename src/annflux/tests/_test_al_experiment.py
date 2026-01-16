@@ -31,13 +31,12 @@ from annflux.shared import AnnfluxSource
 from annflux.ui.basic.run_server import _init, get_app
 
 annflux_data_path: str | None | Path = None
-data_source: DataSource | None = None
+data_source: DataSource = None # ty: ignore
 
 
-def create_app(seed):
+def create_app(seed, existing_feature_cache_path):
     #
-    global annflux_data_path, data_source
-    data_source = PapBig()
+    global annflux_data_path
     data_source.download()
     data_folder = Path(os.path.expanduser(f"~/annflux/data/{data_source.name}"))
     if os.path.isdir(data_folder):
@@ -47,6 +46,7 @@ def create_app(seed):
         AnnfluxSource(data_folder),
         start_labels=set(json.load(open(data_source.true_labels_path)).values()),
         random_seed=seed,
+        existing_feature_cache_path=existing_feature_cache_path,  # TODO
     )
     annflux_folder = data_folder / "annflux"
     annflux_data_path = annflux_folder / "annflux.csv"
@@ -104,7 +104,8 @@ def _test_al_strategies(
     time_start = time()
     strategies = []
     while t["labeled"].sum() < len(t):
-        t.sort_values(active_strategy, inplace=True)
+        if active_strategy is not None:
+            t.sort_values(active_strategy, inplace=True)
         active_uids = t[t["labeled"] == 0].uid.values[:active_set_size]
         labeling = {active_uid: true_labels[active_uid] for active_uid in active_uids}
         client.post("/label", json=labeling)
@@ -116,7 +117,7 @@ def _test_al_strategies(
         labeled_train_set_sizes.append(t["labeled"].sum() - num_test_images)
         times.append(time() - time_start)
         j_performance = get_json(client, "/performance")
-        print(j_performance)
+        print(f"{j_performance=}")
         percentage_near_labeled = j_performance["percentage_near_labeled"]
         if percentage_near_labeled > 0.99:
             active_strategy = end_strategy
@@ -153,11 +154,19 @@ def _test_al_strategies(
         else:
             linear_training.append(0)
         active_round += 1
-    print(avg_accuracies)
-    print(avg_recalls)
-    print(avg_precisions)
+        t = get_annflux_data(client)
 
-    print(len(avg_accuracies), len(avg_recalls), len(avg_precisions))
+        pandas.DataFrame(
+            data={
+                "accuracy": avg_accuracies,
+                "recall": avg_recalls,
+                "precision": avg_precisions,
+                "strategies": strategies,
+                "time_s": times,
+                "labeled_train_set_size": labeled_train_set_sizes,
+                "linear_training": linear_training,
+            }
+        ).to_csv(out_path + ".incomplete.csv", index=False)
     pandas.DataFrame(
         data={
             "accuracy": avg_accuracies,
@@ -169,6 +178,7 @@ def _test_al_strategies(
             "linear_training": linear_training,
         }
     ).to_csv(out_path, index=False)
+    os.remove(out_path + ".incomplete.csv")
 
 
 def get_annflux_data(client) -> pandas.DataFrame:
@@ -192,12 +202,17 @@ if __name__ == "__main__":
     end_strategy = "fre_strat"
     active_set_size = 500
     linear_strategy = ("at", (0, 5, 10, 15))
+    data_source = PapBig()
     for seed in range(42, 42 + 5):
+        app = create_app(
+            seed,
+            None #"/home/lhogeweg/annflux/data/papbig_features/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_ed541cdf7fd64bb876b2d0a2ebabeaf0489a9dd1938194c27d7ff8a7.zarr",
+        )
         _test_al_strategies(
-            create_app(seed).test_client(),
+            app.test_client(),
             out_path=os.path.join(
                 "/home/lhogeweg/Documents/annflux_ln/src/annflux/projects/al_evaluation/experiments",
-                f"papbig_step_{active_set_size}_strategy_{end_strategy}_linear_{'_'.join(map(str, linear_strategy))}_seed={seed}.csv",
+                f"{data_source.name}_knnexp_10_step_{active_set_size}_strategy_{end_strategy}_linear_{'_'.join(map(str, linear_strategy))}_seed={seed}.csv",
             ),
             end_strategy=end_strategy,
             active_set_size=active_set_size,

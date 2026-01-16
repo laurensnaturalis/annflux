@@ -846,6 +846,7 @@ def ui_script_entry():
         debug=str2bool(os.getenv("APP_DEBUG", False)),
         host="0.0.0.0",
         threaded=True,
+        use_reloader=False,
         port=int(os.getenv("PORT", "8006")),
     )
 

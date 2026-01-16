@@ -766,7 +766,7 @@ def make_predictions(
         start_time = time.time()
         org_index = data_indices[i]
 
-        case_debug = org_index_to_uid[org_index] == "AO_NS_1024254"
+        case_debug = org_index_to_uid[org_index] == "RMNH_INS_1047595"
 
 
         probabilities = defaultdict(lambda: 0)
@@ -777,11 +777,14 @@ def make_predictions(
         min_distance = None
         if case_debug:
             print("CASE_DEBUG", org_index, indices_for_i, train_labels[indices_for_i])
-        for i2, multilabel_ in enumerate(train_labels[indices_for_i]):
+            distance_weights = []
+        for i2, multilabel_ in enumerate(train_labels[indices_for_i]): # loop through NN
             if skip_first and i2 == 0:
                 continue
             if multilabel_ is not None and len(multilabel_) > 0:
-                distance_weight = 1 / max(1e-8, distances[i][i2] ** knn_rank_exponent)  # noqa
+                distance_weight = max(1e-8, 1. / (distances[i][i2] ** knn_rank_exponent))  # noqa
+                if case_debug:
+                    distance_weights.append(distance_weight)
                 # if distance_weight < 0.01 * max_mass:
                 #     continue
                 for label_ in multilabel_:
@@ -793,7 +796,8 @@ def make_predictions(
 
         for label_ in probabilities:
             probabilities[label_] /= max_mass
-
+        if case_debug:
+            print("dw", np.array(distance_weights) / max_mass)
         # if num_labeled_nn > 1 and len(probabilities) > 1:
         #     print("BLAAAAT", tag, probabilities, org_index_to_uid[org_index])
         time_probabilities += time.time() - start_time
