@@ -105,7 +105,9 @@ class PapBig(DataSource):
 
         print(len(t))
 
-        print(len(t))
+    def copy_to(self, folder: str | PathLike):
+        super().copy_to(folder)
+        shutil.copy(os.path.join(self.out_folder, "label_defs.json"), os.path.join(folder, "annflux"))
 
     @property
     def true_labels_path(self):

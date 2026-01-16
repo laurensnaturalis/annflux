@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from os.path import basename
 
-from annflux.tools.io import basename_no_extension
 
 import argparse
 import copy
@@ -128,12 +127,8 @@ def execute(arg_list: list[str] | None = None):
     #
     purge_parser = subparsers.add_parser("purge", help="TODO")
     purge_parser.add_argument("folder", type=str, help="Data folder")
-    purge_parser.add_argument(
-        "--balance_factor", type=float, help="TODO", default=10.0
-    )
-    purge_parser.add_argument(
-        "--num_to_keep", type=int, help="TODO", default=10000
-    )
+    purge_parser.add_argument("--balance_factor", type=float, help="TODO", default=10.0)
+    purge_parser.add_argument("--num_to_keep", type=int, help="TODO", default=10000)
     purge_parser.add_argument("--dry_run", action="store_true")
 
     args = parser.parse_args(arg_list)
@@ -153,7 +148,7 @@ def execute(arg_list: list[str] | None = None):
             source,
             balance_factor=args.balance_factor,
             num_to_keep=args.num_to_keep,
-            dry_run=args.dry_run
+            dry_run=args.dry_run,
         )
     elif args.command == "train_then_features":
         train_then_features(
@@ -215,6 +210,7 @@ def go_command(
     label_column_name="label",
     start_labels=None,
     random_seed=None,
+    existing_feature_cache_path=None,
 ):
     source = init_folder(
         source,
@@ -229,6 +225,7 @@ def go_command(
         source,
         architecture=architecture,
         train_model=False,
+        existing_feature_cache_path=existing_feature_cache_path
         # feature_cache=feature_cache
     )
     embed_and_prepare(source)
@@ -385,10 +382,10 @@ def stream(
             model_version, port, stream_process_table, table_to_predict, tmp_path
         )
     else:
-        table_to_predict.rename(columns={"patch_path": "path"}, inplace=True) # TODO: in tile function
-        table_to_predict["filename"] = table_to_predict[
-            "path"
-        ]
+        table_to_predict.rename(
+            columns={"patch_path": "path"}, inplace=True
+        )  # TODO: in tile function
+        table_to_predict["filename"] = table_to_predict["path"]
         features, probs, model = train_then_features(
             source,
             table_to_predict,
@@ -463,7 +460,12 @@ def stream(
     stream_process_table["date_to_project"] = None
     for r, row in data_to_add.iterrows():
         try:
-            shutil.copy(row.path, os.path.join(source.images_folder, basename(row.path).replace("-", "_")))
+            shutil.copy(
+                row.path,
+                os.path.join(
+                    source.images_folder, basename(row.path).replace("-", "_")
+                ),
+            )
         except FileNotFoundError:
             stream_logger.error(f"{row.path} not found")
         stream_logger.info(f"Adding {row.path} to project")
@@ -624,7 +626,7 @@ def inference_edge_server(
         ):
             print(f"RemoteDisconnected for {row.patch_path}")
             continue
-        prediction = j_out["predictions"][0]["classes"]["items"][0] # ty: ignore
+        prediction = j_out["predictions"][0]["classes"]["items"][0]  # ty: ignore
         # print(prediction)
         stream_process_table.loc[r, "label_possible"] = prediction["name"]
         stream_process_table.loc[r, "label_probability"] = prediction["probability"]

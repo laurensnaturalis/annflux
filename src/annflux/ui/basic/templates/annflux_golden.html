@@ -1532,6 +1532,26 @@ limitations under the License.
         });
     }
 
+    function _highlightGalleryInMap() {
+        let dot = d3.select("#dot-" + "ZMA_INS_1332711");
+        console.log (dot);
+
+        dot
+            .transition()
+            .duration(500)
+            .style("fill", "blue")
+            .transition()
+            .duration(500)
+            .style("fill", "red");
+        dot
+            .transition()
+            .duration(500)
+            .attr("r", 20)
+            .transition()
+            .duration(500)
+            .attr("r", 3);
+    }
+
     function setFlash(elementId) {
         console.log("setFlash", elementId);
         localStorage.setItem("flashAtLoad", elementId.toString());

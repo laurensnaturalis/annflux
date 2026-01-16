@@ -49,6 +49,7 @@ def linear_retraining(state: AnnFluxState, status_callback):
             f"no label for idx {np.array(state.labeled_indices)[no_label_for_labeled_idx]}"
         )
     binarizer.fit(state.label_array[state.labeled_indices])
+    print(f"{len(binarizer.classes_)=}")
     targets = binarizer.transform(state.label_array[state.labeled_indices])
 
     test_targets = binarizer.transform(
@@ -60,8 +61,7 @@ def linear_retraining(state: AnnFluxState, status_callback):
     )
     input_ = Input(shape=(state.features.shape[1],))
     dense = input_
-    activation = "relu"
-    features_ = Dense(state.features.shape[1], activation=activation, name="features")(
+    features_ = Dense(state.features.shape[1], activation="relu", name="features")(
         dense
     )
     features_ = Lambda(lambda x: l2_normalize(x, axis=1))(features_)

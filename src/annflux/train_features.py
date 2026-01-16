@@ -20,13 +20,10 @@ from annflux.repository.model import KerasModel, Model, ClipModel
 from annflux.repository.repository import Repository
 from annflux.repository.resultset import Resultset
 from annflux.shared import AnnfluxSource
-from annflux.tools.data import init_folder
 from annflux.training.annflux.feature_extractor import (
     make_resultset,
     TrainParameters,
 )
-
-
 
 
 def get_repo_model(
@@ -56,7 +53,7 @@ def get_repo_model(
         model = model_type(str(tmp_dir))
         pandas.DataFrame(
             data=list(zip(range(2), ["foo", "bar"])),
-            columns=["index", "class_name"], # ty: ignore
+            columns=["index", "class_name"],  # ty: ignore
         ).to_csv(model.class_to_label_path, index=False)
         repo.commit(model, tag="untrained")
         shutil.rmtree(tmp_dir)
@@ -74,6 +71,7 @@ def train_then_features(
     train_model=True,
     model_variant="wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M",
     cache_name: str | None = None,
+    existing_feature_cache_path=None,
 ) -> Tuple[NDArray, NDArray, Model]:
     """
     Returns (features, probs) of `dataset`
@@ -93,7 +91,7 @@ def train_then_features(
         if not os.path.exists(labels_path):
             dataset, model = get_untrained_model(repo, architecture)
         else:
-            #train(source, architecture, repo, train_folder)
+            # train(source, architecture, repo, train_folder)
             model = repo.get(label=KerasModel, tag="seen").last()
             shutil.rmtree(train_folder)
         extract_and_store_features(dataset, model, repo)
@@ -179,7 +177,7 @@ def train_then_features(
                         f"model_{extractor.repo_model.entry.uid}_dataset_stream_*.zarr",
                     )
                 )
-            )
+            ) if existing_feature_cache_path is None else [existing_feature_cache_path]
             if len(existing_feature_cache_path) > 0:
                 existing_feature_cache_path = existing_feature_cache_path[0]
             else:
@@ -307,7 +305,8 @@ def train(
     )
     print("unique_labels", unique_labels)
     pandas.DataFrame(
-        data=list(zip(unique_labels, unique_labels)), columns=["label", "taxon"] # ty: ignore
+        data=list(zip(unique_labels, unique_labels)),
+        columns=["label", "taxon"],  # ty: ignore
     ).to_csv(seen_taxon_mapping_path)
     labeled_ids = [
         x_
