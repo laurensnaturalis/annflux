@@ -202,7 +202,7 @@ if __name__ == "__main__":
     end_strategy = "fre_strat"
     active_set_size = 500
     linear_strategy = ("at", (0, 5, 10, 15))
-    data_source = PapBig()
+    data_source = StreetSurfaceVis()
     for seed in range(42, 42 + 5):
         app = create_app(
             seed,
@@ -212,7 +212,7 @@ if __name__ == "__main__":
             app.test_client(),
             out_path=os.path.join(
                 "/home/lhogeweg/Documents/annflux_ln/src/annflux/projects/al_evaluation/experiments",
-                f"{data_source.name}_knnexp_10_step_{active_set_size}_strategy_{end_strategy}_linear_{'_'.join(map(str, linear_strategy))}_seed={seed}.csv",
+                f"{data_source.name}_knnexp_3_step_{active_set_size}_strategy_{end_strategy}_linear_{'_'.join(map(str, linear_strategy))}_seed={seed}.csv",
             ),
             end_strategy=end_strategy,
             active_set_size=active_set_size,

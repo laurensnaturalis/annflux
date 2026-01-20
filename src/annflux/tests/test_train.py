@@ -18,10 +18,10 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
-
 from annflux.data.bombus_plant_test.data import BombusPlantTest
 from annflux.shared import AnnfluxSource
-from annflux.train_features import init_folder, add_annotations_and_set, get_repo_model
+from annflux.tools.data import init_folder
+from annflux.train_features import add_annotations_and_set, get_repo_model
 from annflux.training.annflux.clip import ClipFeatureExtractor
 from annflux.training.annflux.feature_extractor import TrainParameters
 

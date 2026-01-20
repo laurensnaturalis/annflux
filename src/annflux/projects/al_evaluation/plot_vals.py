@@ -9,8 +9,8 @@ from pandas import DataFrame
 
 def m():
     accuracy_avg, recall_avg, acc_std, t = compute_averages("experiments/step_500_strategy_fre_strat_linear_at_10")
-    accuracy_avg2, recall_avg2, acc_std2, t = compute_averages("experiments/knnexp_1_step_500_strategy_fre_strat_linear_at_(0, 5, 10, 15)")
-    accuracy_avg3, recall_avg3, acc_std3, t = compute_averages("experiments/knnexp_1_step_500_strategy_None_linear_at_(0, 5, 10, 15)")
+    accuracy_avg2, recall_avg2, acc_std2, t = compute_averages("experiments/streetsurfacevis_knnexp_3_step_500_strategy_fre_strat_linear_at_(0, 5, 10, 15)")
+    accuracy_avg3, recall_avg3, acc_std3, t = compute_averages("experiments/streetsurfacevis_knnexp_10_step_500_strategy_fre_strat_linear_at_(0, 5, 10, 15)")
     accuracy_avg4, recall_avg4, acc_std4, t = compute_averages("experiments/knnexp_3_step_500_strategy_None_linear_at_(0, 5, 10, 15)")
     plt.subplot(221)
     plt.plot(t.labeled_train_set_size, accuracy_avg, label="linear at 10")
@@ -22,7 +22,7 @@ def m():
         color="C0",
         alpha=alpha,
     )
-    plt.plot(t.labeled_train_set_size, accuracy_avg2, label="linear at (0, 5, 10, 15), fre strat")
+    plt.plot(t.labeled_train_set_size, accuracy_avg2, label="linear at (0, 5, 10, 15), fre strat, exp 3")
     plt.fill_between(
         t.labeled_train_set_size,
         accuracy_avg2 - acc_std2,
@@ -30,7 +30,7 @@ def m():
         color="C1",
         alpha=alpha,
     )
-    plt.plot(t.labeled_train_set_size, accuracy_avg3, label="linear at (0, 5, 10, 15), random")
+    plt.plot(t.labeled_train_set_size, accuracy_avg3, label="linear at (0, 5, 10, 15), frestrat, exp 10")
     plt.fill_between(
         t.labeled_train_set_size,
         accuracy_avg3 - acc_std3,
@@ -73,7 +73,7 @@ def compute_averages(path) -> tuple[DataFrame, Any, Any, Any]:
             recalls.append(t.recall)
             accuracies.append(t.accuracy)
         else:
-            print(f"{path} does not exist")
+            print(f"{path_} does not exist")
     # print(np.vstack(accuracies).shape)
     recall_avg = np.mean(np.vstack(recalls), axis=0)
     accuracy_avg = np.mean(np.vstack(accuracies), axis=0)

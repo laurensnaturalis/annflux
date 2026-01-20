@@ -240,11 +240,11 @@ def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
         # Split by AND/OR
         and_clauses = [c.strip() for c in expr.split(" AND ") if c]
         if len(and_clauses) > 1:
-            return " & ".join(parse_condition(c) for c in and_clauses)
+            return " & ".join(f"({parse_condition(c)})" for c in and_clauses)
 
         or_clauses = [c.strip() for c in expr.split(" OR ") if c]
         if len(or_clauses) > 1:
-            return " | ".join(parse_condition(c) for c in or_clauses)
+            return " | ".join(f"({parse_condition(c)})" for c in or_clauses)
 
         return parse_condition(expr)
 

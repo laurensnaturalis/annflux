@@ -262,7 +262,8 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
             tag="predicting near labelled",
         )
         data.label_predicted = data.label_predicted.apply(lambda x_: canon_(x_))
-        data.label_true = data.label_true.apply(lambda x_: canon_(x_))
+        if "label_true" in data.columns:
+            data.label_true = data.label_true.apply(lambda x_: canon_(x_))
         # FRE
         state.g_quick_status = "computing FRE"
         compute_fre(
@@ -475,6 +476,9 @@ def load_data(state: AnnFluxState, logger: logging.Logger, no_linear_features=Fa
     )
     logger.debug(f"|labeled_test_indices|={len(state.labeled_test_indices)}")
     logger.debug(f"instant_reclassification 5={time.time() - start_time}")
+    data["label_true"] = np.array(
+        [canon_(annotations.get(uid)) for uid in data.uid.values]  # noqa
+    )
     return annotations, data, result_set, test_indices, test_uids
 
 
