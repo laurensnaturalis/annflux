@@ -59,7 +59,7 @@ def run_coverage_func():
         print("deleting existing .coverage")
         os.remove(".coverage")
     os.system('find . -name "*.pyc" -delete')
-    os.system(f"pytest annflux/tests --cov -sv > ../release_assets/tests_{get_version()['version']}.txt")
+    os.system(f"pytest annflux/tests --cov -svc > ../release_assets/tests_{get_version()['version']}.txt")
     os.system(f"coverage report -m --ignore-errors > ../release_assets/coverage_{get_version()['version']}.txt")
     extract_test_results(f"../release_assets/tests_{get_version()['version']}.txt", f"../release_assets/test_report_{get_version()['version']}.md")
 

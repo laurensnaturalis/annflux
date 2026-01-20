@@ -117,9 +117,6 @@ def color_and_label(
     )
     logger.info(f"color_and_label: updating {len(data_to_update)} media")
     #
-    label_array = np.array(
-        [annotations.get(uid) for i, uid in enumerate(data.uid.values)]  # noqa
-    )
     cmap = plt.get_cmap("viridis")
     cmap_distinct = plt.get_cmap("tab20b")
     individual_labels_unique = set(individual_labels)
@@ -134,8 +131,9 @@ def color_and_label(
         else "n/a"
     )
 
-    data["label_true"] = label_array
-    data["label_true"] = data["label_true"].apply(lambda x_: canon_(x_))
+    data["label_true"] = np.array(
+        [canon_(annotations.get(uid)) for uid in data.uid.values]  # noqa
+    )
     labeled_uids = set(annotations.keys())
     data["labeled"] = data["uid"].apply(lambda x_: int(x_ in labeled_uids))
 

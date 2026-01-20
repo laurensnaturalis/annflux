@@ -47,7 +47,7 @@ from typing import Dict, List, Optional, Tuple
 
 import flask
 import pandas
-from flask import make_response, render_template, request, send_file, Response
+from flask import make_response, render_template, request, send_file, Response, abort
 from flask_httpauth import HTTPBasicAuth
 from tensorflow.python.keras.callbacks import Callback
 from werkzeug.security import check_password_hash
@@ -86,8 +86,8 @@ exclusivity_path: str
 label_definitions_path: str
 label_provider_path: str
 g_state: AnnFluxState
-g_layout: str
-logger: logging.Logger
+g_layout: str = "label"
+logger: logging.Logger | None = None
 
 
 class NoStatus(logging.Filter):
@@ -245,12 +245,15 @@ def data_get():
 
     if not os.path.exists(annflux_pq_cache_path):
         if filter_query is not None:
-            t = sql_to_pandas_query(
-                filter_query,
-                pandas.read_csv(
-                    annflux_data_path, dtype={"label_predicted": str, "label_true": str}
-                ),
-            )
+            try:
+                t = sql_to_pandas_query(
+                    filter_query,
+                    pandas.read_csv(
+                        annflux_data_path, dtype={"label_predicted": str, "label_true": str}
+                    ),
+                )
+            except ValueError as e:
+                abort(400, str(e))
             print(f"{len(t)=}")
             with tempfile.NamedTemporaryFile() as fn:
                 t.to_csv(fn, index=False)
@@ -314,6 +317,7 @@ def thumbnail(uid):
     os.makedirs(thumb_path_, exist_ok=True)
     thumb_path = os.path.join(thumb_path_, f"{uid}.jpg")
     if not os.path.exists(image_path):
+        os.makedirs(failed_images_path, exist_ok=True)
         failed_thumb_path = os.path.join(failed_images_path, f"{uid}.jpg")
         if not os.path.exists(failed_thumb_path):
             generate_missing_thumbnail(uid).save(failed_thumb_path)
@@ -366,6 +370,7 @@ def images_full(uid):
         return send_file(file_path, mimetype="image/jpg", as_attachment=False)
     else:
         print(f"{file_path} not found")
+        abort(Response("Image not found", status=404))
 
 
 @app.route("/sounds/<uid>")
