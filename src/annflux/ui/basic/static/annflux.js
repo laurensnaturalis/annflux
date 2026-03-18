@@ -146,16 +146,16 @@ function filterData(
         show_data_start = show_data_start.filter((a) =>
             // a["label_predicted"].toLowerCase().includes(label_predicted)
             urlParams.get("not_label_predicted") === "on"
-                ? !(a["label_predicted"] ?? "").toLowerCase().includes(label_predicted)
-                : (a["label_predicted"] ?? "").toLowerCase().includes(label_predicted)
+                ? (a["label_predicted"] ?? "").toLowerCase().split(",").indexOf(label_predicted) === -1
+                : (a["label_predicted"] ?? "").toLowerCase().split(",").indexOf(label_predicted) > -1
         );
     }
     const label_true = urlParams.get("label_true");
     if (label_true) {
         show_data_start = show_data_start.filter((a) =>
             urlParams.get("not_label_true") === "on"
-                ? !(a["label_true"] ?? "").toLowerCase().includes(label_true)
-                : (a["label_true"] ?? "").toLowerCase().includes(label_true)
+                ? (a["label_true"] ?? "").toLowerCase().split(",").indexOf(label_true) === -1
+                : (a["label_true"] ?? "").toLowerCase().split(",").indexOf(label_true) > -1
         );
     }
     const label_undetermined = urlParams.get("label_undetermined");

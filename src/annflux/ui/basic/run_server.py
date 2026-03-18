@@ -187,6 +187,7 @@ users = dict([x_.split("|") for x_ in os.getenv("USERS", "").split()])
 
 @auth.verify_password
 def verify_password(username, password):
+    print("USERS", users)
     if len(users) == 0 or (
         username in users and check_password_hash(users.get(username, ""), password)
     ):
@@ -253,6 +254,7 @@ def data_get():
                     ),
                 )
             except ValueError as e:
+                raise e
                 abort(400, str(e))
             print(f"{len(t)=}")
             with tempfile.NamedTemporaryFile() as fn:
@@ -334,7 +336,7 @@ def nearest_neighbors(uid):
     """ """
     state: AnnFluxState = g_state
     import numpy as np
-    data = pandas.read_csv(state.annflux_path, dtype={"label_predicted": str, "label_true": str}) # TODO: slow
+    data = pandas.read_csv(state.annflux_path, dtype={"label_predicted": str, "label_true": str, "image_id": str}) # TODO: slow
     index = np.where(data.image_id == uid)[0][0] # TODO: slow
     print("NEIGHBORS", index, state.all_indices[index])
     data_neighbors = data.iloc[state.all_indices[index]]

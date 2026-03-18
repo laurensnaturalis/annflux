@@ -357,6 +357,7 @@ limitations under the License.
     }
 
     function drawGallery(show_data, as_ranking_column) {
+        console.log("hierzo", show_data.length);
         as_ranking_column = as_ranking_column ?? urlParams.get("as_ranking_column");
         //show_data.sort((a, b) => a.score_predicted - b.score_predicted);
         const rank_modifier = urlParams.get("invert_ranking") == "on" ? -1 : +1;

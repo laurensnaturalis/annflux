@@ -55,9 +55,9 @@ def get_repo_model(
             data=list(zip(range(2), ["foo", "bar"])),
             columns=["index", "class_name"],  # ty: ignore
         ).to_csv(model.class_to_label_path, index=False)
-        repo.commit(model, tag="untrained")
+        repo.commit(model, tag=tag)
         shutil.rmtree(tmp_dir)
-        model = repo.get(label=model_type, tag="untrained").first()
+        model = repo.get(label=model_type, tag=tag).first()
     return model
 
 
@@ -100,9 +100,13 @@ def train_then_features(
             from annflux.training.annflux.bioclip import (
                 BioClipFeatureExtractor as Extractor,
             )
-        if architecture == "bioclip2":
+        elif architecture == "bioclip2":
             from annflux.training.annflux.bioclip2 import (
                 BioClip2FeatureExtractor as Extractor,
+            )
+        elif architecture == "biocap":
+            from annflux.training.annflux.bioclip2 import (
+                BioCapFeatureExtractor as Extractor,
             )
         elif architecture == "clip":
             from annflux.training.annflux.clip import ClipFeatureExtractor as Extractor
