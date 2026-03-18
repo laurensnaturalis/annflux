@@ -15,7 +15,7 @@ def m():
 
     processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-4B-Instruct")
 
-    constrained_query = "describe the image in terms of the presence of branches, grass, trees, or other vegetation; one or multiple animals; the presence of water, rock, soil, or snow; the presence of non-natural objects, humans, and visible sky. Output as a list of keywords of present key words, explicitly use the words 'one' or 'multiple' for the multiplicity of animals"
+    constrained_query = "describe the image in terms of the presence of branches, grass, trees, or other vegetation; one or multiple animals or tracks; the presence of water, rock, soil, or snow; the presence of non-natural objects, humans, and visible sky. Output as a list of keywords of present key words, explicitly use the words 'one' or 'multiple' for the multiplicity of animals"
     open_query = "describe the image"
     messages = [
         {
@@ -23,7 +23,7 @@ def m():
             "content": [
                 {
                     "type": "image",
-                    "image": "http://127.0.0.1:8006/images/full/AO_NS_1987303",
+                    "image": "http://127.0.0.1:8006/images/thumbnail/AO_NS_1874498",
                 },
                 {"type": "text", "text": constrained_query},
             ],

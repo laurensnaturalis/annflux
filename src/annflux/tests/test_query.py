@@ -32,3 +32,11 @@ class TestQuery(unittest.TestCase):
                 data={"label_predicted": ["Pap", "Bap"], "label_true": ["Bap", "Pap"]}
             ),
         )
+
+    def test_in_query(self):
+        self.assertAlmostEqual(1, len(sql_to_pandas_query(
+            "Graphium eurypylus IN row.label_predicted",
+            pandas.DataFrame(
+                data={"label_predicted": ["Pap", "Graphium eurypylus"], "label_true": ["Bap", "Graphium eurypylus"]}
+            ),
+        )))

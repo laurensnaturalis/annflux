@@ -282,6 +282,15 @@ function Map2D($container) {
                             urlParams.get("ignore_double_checked") == "on"
                     );
                 }
+                const in_test = urlParams.get("in_test") ?? 0;
+                if (in_test == 1) {
+                    // alert(show_data2.length);
+                    show_data2 = show_data2.filter(
+                        (row) =>
+                            row.in_test == 1
+                    );
+                    // alert(show_data2.length);
+                }
                 const rank_modifier = urlParams.get("invert_ranking") === "on" ? -1 : +1;
                 show_data2 = show_data2.sort(
                     (a, b) => {
@@ -301,8 +310,7 @@ function Map2D($container) {
                         show_data2.push(row);
                     }
                 }
-            }
-            else {
+            } else {
                 // show_data2 = show_data_start;
                 console.log("before filter", show_data_start);
 
@@ -433,7 +441,7 @@ function Map2D($container) {
 
     function getDomain(name, data_) {
         let xs = new Set();
-        data_.forEach((el) => xs.add(parseInt(el[name])));
+        data_.forEach((el) => xs.add(parseFloat(el[name])));
         const sortedX = Array.from(xs).sort((a, b) => a > b);
         const xDomain = [sortedX[0], sortedX[sortedX.length - 1]];
         return xDomain;

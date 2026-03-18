@@ -553,16 +553,15 @@ class TestAuthentication:
 
     def test_auth_required(self):
         """Test that authentication is required when users are configured"""
-        with patch.dict(os.environ, {"USERS": "testuser|hashedpassword"}):
-            os.environ["PROJECT_ROOT"] = "/tmp"
+        os.environ["PROJECT_ROOT"] = "/tmp"
+        os.environ["USERS"] = "testuser|hashedpassword"
+        with patch("annflux.ui.basic.run_server._init"):
+            test_app = get_app()
+            client = test_app.test_client()
 
-            with patch("annflux.ui.basic.run_server._init"):
-                test_app = get_app()
-                client = test_app.test_client()
-
-                response = client.get("/")
-                # Should require authentication
-                assert response.status_code == 401
+            response = client.get("/")
+            # Should require authentication
+            assert response.status_code == 401
 
     def test_no_auth_when_no_users(self):
         """Test that authentication is not required when no users are configured"""
