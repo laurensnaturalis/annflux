@@ -37,6 +37,15 @@ function addDots(
         "e_0",
         "e_1"
     );
+
+    function getColor(d) {
+        const c = (color_by ? d[color_by] : d.color_class);
+        if (c === undefined || c === null) {
+            return "#888";
+        }
+        const s = String(c).trim();
+        return s.length > 0 ? s : "#888";
+    }
     if (localStorage.getItem("debug") === "2") {
         console.log(dotsId, "addDots", filters, x(20));
     }
@@ -58,8 +67,8 @@ function addDots(
         .attr("id", function (d) {
             return "dot-" + d.uid;
         })
-        .style("fill", d => d.labeled == 1 ? (color_by ? d[color_by] : d.color_class ) : "")
-        .style("stroke", d => d.labeled == 0 ? (color_by ? d[color_by] : d.color_class ) : "")
+        .style("fill", (d) => (d.labeled == 1 ? getColor(d) : "none"))
+        .style("stroke", (d) => (d.labeled == 0 ? getColor(d) : "none"))
         //.style("stroke", function (d) {
         //  return d.color_prob;
         //})
