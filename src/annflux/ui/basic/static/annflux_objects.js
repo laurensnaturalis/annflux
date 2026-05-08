@@ -73,14 +73,13 @@ function Map2D($container) {
         gallery = d3.select("#gallery").append("div");
     };
 
+    //lastZoomUpdate = new Date().getTime() / 1000;
     this.handleZoom = function (e) {
         transform = d3.zoomTransform(this);
         d3Group.attr("transform", transform);
         zoomControl(
             elementId,
-            transform,
-            lastZoomUpdate,
-            numUpdatesActive,
+            transform,           
             localData
         );
     };
@@ -119,6 +118,10 @@ function Map2D($container) {
         if (localStorage.getItem("debug") >= 1) {
             console.log("domain", this.xDomain, this.yDomain);
         }
+        console.log("xDomain", this.xDomain);
+        console.log("yDomain", this.yDomain);
+        console.log("width", width);
+        console.log("height", height);
         //
         this.x = d3.scaleLinear().domain(this.xDomain).range([0, width]);
         this.y = d3.scaleLinear().domain(this.yDomain).range([height, 0]);
@@ -382,6 +385,7 @@ function Map2D($container) {
         if (localStorage.getItem("debug") === "1") {
             console.log("render", elementId, data.length, mode);
         }
+        console.log("transform", transform);
         if (mode === "embedding") {
             console.time("render::addDots")
             dots = addDots(
@@ -467,7 +471,7 @@ function zoomControl(
                     console.log(gReferences);
                     console.log("zoomControl", elementId, gReferences.get(elementId));
                 }
-                gReferences.get(elementId).render(data, x, y);
+                gReferences.get(elementId).render(data, gReferences.get(elementId).x, gReferences.get(elementId).y);
                 gReferences.get(elementId).lastZoomUpdate = now;
                 gReferences.get(elementId).numUpdatesActive--;
                 if (localStorage.getItem("debug") >= 1) {
