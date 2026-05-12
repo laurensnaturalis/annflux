@@ -34,15 +34,18 @@ def diversify(
 
     for _ in tqdm(range(diversify_from), total=diversify_from, desc="diversifying"):
         others = list(set(range(len(features_sorted))) - set(result))
+        if len(others) == 0:
+            break
+        sample_size = max(1, int(fraction_others * len(others)))
         others = np.random.choice(
-            others, size=int(fraction_others * len(others)), replace=False
+            others, size=sample_size, replace=False
         )  # TODO(improvement): use most needed as weights
         others = list(sorted(others))
         distances = pairwise_distances(
             features_sorted[list(sorted(result))], features_sorted[others]
         )
         sum_distances = np.sum(distances, axis=0)
-        result.append(int(np.argmin(sum_distances)))
+        result.append(others[int(np.argmax(sum_distances))])
 
     return result
 
