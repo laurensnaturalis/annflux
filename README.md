@@ -53,10 +53,6 @@ Extract to `~/annflux/data/envdataset/images`
 On commandline
 
 ```bash
-export HUGGINGFACE_CLIP_NAME={a hugging face CLIP model that supports the peft package}
-```
-
-```bash
 annflux go ~/annflux/data/envdataset --start_labels Your_label_A Your_label_B Your_label_C`
 ```
 
