@@ -16,8 +16,10 @@ import line_profiler
 from pandas import DataFrame
 from pandas.core.api import DataFrame
 import logging
+import os
 import time
 from collections import defaultdict, Counter
+from joblib import Parallel, delayed
 from typing import List, Dict, Iterable, Any
 
 import numpy as np
@@ -32,6 +34,29 @@ logger = logging.getLogger("annflux_server")
 agg_to_pca = {}  # TODO: reset when features are updated
 
 
+def _fit_pca_for_label(
+    agg: str, 
+    indices_: List[int], 
+    features: NDArray, 
+    new_labeled_indices: List[int] | None,
+    logger: logging.Logger
+) -> tuple[str, PCA] | None:
+    """
+    Helper function to fit PCA for a single label (for parallelization)
+    """
+    if new_labeled_indices is not None:
+        if len(set(new_labeled_indices).intersection(set(indices_))) == 0:
+            logger.debug(f"PCA: Skipping {agg} because not in new labeled images")
+            return None
+    feat_ = features[sorted(indices_)]
+    if len(feat_) > 10:
+        logger.debug(f"PCA: Updating {agg}")
+        pca = PCA(n_components=0.95)
+        pca.fit(feat_)
+        return (agg, pca)
+    return None
+
+
 def compute_fre(
     annotations: Dict[str, str],
     data: pandas.DataFrame,
@@ -39,9 +64,11 @@ def compute_fre(
     labeled_indices: List[int],
     test_uids: Iterable[str],
     new_labeled_indices: List[int] | None = None,
+    pca_cache: dict | None = None,
 ):
     """
     Compute feature reconstruction error
+    :param pca_cache: Optional dict to cache PCA models per label. If None, uses global module cache.
     """
     time_start = time.time()
     label_agg_array = np.array(
@@ -59,19 +86,26 @@ def compute_fre(
         if label_agg_array[index_] is not None:
             agg_to_indices[canon_(label_agg_array[index_])].append(index_)
     logger.info(f"[TIMING] PCA data preparation took {time.time() - time_start} s")
-    # make PCA models
+    # Use provided cache or fall back to global
+    cache = pca_cache if pca_cache is not None else agg_to_pca
+    # make PCA models (parallelized)
     time_start = time.time()
-    for agg, indices_ in tqdm(agg_to_indices.items()):
-        if new_labeled_indices is not None:
-            if len(set(new_labeled_indices).intersection(set(indices_))) == 0:
-                logger.debug(f"PCA: Skipping {agg} because not in new labeled images")
-                continue
-        feat_ = features[sorted(indices_)]
-        if len(feat_) > 10:
-            logger.debug(f"PCA: Updating {agg}")
-            pca = PCA(n_components=0.95)
-            pca.fit(feat_)
-            agg_to_pca[agg] = pca
+    pca_jobs = []
+    for agg, indices_ in agg_to_indices.items():
+        pca_jobs.append(delayed(_fit_pca_for_label)(
+            agg, indices_, features, new_labeled_indices, logger
+        ))
+    
+    # Use -1 for all CPUs, or set to specific number via environment variable
+    n_jobs = int(os.getenv("FRE_N_JOBS", -1))
+    results = Parallel(n_jobs=n_jobs)(pca_jobs)
+    
+    # Update cache with results
+    for result in results:
+        if result is not None:
+            agg, pca = result
+            cache[agg] = pca
+    
     logger.info(f"pca analysis took={time.time() - time_start:.2f}")
     # compute FRE values
     time_start = time.time()
@@ -85,8 +119,8 @@ def compute_fre(
 
         features_ = features[indices_]
 
-        if label_predicted_ in agg_to_pca:
-            pca: PCA = agg_to_pca[label_predicted_]
+        if label_predicted_ in cache:
+            pca: PCA = cache[label_predicted_]
             fre = np.linalg.norm(
                 pca.inverse_transform(pca.transform(features_)) - features_, axis=1
             )

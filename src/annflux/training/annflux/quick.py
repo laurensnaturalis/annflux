@@ -109,6 +109,9 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
             logger,
         )
 
+    # Compute reload_features BEFORE updating state.cache_for
+    reload_features = state.cache_for != result_set.entry.uid
+    
     state.cache_for = result_set.entry.uid
     state.version_for_recompute = (
         result_set.entry.uid + "_" + str(state.trained_for_version_previous)
@@ -116,8 +119,11 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
 
     time_start = time.time()
 
-    print("knn labeled", time.time() - time_start)
+    print("knn labeled", time.time() - start_time)
     new_labeled_nn_uids = None
+
+    # FRE PCA cache - reset when features change
+    fre_pca_cache: dict = {}
 
     if len(state.labeled_indices) > 0:
     #     return
@@ -266,6 +272,9 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
             data.label_true = data.label_true.apply(lambda x_: canon_(x_))
         # FRE
         state.g_quick_status = "computing FRE"
+        # Reset PCA cache if features were reloaded
+        if reload_features:
+            fre_pca_cache.clear()
         compute_fre(
             annotations,
             data,
@@ -273,6 +282,7 @@ def quick_reclassification_instance(knn_type, state, logger: logging.Logger):
             state.labeled_indices,
             test_uids,
             new_labeled_indices_for_fre,
+            pca_cache=fre_pca_cache,
         )
         #
         most_needed_first = sorted(counter_of_most_need.items(), key=lambda t_: -t_[1])
@@ -417,7 +427,7 @@ def load_data(state: AnnFluxState, logger: logging.Logger, no_linear_features=Fa
     if no_linear_features:
         for resultset in repo.get(label=Resultset, tag="unseen")[::-1]:
             print(resultset, resultset.entry, resultset.entry.message)
-            if "linear" not in resultset.entry.message == "":
+            if "linear" not in resultset.entry.message:
                 result_set = resultset
                 break
     else:
