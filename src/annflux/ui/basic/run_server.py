@@ -17,6 +17,7 @@ import shutil
 import tempfile
 
 from PIL import Image
+from keras.src.callbacks import Callback
 from pandas.errors import EmptyDataError
 
 from annflux.repo_results_to_embedding import group_embedding
@@ -49,7 +50,7 @@ import flask
 import pandas
 from flask import make_response, render_template, request, send_file, Response, abort
 from flask_httpauth import HTTPBasicAuth
-from tensorflow.python.keras.callbacks import Callback
+# from tensorflow.python.keras.callbacks import Callback
 from werkzeug.security import check_password_hash
 
 from annflux.algorithms.embeddings import compute_tsne
@@ -344,6 +345,89 @@ def nearest_neighbors(uid):
     # data_neighbors = data_neighbors[data_neighbors["labeled"] == 1]
 
     return Response(data_neighbors.to_csv(index=True), mimetype="text/csv")
+
+
+_clip_model_cache = None
+_clip_processor_cache = None
+_clip_device_cache = None
+_uid_cache = None
+
+
+def _get_clip_text_encoder():
+    global _clip_model_cache, _clip_processor_cache, _clip_device_cache
+    if _clip_model_cache is None:
+        import torch
+        from transformers import CLIPModel, CLIPProcessor
+        from annflux.repository.model import ClipModel
+
+        repo = Repository(os.path.join(g_state.annflux_folder, "datarepo"))
+        clip_model_entry = repo.get(label=ClipModel).last()
+        if clip_model_entry is None:
+            raise RuntimeError("No CLIP model found in repository")
+        config = json.load(open(os.path.join(clip_model_entry.path, "model.json")))
+        clip_variant = config["model_variant"]
+        _clip_device_cache = "cuda" if torch.cuda.is_available() else "cpu"
+        _clip_model_cache = CLIPModel.from_pretrained(
+            clip_variant, device_map=_clip_device_cache, torch_dtype=torch.float16
+        )
+        _clip_processor_cache = CLIPProcessor.from_pretrained(clip_variant)
+        adapter_folder = os.path.join(clip_model_entry.path, "adapter")
+        if os.path.exists(adapter_folder):
+            _clip_model_cache.load_adapter(adapter_folder)
+        logger.info(f"Loaded CLIP text encoder: {clip_variant}")
+    return _clip_model_cache, _clip_processor_cache, _clip_device_cache
+
+
+def _get_uid_list():
+    global _uid_cache
+    if _uid_cache is None:
+        data = pandas.read_csv(g_state.annflux_path, usecols=["uid"], dtype={"uid": str})
+        _uid_cache = data.uid.values
+    return _uid_cache
+
+
+@app.route("/search/natural_language")
+def search_natural_language():
+    import torch
+    import numpy as np
+
+    query = flask.request.args.get("query", "")
+    if not query:
+        return flask.jsonify({"uids": [], "scores": [], "error": "Empty query"})
+
+    n = int(flask.request.args.get("n", 50))
+
+    if not g_state.is_initialized() or len(g_state.features) == 0:
+        return flask.jsonify({"uids": [], "scores": [], "error": "Features not loaded yet"}), 503
+
+    try:
+        model, processor, device = _get_clip_text_encoder()
+    except RuntimeError as e:
+        logger.error(f"Failed to load CLIP text encoder: {e}")
+        return flask.jsonify({"uids": [], "scores": [], "error": str(e)}), 500
+
+    with torch.no_grad():
+        inputs = processor(text=[query], return_tensors="pt", padding=True)
+        inputs = {k: v.to(device) for k, v in inputs.items() if isinstance(v, torch.Tensor)}
+        text_features = model.get_text_features(**inputs)
+        text_embedding = text_features.cpu().numpy().flatten().astype(np.float32)
+
+    text_embedding = text_embedding / np.linalg.norm(text_embedding)
+
+    features = g_state.features.astype(np.float32)
+    norms = np.linalg.norm(features, axis=1, keepdims=True)
+    norms[norms == 0] = 1
+    features_normalized = features / norms
+
+    similarities = features_normalized @ text_embedding
+    top_indices = np.argsort(similarities)[::-1][:n]
+
+    uids = _get_uid_list()
+    result_uids = uids[top_indices].tolist()
+    result_scores = similarities[top_indices].tolist()
+
+    logger.info(f"Natural language search: query='{query}', top score={result_scores[0]:.3f}, |uids|={len(result_uids)}")
+    return flask.jsonify({"uids": result_uids, "scores": result_scores})
 
 
 @app.route("/images/original/thumbnail/<uid>")

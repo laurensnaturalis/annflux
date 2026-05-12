@@ -198,6 +198,13 @@ limitations under the License.
       <img src="" style="max-width: 100%" />
       <a href="#" onclick="$('#fullscreen').hide();">x</a>
     </div>
+      <div id="nlSearchBox" style="margin-bottom: 4px;">
+        <input type="text" id="nlSearchQuery" placeholder="Search images by description..." style="width: 250px;"
+          onkeydown="if(event.key==='Enter') searchNaturalLanguage()" />
+        <a href="#" onclick="searchNaturalLanguage()">Search</a>
+        <a href="#" onclick="clearNaturalLanguageSearch()">Clear</a>
+        <span id="nlSearchStatus" style="color: #888; font-size: 0.9em;"></span>
+      </div>
       <a href="#" onclick="submitLabeledGallery(this)"
         >Save all labels/images</a
       >
@@ -1580,6 +1587,43 @@ limitations under the License.
 
     function setLabelParent(val) {
         $("#parentLabel").val(val);
+    }
+
+    function searchNaturalLanguage() {
+        const query = $("#nlSearchQuery").val();
+        if (!query) return;
+        const n = parseInt(urlParams.get("num_in_gallery") || "50");
+        $("#nlSearchStatus").html("Searching...");
+        $.get("/search/natural_language", {query: query, n: n}, function (result) {
+            console.log(result.uids.length);
+            if (result.uids && result.uids.length > 0) {
+                const uidToScore = new Map();
+                for (let i = 0; i < result.uids.length; i++) {
+                    uidToScore.set(result.uids[i], result.scores[i]);
+                }
+                let show_data = [];
+                for (const uid of result.uids) {
+                    const found = data.find(d => d.uid == uid);
+                    if (found) show_data.push(found);
+                }
+                $("#nlSearchStatus").html(`${show_data.length} results`);
+                drawGallery(show_data);
+            } else {
+                $("#nlSearchStatus").html(result.error || "No results");
+            }
+        }).fail(function (jqXHR) {
+            const msg = jqXHR.responseJSON ? jqXHR.responseJSON.error : "Search failed";
+            $("#nlSearchStatus").html(msg);
+            logUI("Search failed: " + msg, 1);
+        });
+    }
+
+    function clearNaturalLanguageSearch() {
+        $("#nlSearchQuery").val("");
+        $("#nlSearchStatus").html("");
+        if (embeddingMap) {
+            embeddingMap.setData(data);
+        }
     }
 </script>
 
