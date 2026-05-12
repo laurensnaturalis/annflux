@@ -200,7 +200,9 @@ limitations under the License.
     </div>
       <div id="nlSearchBox" style="margin-bottom: 4px;">
         <input type="text" id="nlSearchQuery" placeholder="Search images by description..." style="width: 250px;"
-          onkeydown="if(event.key==='Enter') searchNaturalLanguage()" />
+          onkeydown="event.stopPropagation(); if(event.key==='Enter') searchNaturalLanguage()"
+          onkeyup="event.stopPropagation()"
+          onkeypress="event.stopPropagation()" />
         <a href="#" onclick="searchNaturalLanguage()">Search</a>
         <a href="#" onclick="clearNaturalLanguageSearch()">Clear</a>
         <span id="nlSearchStatus" style="color: #888; font-size: 0.9em;"></span>

@@ -30,6 +30,7 @@ from annflux.tools.io import (
     to_js_arrow,
     compute_hash,
     sql_to_pandas_query,
+    numpy_load,
 )
 from annflux.tools.progress_learn import estimate_duration
 from annflux.tools.visualization import most_contrasting_gray, brighten_hex_color
@@ -351,6 +352,7 @@ _clip_model_cache = None
 _clip_processor_cache = None
 _clip_device_cache = None
 _uid_cache = None
+_original_clip_features = None
 
 
 def _get_clip_text_encoder():
@@ -386,6 +388,21 @@ def _get_uid_list():
     return _uid_cache
 
 
+def _get_original_clip_features():
+    global _original_clip_features
+    if _original_clip_features is None:
+        from annflux.repository.resultset import Resultset
+
+        repo = Repository(os.path.join(g_state.annflux_folder, "datarepo"))
+        result_set = repo.get(label=Resultset, tag="unseen").first()
+        if result_set is None:
+            raise RuntimeError("No resultset found in repository")
+        folder = result_set.path
+        _original_clip_features = numpy_load(f"{folder}/last_full.npz", "lastFull")
+        logger.info(f"Loaded original CLIP features from {folder}, shape={_original_clip_features.shape}")
+    return _original_clip_features
+
+
 @app.route("/search/natural_language")
 def search_natural_language():
     import torch
@@ -397,13 +414,11 @@ def search_natural_language():
 
     n = int(flask.request.args.get("n", 50))
 
-    if not g_state.is_initialized() or len(g_state.features) == 0:
-        return flask.jsonify({"uids": [], "scores": [], "error": "Features not loaded yet"}), 503
-
     try:
         model, processor, device = _get_clip_text_encoder()
+        features = _get_original_clip_features()
     except RuntimeError as e:
-        logger.error(f"Failed to load CLIP text encoder: {e}")
+        logger.error(f"Failed to initialize natural language search: {e}")
         return flask.jsonify({"uids": [], "scores": [], "error": str(e)}), 500
 
     with torch.no_grad():
@@ -414,7 +429,7 @@ def search_natural_language():
 
     text_embedding = text_embedding / np.linalg.norm(text_embedding)
 
-    features = g_state.features.astype(np.float32)
+    features = features.astype(np.float32)
     norms = np.linalg.norm(features, axis=1, keepdims=True)
     norms[norms == 0] = 1
     features_normalized = features / norms
