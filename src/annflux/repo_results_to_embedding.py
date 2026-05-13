@@ -142,6 +142,10 @@ def embed_and_prepare_func(
         alt_embedding[:, 1] += y_shift
         data["e2_0"] = alt_embedding[sel, 0]
         data["e2_1"] = alt_embedding[sel, 1]
+        dx = data["e2_0"].values - data["e_0"].values
+        dy = data["e2_1"].values - data["e_1"].values
+        angle_from_vertical = np.degrees(np.arctan2(np.abs(dx), np.abs(dy)))
+        data["alt_line_angle"] = angle_from_vertical
         logger.info("Alternative embedding written to e2_0, e2_1")
     data["in_test"] = data["uid"].apply(lambda x_: int(x_ in test_uids))
     data.to_csv(data_state_path, index=False)

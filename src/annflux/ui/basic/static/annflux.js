@@ -24,9 +24,9 @@ function addDots(
     d3Element,
     dotsId,
     filters,
-    showLines
+    lineThreshold
 ) {
-    if (showLines === undefined) showLines = true;
+    if (lineThreshold === undefined) lineThreshold = 5;
     const [show_data, k] = filterData(
         data,
         x,
@@ -71,7 +71,7 @@ function addDots(
             .style("stroke", "#aaaaaa")
             .style("stroke-width", 1 / k)
             .style("stroke-opacity", 0.5)
-            .style("display", showLines ? null : "none");
+            .style("display", (d) => (lineThreshold !== null && parseFloat(d.alt_line_angle) > lineThreshold) ? null : "none");
 
         // Draw alt embedding dots
         dotsGroup
