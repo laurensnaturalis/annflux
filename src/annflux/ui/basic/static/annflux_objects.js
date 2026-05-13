@@ -25,6 +25,13 @@ function Map2D($container) {
     this.lastZoomUpdate = new Date().getTime() / 1000;
     this.numUpdatesActive = 0;
     let localData = null;
+    this.showLines = true;
+
+    this.toggleLines = function () {
+        this.showLines = !this.showLines;
+        d3.select(`#${dotsId}`).selectAll("line.alt-link")
+            .style("display", this.showLines ? null : "none");
+    };
 
     // Initialize the map
     this.init = function (goldenContainer, elementId_, mode_) {
@@ -77,6 +84,9 @@ function Map2D($container) {
     this.handleZoom = function (e) {
         transform = d3.zoomTransform(this);
         d3Group.attr("transform", transform);
+        const k = transform.k;
+        d3.select(`#${dotsId}`).selectAll("line.alt-link")
+            .style("stroke-width", 0.5 / k);
         zoomControl(
             elementId,
             transform,           
@@ -208,7 +218,9 @@ function Map2D($container) {
             const uiElements = dots ? dots : this.images;
             uiElements.each((d, i) => {
                 let point = [uiObject.x(d.e_0), uiObject.y(d.e_1)];
-                if (pointInPolygon(point, coords)) {
+                const hasAlt = d.e2_0 != null && d.e2_0 !== undefined && !isNaN(parseFloat(d.e2_0));
+                let altPoint = hasAlt ? [uiObject.x(parseFloat(d.e2_0)), uiObject.y(parseFloat(d.e2_1))] : null;
+                if (pointInPolygon(point, coords) || (altPoint && pointInPolygon(altPoint, coords))) {
                     d3.select("#dot-" + d.uid).attr("fill", "red");
                     selectedElements.push(d.uid);
                 }
@@ -398,7 +410,8 @@ function Map2D($container) {
                 height,
                 d3Group,
                 dotsId,
-                this.filters
+                this.filters,
+                this.showLines
             );
             console.timeEnd("render::addDots")
             //

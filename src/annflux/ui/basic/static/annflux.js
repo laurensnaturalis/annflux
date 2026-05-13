@@ -23,8 +23,10 @@ function addDots(
     height,
     d3Element,
     dotsId,
-    filters
+    filters,
+    showLines
 ) {
+    if (showLines === undefined) showLines = true;
     const [show_data, k] = filterData(
         data,
         x,
@@ -68,7 +70,8 @@ function addDots(
             .attr("y2", (d) => y(parseFloat(d.e2_1)))
             .style("stroke", "#aaaaaa")
             .style("stroke-width", 0.5 / k)
-            .style("stroke-opacity", 0.5);
+            .style("stroke-opacity", 0.5)
+            .style("display", showLines ? null : "none");
 
         // Draw alt embedding dots
         dotsGroup

@@ -1687,6 +1687,10 @@ limitations under the License.
                     const key = eventData.originalEvent.key;
                     if (key === "?") {
                         $("#help").toggle();
+                    } else if (key === "l" || key === "L") {
+                        if (embeddingMap) {
+                            embeddingMap.toggleLines();
+                        }
                     } else if (key === "r" && eventData.originalEvent.altKey && eventData.originalEvent.ctrlKey) {
                         localStorage.clear();
                         location.reload();
