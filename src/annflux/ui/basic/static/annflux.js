@@ -69,7 +69,7 @@ function addDots(
             .attr("x2", (d) => x(parseFloat(d.e2_0)))
             .attr("y2", (d) => y(parseFloat(d.e2_1)))
             .style("stroke", "#aaaaaa")
-            .style("stroke-width", 0.5 / k)
+            .style("stroke-width", 1 / k)
             .style("stroke-opacity", 0.5)
             .style("display", showLines ? null : "none");
 
