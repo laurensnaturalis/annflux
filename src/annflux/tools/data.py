@@ -18,6 +18,7 @@ import itertools
 import json
 import logging
 import os
+import re
 import shutil
 import time
 from collections import Counter, defaultdict
@@ -588,9 +589,15 @@ def init_folder(
             make_images(images_path)
 
             clean_filenames(images_path)
+            def _natural_sort_key(s):
+                return [
+                    int(part) if part.isdigit() else part.lower()
+                    for part in re.split(r"(\d+)", s)
+                ]
+
             image_ids = [
                 os.path.splitext(x_)[0]
-                for x_ in os.listdir(images_path)
+                for x_ in sorted(os.listdir(images_path), key=_natural_sort_key)
                 if x_.endswith(".jpg")
             ]
             images_table = pandas.DataFrame(

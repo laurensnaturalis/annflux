@@ -50,13 +50,49 @@ function addDots(
         console.log(dotsId, "addDots", filters, x(20));
     }
     // Add dots
-    let dots = d3Element
-        .append("g")
-        .attr("id", dotsId)
-        .selectAll("dot")
+    let dotsGroup = d3Element.append("g").attr("id", dotsId);
+
+    const hasAltEmbedding = show_data.length > 0 && show_data[0].e2_0 != null && show_data[0].e2_0 !== undefined && !isNaN(parseFloat(show_data[0].e2_0));
+
+    if (hasAltEmbedding) {
+        // Draw connecting lines between primary and alt embedding positions
+        dotsGroup
+            .selectAll("line.alt-link")
+            .data(show_data)
+            .enter()
+            .append("line")
+            .attr("class", "alt-link")
+            .attr("x1", (d) => x(d.e_0))
+            .attr("y1", (d) => y(d.e_1))
+            .attr("x2", (d) => x(parseFloat(d.e2_0)))
+            .attr("y2", (d) => y(parseFloat(d.e2_1)))
+            .style("stroke", "#aaaaaa")
+            .style("stroke-width", 0.5 / k)
+            .style("stroke-opacity", 0.5);
+
+        // Draw alt embedding dots
+        dotsGroup
+            .selectAll("circle.alt-dot")
+            .data(show_data)
+            .enter()
+            .append("circle")
+            .attr("class", "alt-dot")
+            .attr("cx", (d) => x(parseFloat(d.e2_0)))
+            .attr("cy", (d) => y(parseFloat(d.e2_1)))
+            .attr("r", 3.0 / k)
+            .attr("id", (d) => "dot2-" + d.uid)
+            .style("fill", (d) => (d.labeled == 1 ? getColor(d) : "none"))
+            .style("stroke", (d) => (d.labeled == 0 ? getColor(d) : "none"))
+            .style("stroke-width", 1 / k)
+            .style("stroke-dasharray", `${3 / k},${2 / k}`);
+    }
+
+    let dots = dotsGroup
+        .selectAll("circle.primary-dot")
         .data(show_data)
         .enter()
         .append("circle")
+        .attr("class", "primary-dot")
         .attr("cx", function (d) {
             return x(d.e_0);
         })

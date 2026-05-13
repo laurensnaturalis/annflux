@@ -47,9 +47,9 @@ def embed_and_prepare(source: AnnfluxSource, show=False, compute_performance=Fal
     else:
         annotations = {}
     extra_predictions_path = f"{folder}/predictions.csv"
-    out_path = os.path.join(working_folder, "annflux.csv")
+    alt_features_path = os.getenv("ALT_FEATURES_PATH")
 
-    acc_test = embed_and_prepare_func(
+    _ = embed_and_prepare_func(
         source,
         annotations,
         read_table_pandas(f"{folder}/results.csv"),
@@ -58,6 +58,7 @@ def embed_and_prepare(source: AnnfluxSource, show=False, compute_performance=Fal
         extra_predictions_path,
         compute_performance,
         show=show,
+        alt_features_path=alt_features_path,
     )
     # write_performance(
     #     acc_test,
@@ -76,6 +77,7 @@ def embed_and_prepare_func(
     extra_predictions_path=None,
     compute_performance: bool = False,
     show=False,
+    alt_features_path: str | None = None,
 ):
     source: AnnfluxSource | None = None
     if isinstance(source_or_data_state_path, AnnfluxSource):
@@ -119,6 +121,17 @@ def embed_and_prepare_func(
     data = data.iloc[sel]
     data["e_0"] = embedding[sel, 0]
     data["e_1"] = embedding[sel, 1]
+    if alt_features_path is not None and os.path.exists(alt_features_path):
+        logger.info(f"Computing alternative embedding from {alt_features_path}")
+        alt_features = numpy_load(alt_features_path, "lastFull")
+        alt_embedding = compute_tsne(alt_features)
+        alt_embedding = normalize_and_scale(alt_embedding)
+        # Shift alt embedding below the primary embedding so they don't overlap.
+        y_shift = embedding[:, 1].min() - alt_embedding[:, 1].max() - 10
+        alt_embedding[:, 1] += y_shift
+        data["e2_0"] = alt_embedding[sel, 0]
+        data["e2_1"] = alt_embedding[sel, 1]
+        logger.info("Alternative embedding written to e2_0, e2_1")
     data["in_test"] = data["uid"].apply(lambda x_: int(x_ in test_uids))
     data.to_csv(data_state_path, index=False)
     if source is not None:
