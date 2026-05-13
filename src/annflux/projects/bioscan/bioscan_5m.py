@@ -38,7 +38,7 @@ def m():
     # n = 500
     embeddings = []
     rows = []
-    for i_ in range(2000):
+    for i_ in range(5000):
         image, dna_barcode, label = dataset[i_]
         image.save(f"/mnt/big/datasets/bioannflux2/images/image_{i_}.jpg")
         print(image, label)

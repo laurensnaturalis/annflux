@@ -674,6 +674,39 @@ def init_folder(
         dataset = Dataset(unseen_dataset_path, taxon_mapping_path=taxon_mapping_path)
         repo.commit(dataset, tag="unseen")
 
+    if "label_true" in unseen_data.columns:
+        labels_path = source.labels_path
+        if os.path.exists(labels_path):
+            with open(labels_path) as f:
+                existing_labels = json.load(f)
+        else:
+            existing_labels = {}
+        imported = {
+            str(row["uid"]): str(row["label_true"])
+            for _, row in unseen_data.iterrows()
+            if pandas.notna(row["label_true"]) and str(row["label_true"]).strip() != ""
+        }
+        existing_labels.update(imported)
+        with open(labels_path, "w") as f:
+            json.dump(existing_labels, f)
+        print(f"Imported {len(imported)} label_true values into {labels_path}")
+        label_defs_path = source.label_definitions_path
+        if os.path.exists(label_defs_path):
+            with open(label_defs_path) as f:
+                label_defs = json.load(f)
+        else:
+            label_defs = {"labels": []}
+        existing_label_names = {entry[0] for entry in label_defs["labels"]}
+        new_labels = sorted(
+            {v for v in imported.values() if v not in existing_label_names}
+        )
+        for lbl in new_labels:
+            label_defs["labels"].append([lbl, "null"])
+        with open(label_defs_path, "w") as f:
+            json.dump(label_defs, f)
+        if new_labels:
+            print(f"Added {len(new_labels)} new labels to {label_defs_path}: {new_labels}")
+
     return source
 
 

@@ -82,16 +82,19 @@ function Map2D($container) {
 
     //lastZoomUpdate = new Date().getTime() / 1000;
     this.handleZoom = function (e) {
+        const prevK = transform ? transform.k : 1;
         transform = d3.zoomTransform(this);
         d3Group.attr("transform", transform);
         const k = transform.k;
         d3.select(`#${dotsId}`).selectAll("line.alt-link")
-            .style("stroke-width", 0.5 / k);
-        zoomControl(
-            elementId,
-            transform,           
-            localData
-        );
+            .style("stroke-width", 1 / k);
+        if (k !== prevK) {
+            zoomControl(
+                elementId,
+                transform,
+                localData
+            );
+        }
     };
 
     this.setFilter = function (filters_) {
