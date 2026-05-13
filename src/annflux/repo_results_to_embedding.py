@@ -115,23 +115,28 @@ def embed_and_prepare_func(
             ),
         )
     features = numpy_load(features_path, "lastFull")
-    embedding = compute_tsne(features)
-    embedding = normalize_and_scale(embedding)
+    alt_features = None
+    if alt_features_path is not None and os.path.exists(alt_features_path):
+        logger.info(f"Loading and aligning alt features from {alt_features_path}")
+        alt_features_raw = numpy_load(alt_features_path, "lastFull")
+        checkpoint_path = os.path.join(os.path.dirname(alt_features_path), "aligner_best.pt")
+        logger.info("Aligning alt features to primary feature space")
+        alt_features = train_aligner(alt_features_raw, features, checkpoint_path)
+        combined_embedding = compute_tsne(np.concatenate([features, alt_features], axis=0))
+        combined_embedding = normalize_and_scale(combined_embedding)
+        n = len(features)
+        embedding = combined_embedding[:n]
+        alt_embedding = combined_embedding[n:]
+    else:
+        embedding = compute_tsne(features)
+        embedding = normalize_and_scale(embedding)
+        alt_embedding = None
 
     sel = np.arange(len(embedding))
     data = data.iloc[sel]
     data["e_0"] = embedding[sel, 0]
     data["e_1"] = embedding[sel, 1]
-    if alt_features_path is not None and os.path.exists(alt_features_path):
-        logger.info(f"Computing alternative embedding from {alt_features_path}")
-        alt_features = numpy_load(alt_features_path, "lastFull")
-        checkpoint_path = os.path.join(os.path.dirname(alt_features_path), "aligner_best.pt")
-        logger.info(f"Aligning alt features to primary feature space")
-        alt_features = train_aligner(alt_features, features, checkpoint_path)
-        alt_embedding = compute_tsne(alt_features)
-        print(f"{alt_embedding.shape} {embedding.shape}")
-        # alt_embedding = train_aligner(alt_embedding, embedding, checkpoint_path)
-        alt_embedding = normalize_and_scale(alt_embedding)
+    if alt_embedding is not None:
         # Shift alt embedding below the primary embedding so they don't overlap.
         y_shift = embedding[:, 1].min() - alt_embedding[:, 1].max() - 10
         alt_embedding[:, 1] += y_shift
