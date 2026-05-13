@@ -22,6 +22,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MultiLabelBinarizer
 
 from annflux.algorithms.embeddings import compute_tsne, normalize_and_scale
+from annflux.projects.bioscan.align import train_aligner
 from annflux.algorithms.fastdpeak import fast_density_peak_clustering
 from annflux.algorithms.fastdpeak_merge import peak_merge
 from annflux.shared import AnnfluxSource
@@ -124,7 +125,12 @@ def embed_and_prepare_func(
     if alt_features_path is not None and os.path.exists(alt_features_path):
         logger.info(f"Computing alternative embedding from {alt_features_path}")
         alt_features = numpy_load(alt_features_path, "lastFull")
+        checkpoint_path = os.path.join(os.path.dirname(alt_features_path), "aligner_best.pt")
+        logger.info(f"Aligning alt features to primary feature space")
+        alt_features = train_aligner(alt_features, features, checkpoint_path)
         alt_embedding = compute_tsne(alt_features)
+        print(f"{alt_embedding.shape} {embedding.shape}")
+        # alt_embedding = train_aligner(alt_embedding, embedding, checkpoint_path)
         alt_embedding = normalize_and_scale(alt_embedding)
         # Shift alt embedding below the primary embedding so they don't overlap.
         y_shift = embedding[:, 1].min() - alt_embedding[:, 1].max() - 10
