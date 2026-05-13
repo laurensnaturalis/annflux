@@ -1,0 +1,14 @@
+Name                                    Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------
+__init__.py                                 0      0   100%
+annflux/__init__.py                         0      0   100%
+annflux/tests/__init__.py                   0      0   100%
+annflux/tests/test_active_learning.py       6      3    50%   22-24
+annflux/tests/test_al_experiment2.py      103     93    10%   31-165
+annflux/tests/test_al_experiment.py       103     93    10%   30-164
+annflux/tests/test_cli.py                   6      4    33%   20-25
+annflux/tests/test_query.py                12      9    25%   8-29
+annflux/tests/test_server.py              132    122     8%   27-175
+annflux/tests/test_train.py                28     21    25%   23-57
+---------------------------------------------------------------------
+TOTAL                                     390    345    12%

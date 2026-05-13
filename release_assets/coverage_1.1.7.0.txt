@@ -1,0 +1,10 @@
+Name                                Stmts   Miss  Cover   Missing
+-----------------------------------------------------------------
+__init__.py                             0      0   100%
+annflux/__init__.py                     0      0   100%
+annflux/algorithms/__init__.py          0      0   100%
+annflux/algorithms/most_needed.py      68     42    38%   56-102, 110-127
+annflux/tests/__init__.py               0      0   100%
+annflux/tests/test_diversify.py        59      1    98%   84
+-----------------------------------------------------------------
+TOTAL                                 127     43    66%

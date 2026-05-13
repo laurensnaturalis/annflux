@@ -1,0 +1,427 @@
+annflux/algorithms/fastdpeak.py:157:26: F821 Undefined name `nptsne`
+    |
+156 |         if features.shape[1] != 2:
+157 |             tsne_model = nptsne.TextureTsne(verbose=False)
+    |                          ^^^^^^ F821
+158 |             features = tsne_model.fit_transform(features)
+159 |             features = np.reshape(features, (int(features.shape[0] / 2), 2))
+    |
+
+annflux/algorithms/fastdpeak.py:185:13: F841 Local variable `p` is assigned to but never used
+    |
+183 |             # print(centroid)
+184 |             c = next(color).reshape(1, -1)
+185 |             p = plt.scatter(features[sel, 0], features[sel, 1], c=c)
+    |             ^ F841
+186 |             plt.annotate(species, centroid)
+    |
+    = help: Remove assignment to unused variable `p`
+
+annflux/projects/diopsis_coco/make_annflux_project.py:7:8: F811 [*] Redefinition of unused `os` from line 1
+  |
+7 | import os
+  |        ^^ F811
+8 | import cv2
+9 | import csv
+  |
+  = help: Remove definition: `os`
+
+annflux/projects/diopsis_coco/make_annflux_project.py:8:8: F811 [*] Redefinition of unused `cv2` from line 2
+   |
+ 7 | import os
+ 8 | import cv2
+   |        ^^^ F811
+ 9 | import csv
+10 | from pycocotools.coco import COCO
+   |
+   = help: Remove definition: `cv2`
+
+annflux/projects/diopsis_coco/make_annflux_project.py:10:30: F811 [*] Redefinition of unused `COCO` from line 3
+   |
+ 8 | import cv2
+ 9 | import csv
+10 | from pycocotools.coco import COCO
+   |                              ^^^^ F811
+11 | from tqdm import tqdm
+   |
+   = help: Remove definition: `COCO`
+
+annflux/projects/diopsis_coco/make_annflux_project.py:11:18: F811 [*] Redefinition of unused `tqdm` from line 4
+   |
+ 9 | import csv
+10 | from pycocotools.coco import COCO
+11 | from tqdm import tqdm
+   |                  ^^^^ F811
+12 |
+13 | def extract_crops_and_labels(coco_annotation_file, images_dir, output_dir, csv_path):
+   |
+   = help: Remove definition: `tqdm`
+
+annflux/projects/lepisea/download_images.py:5:18: F401 [*] `pandas` imported but unused
+  |
+4 | import pandas
+5 | import pandas as pd
+  |                  ^^ F401
+6 | import requests
+7 | from PIL import Image
+  |
+  = help: Remove unused import: `pandas`
+
+annflux/projects/lepisea/extract_labels.py:2:25: F401 [*] `collections.Counter` imported but unused
+  |
+1 | import json
+2 | from collections import Counter
+  |                         ^^^^^^^ F401
+3 | from pydoc import parentname
+  |
+  = help: Remove unused import: `collections.Counter`
+
+annflux/projects/lepisea/extract_labels.py:3:19: F401 [*] `pydoc.parentname` imported but unused
+  |
+1 | import json
+2 | from collections import Counter
+3 | from pydoc import parentname
+  |                   ^^^^^^^^^^ F401
+4 |
+5 | import pandas
+  |
+  = help: Remove unused import: `pydoc.parentname`
+
+annflux/repo_results_to_embedding.py:50:5: F841 Local variable `out_path` is assigned to but never used
+   |
+48 |         annotations = {}
+49 |     extra_predictions_path = f"{folder}/predictions.csv"
+50 |     out_path = os.path.join(working_folder, "annflux.csv")
+   |     ^^^^^^^^ F841
+51 |
+52 |     acc_test = embed_and_prepare_func(
+   |
+   = help: Remove assignment to unused variable `out_path`
+
+annflux/repo_results_to_embedding.py:52:5: F841 Local variable `acc_test` is assigned to but never used
+   |
+50 |     out_path = os.path.join(working_folder, "annflux.csv")
+51 |
+52 |     acc_test = embed_and_prepare_func(
+   |     ^^^^^^^^ F841
+53 |         source,
+54 |         annotations,
+   |
+   = help: Remove assignment to unused variable `acc_test`
+
+annflux/repository/repository.py:17:25: F401 [*] `typing.Tuple` imported but unused
+   |
+15 | import os
+16 | from json import JSONDecodeError
+17 | from typing import Any, Tuple, Union
+   |                         ^^^^^ F401
+18 |
+19 | import datetime
+   |
+   = help: Remove unused import: `typing.Tuple`
+
+annflux/scripts/annflux_cli.py:357:29: F821 Undefined name `time_string_to_seconds`
+    |
+355 |     # - subsample for time-based streams
+356 |     if subsample:
+357 |         subsample_seconds = time_string_to_seconds(subsample)  # TODO
+    |                             ^^^^^^^^^^^^^^^^^^^^^^ F821
+358 |         if subsample_seconds % 3600 == 0:
+359 |             table_to_predict = subsample_hour(subsample, table_to_predict)
+    |
+
+annflux/scripts/from_class_folder.py:1:8: F401 [*] `glob` imported but unused
+  |
+1 | import glob
+  |        ^^^^ F401
+2 | import os
+3 | import re
+  |
+  = help: Remove unused import: `glob`
+
+annflux/scripts/labels_from_images.py:5:17: F401 [*] `numpy` imported but unused
+  |
+3 | import json
+4 |
+5 | import numpy as np
+  |                 ^^ F401
+6 | import pandas
+  |
+  = help: Remove unused import: `numpy`
+
+annflux/scripts/tile_images.py:74:17: F841 Local variable `datetime_` is assigned to but never used
+   |
+72 |                 datetime_ = parse(basename)
+73 |             except ParserError:
+74 |                 datetime_ = None
+   |                 ^^^^^^^^^ F841
+75 |             patch_path = os.path.join(output_dir, filename.replace("-", "_"))
+76 |             if not os.path.exists(patch_path) or not skip_existing:
+   |
+   = help: Remove assignment to unused variable `datetime_`
+
+annflux/shared.py:128:30: F821 Undefined name `annflux`
+    |
+127 |     @property
+128 |     def repository(self) -> "annflux.repository.repository.Repository":
+    |                              ^^^^^^^ F821
+129 |         from annflux.repository.repository import Repository
+130 |         return Repository(os.path.join(self.working_folder, "datarepo"))
+    |
+
+annflux/shared.py:133:27: F821 Undefined name `annflux`
+    |
+132 |     @property
+133 |     def dataset(self) -> "annflux.repository.dataset.Dataset":
+    |                           ^^^^^^^ F821
+134 |         from annflux.repository.dataset import Dataset
+135 |         return self.repository.get(label=Dataset, tag="unseen").first()
+    |
+
+annflux/tests/test_al_experiment2.py:28:5: F401 [*] `annflux.data.bombus_plant_test.data.StreetSurfaceVis` imported but unused
+   |
+26 | from annflux.data.bombus_plant_test.data import (
+27 |     DataSource,
+28 |     StreetSurfaceVis,
+   |     ^^^^^^^^^^^^^^^^ F401
+29 |     DiopsisPublic,
+30 | )
+   |
+   = help: Remove unused import: `annflux.data.bombus_plant_test.data.StreetSurfaceVis`
+
+annflux/tests/test_cli.py:20:8: F811 [*] Redefinition of unused `unittest` from line 14
+   |
+20 | import unittest
+   |        ^^^^^^^^ F811
+   |
+   = help: Remove definition: `unittest`
+
+annflux/tests/test_server.py:18:8: F401 [*] `tempfile` imported but unused
+   |
+16 | import os
+17 | import shutil
+18 | import tempfile
+   |        ^^^^^^^^ F401
+19 | from io import BytesIO
+20 | from pathlib import Path
+   |
+   = help: Remove unused import: `tempfile`
+
+annflux/tests/test_server.py:94:5: F841 Local variable `response` is assigned to but never used
+   |
+92 |     for active_uid in active_uids:
+93 |         labeling[active_uid] = true_labels[active_uid]
+94 |     response = client.post("/label", json=labeling)
+   |     ^^^^^^^^ F841
+95 |     t = get_annflux_data(client)
+96 |     assert t["labeled"].sum() == 50
+   |
+   = help: Remove assignment to unused variable `response`
+
+annflux/tests/test_server.py:102:5: F841 Local variable `response` is assigned to but never used
+    |
+100 | def test_label_loop(client):
+101 |     true_labels = json.load(open(data_source.true_labels_path))
+102 |     response = client.post("/label", json={})  # TODO(issue): most_needed column not available before refresh
+    |     ^^^^^^^^ F841
+103 |     t = get_annflux_data(client)
+104 |     t.sort_values("most_needed", inplace=True)
+    |
+    = help: Remove assignment to unused variable `response`
+
+annflux/tests/test_server.py:119:9: F841 Local variable `percentage_near_labeled` is assigned to but never used
+    |
+117 |         j_performance = get_json(client, "/performance")
+118 |         print(j_performance)
+119 |         percentage_near_labeled = j_performance["percentage_near_labeled"]
+    |         ^^^^^^^^^^^^^^^^^^^^^^^ F841
+120 |         print([t_[2] for t_ in j_performance["test_performance"]])
+    |
+    = help: Remove assignment to unused variable `percentage_near_labeled`
+
+annflux/tools/core.py:18:17: F401 [*] `numpy` imported but unused
+   |
+16 | from pathlib import Path
+17 |
+18 | import numpy as np
+   |                 ^^ F401
+19 | from numpy._typing import NDArray
+   |
+   = help: Remove unused import: `numpy`
+
+annflux/tools/io.py:144:5: E722 Do not use bare `except`
+    |
+142 |     try:
+143 |         font = ImageFont.truetype("arial.ttf", 40)
+144 |     except:
+    |     ^^^^^^ E722
+145 |         font = ImageFont.load_default()
+    |
+
+annflux/tools/io.py:163:1: E402 Module level import not at top of file
+    |
+161 |     ).to_parquet(annflux_pq_cache_path)
+162 |
+163 | import pandas as pd
+    | ^^^^^^^^^^^^^^^^^^^ E402
+164 | import operator
+    |
+
+annflux/tools/io.py:164:1: E402 Module level import not at top of file
+    |
+163 | import pandas as pd
+164 | import operator
+    | ^^^^^^^^^^^^^^^ E402
+165 |
+166 | def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
+    |
+
+annflux/tools/io.py:164:8: F401 [*] `operator` imported but unused
+    |
+163 | import pandas as pd
+164 | import operator
+    |        ^^^^^^^^ F401
+165 |
+166 | def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
+    |
+    = help: Remove unused import: `operator`
+
+annflux/tools/io.py:260:9: F841 Local variable `namespace` is assigned to but never used
+    |
+258 |     try:
+259 |         # Create a dictionary of column names for eval()
+260 |         namespace = {col: df[col] for col in df.columns}
+    |         ^^^^^^^^^ F841
+261 |         mask = eval(boolean_expr) #, {"__builtins__": None}, namespace)
+262 |     except Exception as e:
+    |
+    = help: Remove assignment to unused variable `namespace`
+
+annflux/tools/mixed.py:21:8: F401 [*] `annflux` imported but unused
+   |
+19 | from typing import Optional, List
+20 |
+21 | import annflux
+   |        ^^^^^^^ F401
+   |
+   = help: Remove unused import: `annflux`
+
+annflux/tools/visualization.py:27:5: F841 Local variable `average_brightness` is assigned to but never used
+   |
+25 |     r, g, b = [int(x * 255) for x in (r, g, b)]
+26 |
+27 |     average_brightness = int(255 - np.mean([r, g, b]))
+   |     ^^^^^^^^^^^^^^^^^^ F841
+28 |     # Convert to hex
+29 |     return "#{:02x}{:02x}{:02x}".format(r, g, b)
+   |
+   = help: Remove assignment to unused variable `average_brightness`
+
+annflux/training/annflux/clip.py:600:9: F841 Local variable `test_true_vals` is assigned to but never used
+    |
+598 |             root_dir="Images", data_frame=data_test, processor=self.processor
+599 |         )
+600 |         test_true_vals = list(x[1] for x in test_set)
+    |         ^^^^^^^^^^^^^^ F841
+601 |         unique_labels = list(data_test.caption.unique())
+    |
+    = help: Remove assignment to unused variable `test_true_vals`
+
+annflux/training/annflux/clip.py:640:9: F841 Local variable `test_loader` is assigned to but never used
+    |
+638 |         )
+639 |
+640 |         test_loader = DataLoader(
+    |         ^^^^^^^^^^^ F841
+641 |             test_set,
+642 |             batch_size=512,
+    |
+    = help: Remove assignment to unused variable `test_loader`
+
+annflux/training/annflux/clip_server.py:199:15: F821 Undefined name `str2bool`
+    |
+198 |     app.run(
+199 |         debug=str2bool(os.getenv("APP_DEBUG", False)),
+    |               ^^^^^^^^ F821
+200 |         host="127.0.0.1",
+201 |         threaded=True,
+    |
+
+annflux/training/annflux/group_classifier_transformer.py:2:8: F401 [*] `pickle` imported but unused
+  |
+1 | import itertools
+2 | import pickle
+  |        ^^^^^^ F401
+3 | from collections import Counter
+4 | from xml.etree.ElementInclude import default_loader
+  |
+  = help: Remove unused import: `pickle`
+
+annflux/training/annflux/group_classifier_transformer.py:4:38: F401 [*] `xml.etree.ElementInclude.default_loader` imported but unused
+  |
+2 | import pickle
+3 | from collections import Counter
+4 | from xml.etree.ElementInclude import default_loader
+  |                                      ^^^^^^^^^^^^^^ F401
+5 | from collections import defaultdict
+6 | import pandas
+  |
+  = help: Remove unused import: `xml.etree.ElementInclude.default_loader`
+
+annflux/training/annflux/group_classifier_transformer.py:109:9: F841 Local variable `X` is assigned to but never used
+    |
+107 |     sanity = False
+108 |     if sanity:
+109 |         X = np.vstack(list(itertools.chain.from_iterable(grouped_features)))
+    |         ^ F841
+110 |         y = np.argmax(np.vstack(list(itertools.chain.from_iterable(grouped_labels))), axis=1)
+111 |         X_train, X_test, y_train, y_test = train_test_split(
+    |
+    = help: Remove assignment to unused variable `X`
+
+annflux/training/annflux/group_classifier_transformer.py:110:9: F841 Local variable `y` is assigned to but never used
+    |
+108 |     if sanity:
+109 |         X = np.vstack(list(itertools.chain.from_iterable(grouped_features)))
+110 |         y = np.argmax(np.vstack(list(itertools.chain.from_iterable(grouped_labels))), axis=1)
+    |         ^ F841
+111 |         X_train, X_test, y_train, y_test = train_test_split(
+112 |             features[patch_data.index.tolist()],patch_data.label_original , test_size=0.33, random_state=42
+    |
+    = help: Remove assignment to unused variable `y`
+
+annflux/training/annflux/quick.py:19:8: F401 [*] `traceback` imported but unused
+   |
+17 | import os
+18 | import time
+19 | import traceback
+   |        ^^^^^^^^^ F401
+20 | from collections import defaultdict
+21 | from typing import Set, Dict, Any, Tuple
+   |
+   = help: Remove unused import: `traceback`
+
+annflux/training/tensorflow/torch_backend.py:10:8: F401 [*] `math` imported but unused
+   |
+ 8 | from collections import Counter, defaultdict
+ 9 | import numpy as np
+10 | import math
+   |        ^^^^ F401
+11 | import os
+12 | from typing import Dict, List, Optional
+   |
+   = help: Remove unused import: `math`
+
+annflux/training/tensorflow/torch_backend.py:12:32: F401 [*] `typing.Optional` imported but unused
+   |
+10 | import math
+11 | import os
+12 | from typing import Dict, List, Optional
+   |                                ^^^^^^^^ F401
+13 |
+14 | def l2_normalize(x, axis=1):
+   |
+   = help: Remove unused import: `typing.Optional`
+
+Found 42 errors.
+[*] 21 fixable with the `--fix` option (13 hidden fixes can be enabled with the `--unsafe-fixes` option).

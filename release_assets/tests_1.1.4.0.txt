@@ -1,0 +1,99 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.11, pytest-8.3.5, pluggy-1.5.0 -- /home/lhogeweg/miniconda3/envs/annflux2/bin/python
+cachedir: .pytest_cache
+rootdir: /home/lhogeweg/Documents/annflux_ln
+configfile: pyproject.toml
+plugins: cov-6.1.1
+collecting ... collected 0 items / 7 errors
+
+==================================== ERRORS ====================================
+__________ ERROR collecting src/annflux/tests/test_active_learning.py __________
+ImportError while importing test module '/home/lhogeweg/Documents/annflux_ln/src/annflux/tests/test_active_learning.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../miniconda3/envs/annflux2/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+annflux/tests/test_active_learning.py:19: in <module>
+    from annflux.tools.data import compute_incorrect_score
+E   ModuleNotFoundError: No module named 'annflux.tools'
+___________ ERROR collecting src/annflux/tests/test_al_experiment.py ___________
+ImportError while importing test module '/home/lhogeweg/Documents/annflux_ln/src/annflux/tests/test_al_experiment.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../miniconda3/envs/annflux2/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+annflux/tests/test_al_experiment.py:26: in <module>
+    from annflux.data.bombus_plant_test.data import (
+E   ModuleNotFoundError: No module named 'annflux.data'
+__________ ERROR collecting src/annflux/tests/test_al_experiment2.py ___________
+ImportError while importing test module '/home/lhogeweg/Documents/annflux_ln/src/annflux/tests/test_al_experiment2.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../miniconda3/envs/annflux2/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+annflux/tests/test_al_experiment2.py:26: in <module>
+    from annflux.data.bombus_plant_test.data import (
+E   ModuleNotFoundError: No module named 'annflux.data'
+________________ ERROR collecting src/annflux/tests/test_cli.py ________________
+ImportError while importing test module '/home/lhogeweg/Documents/annflux_ln/src/annflux/tests/test_cli.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../miniconda3/envs/annflux2/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+annflux/tests/test_cli.py:16: in <module>
+    from annflux.scripts.run_tests import run_cli_tests
+E   ModuleNotFoundError: No module named 'annflux.scripts'
+_______________ ERROR collecting src/annflux/tests/test_query.py _______________
+ImportError while importing test module '/home/lhogeweg/Documents/annflux_ln/src/annflux/tests/test_query.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../miniconda3/envs/annflux2/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+annflux/tests/test_query.py:5: in <module>
+    from annflux.tools.io import sql_to_pandas_query
+E   ModuleNotFoundError: No module named 'annflux.tools'
+______________ ERROR collecting src/annflux/tests/test_server.py _______________
+ImportError while importing test module '/home/lhogeweg/Documents/annflux_ln/src/annflux/tests/test_server.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../miniconda3/envs/annflux2/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+annflux/tests/test_server.py:26: in <module>
+    from annflux.data.bombus_plant_test.data import BombusPlantTest, DataSource
+E   ModuleNotFoundError: No module named 'annflux.data'
+_______________ ERROR collecting src/annflux/tests/test_train.py _______________
+ImportError while importing test module '/home/lhogeweg/Documents/annflux_ln/src/annflux/tests/test_train.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../miniconda3/envs/annflux2/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+annflux/tests/test_train.py:22: in <module>
+    from annflux.data.bombus_plant_test.data import BombusPlantTest
+E   ModuleNotFoundError: No module named 'annflux.data'
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.11.11-final-0 _______________
+
+Name                                    Stmts   Miss  Cover
+-----------------------------------------------------------
+__init__.py                                 0      0   100%
+annflux/__init__.py                         0      0   100%
+annflux/tests/__init__.py                   0      0   100%
+annflux/tests/test_active_learning.py       6      3    50%
+annflux/tests/test_al_experiment2.py      103     93    10%
+annflux/tests/test_al_experiment.py       103     93    10%
+annflux/tests/test_cli.py                   6      4    33%
+annflux/tests/test_query.py                12      9    25%
+annflux/tests/test_server.py              132    122     8%
+annflux/tests/test_train.py                28     21    25%
+-----------------------------------------------------------
+TOTAL                                     390    345    12%
+=========================== short test summary info ============================
+ERROR annflux/tests/test_active_learning.py
+ERROR annflux/tests/test_al_experiment.py
+ERROR annflux/tests/test_al_experiment2.py
+ERROR annflux/tests/test_cli.py
+ERROR annflux/tests/test_query.py
+ERROR annflux/tests/test_server.py
+ERROR annflux/tests/test_train.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 7 errors during collection !!!!!!!!!!!!!!!!!!!!
+============================== 7 errors in 0.79s ===============================
