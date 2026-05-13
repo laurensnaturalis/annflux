@@ -1,0 +1,1133 @@
+F811 Redefinition of unused `DataFrame` from line 16
+  --> annflux/algorithms/feature_reconstruction_error.py:16:20
+   |
+14 | # limitations under the License.
+15 | import line_profiler
+16 | from pandas import DataFrame
+   |                    --------- previous definition of `DataFrame` here
+17 | from pandas.core.api import DataFrame
+   |                             ^^^^^^^^^ `DataFrame` redefined here
+18 | import logging
+19 | import os
+   |
+help: Remove definition: `DataFrame`
+
+F401 [*] `tqdm.tqdm` imported but unused
+  --> annflux/algorithms/feature_reconstruction_error.py:29:18
+   |
+27 | from numpy._typing import NDArray
+28 | from sklearn.decomposition import PCA
+29 | from tqdm import tqdm
+   |                  ^^^^
+30 |
+31 | from annflux.tools.data import canon_
+   |
+help: Remove unused import: `tqdm.tqdm`
+
+F401 [*] `pickle` imported but unused
+  --> annflux/performance/basic.py:19:8
+   |
+17 | import logging
+18 | import os
+19 | import pickle
+   |        ^^^^^^
+20 | import time
+21 | from collections import defaultdict
+   |
+help: Remove unused import: `pickle`
+
+F401 [*] `annflux.data.bombus_plant_test.data.StreetSurfaceVis` imported but unused
+  --> annflux/projects/al_evaluation/simulate_steps.py:9:57
+   |
+ 7 | import pandas
+ 8 |
+ 9 | from annflux.data.bombus_plant_test.data import PapBig, StreetSurfaceVis
+   |                                                         ^^^^^^^^^^^^^^^^
+10 | from annflux.scripts.annflux_cli import go_command
+11 | from annflux.shared import AnnfluxSource
+   |
+help: Remove unused import: `annflux.data.bombus_plant_test.data.StreetSurfaceVis`
+
+F841 Local variable `annflux_data_path` is assigned to but never used
+  --> annflux/projects/al_evaluation/simulate_steps.py:41:5
+   |
+39 |     )
+40 |     annflux_folder = data_folder / "annflux"
+41 |     annflux_data_path = annflux_folder / "annflux.csv"
+   |     ^^^^^^^^^^^^^^^^^
+42 |     print(f"Project in {data_folder}")
+   |
+help: Remove assignment to unused variable `annflux_data_path`
+
+F401 [*] `pandas` imported but unused
+ --> annflux/projects/diopsis26/count_labels21.py:3:8
+  |
+1 | import json
+2 |
+3 | import pandas
+  |        ^^^^^^
+  |
+help: Remove unused import: `pandas`
+
+F841 Local variable `taxa` is assigned to but never used
+  --> annflux/projects/diopsis26/to_nia_format.py:55:5
+   |
+53 |         print(taxon_full_name, row)
+54 |
+55 |     taxa = pandas.DataFrame(
+   |     ^^^^
+56 |         taxon_rows,
+57 |         columns="taxon_full_name,taxon_id_at_source,status_at_source,accepted_taxon_id_at_source,kingdom,division,class,order,family,g…
+   |
+help: Remove assignment to unused variable `taxa`
+
+F401 [*] `torch` imported but unused
+ --> annflux/projects/plantstream/sam3.py:2:12
+  |
+1 | def m():
+2 |     import torch
+  |            ^^^^^
+3 |
+4 |     #################################### For Image ####################################
+  |
+help: Remove unused import: `torch`
+
+F841 Local variable `masks` is assigned to but never used
+  --> annflux/projects/plantstream/sam3.py:21:5
+   |
+20 |     # Get the masks, bounding boxes, and scores
+21 |     masks, boxes, scores = output["masks"], output["boxes"], output["scores"]
+   |     ^^^^^
+   |
+help: Remove assignment to unused variable `masks`
+
+F841 Local variable `boxes` is assigned to but never used
+  --> annflux/projects/plantstream/sam3.py:21:12
+   |
+20 |     # Get the masks, bounding boxes, and scores
+21 |     masks, boxes, scores = output["masks"], output["boxes"], output["scores"]
+   |            ^^^^^
+   |
+help: Remove assignment to unused variable `boxes`
+
+F841 Local variable `scores` is assigned to but never used
+  --> annflux/projects/plantstream/sam3.py:21:19
+   |
+20 |     # Get the masks, bounding boxes, and scores
+21 |     masks, boxes, scores = output["masks"], output["boxes"], output["scores"]
+   |                   ^^^^^^
+   |
+help: Remove assignment to unused variable `scores`
+
+F401 [*] `transformers.AutoModelForImageTextToText` imported but unused
+ --> annflux/projects/plantstream/vlm.py:5:45
+  |
+4 | def m():
+5 |     from transformers import AutoProcessor, AutoModelForImageTextToText
+  |                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+6 |     from accelerate import Accelerator
+7 |     import torch
+  |
+help: Remove unused import: `transformers.AutoModelForImageTextToText`
+
+F401 [*] `accelerate.Accelerator` imported but unused
+ --> annflux/projects/plantstream/vlm.py:6:28
+  |
+4 | def m():
+5 |     from transformers import AutoProcessor, AutoModelForImageTextToText
+6 |     from accelerate import Accelerator
+  |                            ^^^^^^^^^^^
+7 |     import torch
+  |
+help: Remove unused import: `accelerate.Accelerator`
+
+F401 [*] `torch` imported but unused
+ --> annflux/projects/plantstream/vlm.py:7:12
+  |
+5 |     from transformers import AutoProcessor, AutoModelForImageTextToText
+6 |     from accelerate import Accelerator
+7 |     import torch
+  |            ^^^^^
+8 |
+9 |     # device = Accelerator().device
+  |
+help: Remove unused import: `torch`
+
+F841 Local variable `processor` is assigned to but never used
+  --> annflux/projects/plantstream/vlm.py:16:5
+   |
+14 |     # ).to(device)
+15 |
+16 |     processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-4B-Instruct")
+   |     ^^^^^^^^^
+17 |
+18 |     constrained_query = "describe the image in terms of the presence of branches, grass, trees, or other vegetation; one or multiple a…
+   |
+help: Remove assignment to unused variable `processor`
+
+F841 Local variable `open_query` is assigned to but never used
+  --> annflux/projects/plantstream/vlm.py:19:5
+   |
+18 |     constrained_query = "describe the image in terms of the presence of branches, grass, trees, or other vegetation; one or multiple a…
+19 |     open_query = "describe the image"
+   |     ^^^^^^^^^^
+20 |     messages = [
+21 |         {
+   |
+help: Remove assignment to unused variable `open_query`
+
+F841 Local variable `datetime_` is assigned to but never used
+  --> annflux/scripts/tile_images.py:73:17
+   |
+71 |                 datetime_ = parse(basename)
+72 |             except ParserError:
+73 |                 datetime_ = None
+   |                 ^^^^^^^^^
+74 |             patch_path = os.path.join(output_dir, filename.replace("-", "_"))
+75 |             if not os.path.exists(patch_path) or not skip_existing:
+   |
+help: Remove assignment to unused variable `datetime_`
+
+F841 Local variable `file_paths` is assigned to but never used
+   --> annflux/scripts/tile_images.py:236:5
+    |
+234 |         original_label: dict[str, str] = {}
+235 |
+236 |     file_paths: list[str] = glob.glob(f"{folder}/original/*.jpg")
+    |     ^^^^^^^^^^
+237 |     table = tile_and_save(
+238 |         input_folder=folder,
+    |
+help: Remove assignment to unused variable `file_paths`
+
+F401 [*] `annflux.data.bombus_plant_test.data.PapBig` imported but unused
+  --> annflux/tests/_test_al_experiment.py:27:5
+   |
+25 |     DataSource,
+26 |     StreetSurfaceVis,
+27 |     PapBig,
+   |     ^^^^^^
+28 | )
+29 | from annflux.scripts.annflux_cli import go_command
+   |
+help: Remove unused import: `annflux.data.bombus_plant_test.data.PapBig`
+
+F401 [*] `pathlib.Path` imported but unused
+  --> annflux/tests/test_api_integration.py:25:21
+   |
+23 | import time
+24 | from io import BytesIO
+25 | from pathlib import Path
+   |                     ^^^^
+26 | from unittest.mock import patch
+   |
+help: Remove unused import: `pathlib.Path`
+
+F401 [*] `unittest.mock.patch` imported but unused
+  --> annflux/tests/test_api_integration.py:26:27
+   |
+24 | from io import BytesIO
+25 | from pathlib import Path
+26 | from unittest.mock import patch
+   |                           ^^^^^
+27 |
+28 | import pandas as pd
+   |
+help: Remove unused import: `unittest.mock.patch`
+
+F401 [*] `annflux.tests.test_rest_api.client` imported but unused
+  --> annflux/tests/test_api_integration.py:35:41
+   |
+33 |     APIAssertions
+34 | )
+35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+   |                                         ^^^^^^
+   |
+help: Remove unused import
+
+F401 [*] `annflux.tests.test_rest_api.temp_project_dir` imported but unused
+  --> annflux/tests/test_api_integration.py:35:49
+   |
+33 |     APIAssertions
+34 | )
+35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+   |                                                 ^^^^^^^^^^^^^^^^
+   |
+help: Remove unused import
+
+F401 [*] `annflux.tests.test_rest_api.mock_app` imported but unused
+  --> annflux/tests/test_api_integration.py:35:67
+   |
+33 |     APIAssertions
+34 | )
+35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+   |                                                                   ^^^^^^^^
+   |
+help: Remove unused import
+
+F811 Redefinition of unused `client` from line 35
+  --> annflux/tests/test_api_integration.py:41:49
+   |
+39 |     """Integration tests for the complete API workflow"""
+40 |     
+41 |     def test_complete_annotation_workflow(self, client, temp_project_dir):
+   |                                                 ^^^^^^ `client` redefined here
+42 |         """Test the complete annotation workflow from data retrieval to labeling"""
+   |
+  ::: annflux/tests/test_api_integration.py:35:41
+   |
+33 |     APIAssertions
+34 | )
+35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+   |                                         ------ previous definition of `client` here
+   |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `temp_project_dir` from line 35
+  --> annflux/tests/test_api_integration.py:41:57
+   |
+39 |     """Integration tests for the complete API workflow"""
+40 |     
+41 |     def test_complete_annotation_workflow(self, client, temp_project_dir):
+   |                                                         ^^^^^^^^^^^^^^^^ `temp_project_dir` redefined here
+42 |         """Test the complete annotation workflow from data retrieval to labeling"""
+   |
+  ::: annflux/tests/test_api_integration.py:35:49
+   |
+33 |     APIAssertions
+34 | )
+35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+   |                                                 ---------------- previous definition of `temp_project_dir` here
+   |
+help: Remove definition: `temp_project_dir`
+
+F841 Local variable `updated_df` is assigned to but never used
+  --> annflux/tests/test_api_integration.py:76:9
+   |
+74 |         response = client.get("/data")
+75 |         APIAssertions.assert_file_response(response, "application/x-binary")
+76 |         updated_df = pd.read_parquet(BytesIO(response.data))
+   |         ^^^^^^^^^^
+77 |         
+78 |         # Note: The actual labeling might be handled asynchronously
+   |
+help: Remove assignment to unused variable `updated_df`
+
+F811 Redefinition of unused `client` from line 35
+  --> annflux/tests/test_api_integration.py:95:50
+   |
+93 |         assert "package_version" in status
+94 |     
+95 |     def test_filtering_and_search_workflow(self, client):
+   |                                                  ^^^^^^ `client` redefined here
+96 |         """Test data filtering and search capabilities"""
+   |
+  ::: annflux/tests/test_api_integration.py:35:41
+   |
+33 |     APIAssertions
+34 | )
+35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+   |                                         ------ previous definition of `client` here
+   |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:115:41
+    |
+113 |         assert len(df_complex) <= len(df_filtered)
+114 |     
+115 |     def test_exclusivity_workflow(self, client):
+    |                                         ^^^^^^ `client` redefined here
+116 |         """Test label exclusivity management"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:137:50
+    |
+136 |     @pytest.mark.skip("needs work")
+137 |     def test_performance_tracking_workflow(self, client, temp_project_dir):
+    |                                                  ^^^^^^ `client` redefined here
+138 |         """Test performance tracking and metrics"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `temp_project_dir` from line 35
+   --> annflux/tests/test_api_integration.py:137:58
+    |
+136 |     @pytest.mark.skip("needs work")
+137 |     def test_performance_tracking_workflow(self, client, temp_project_dir):
+    |                                                          ^^^^^^^^^^^^^^^^ `temp_project_dir` redefined here
+138 |         """Test performance tracking and metrics"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:49
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                                 ---------------- previous definition of `temp_project_dir` here
+    |
+help: Remove definition: `temp_project_dir`
+
+F841 Local variable `performance` is assigned to but never used
+   --> annflux/tests/test_api_integration.py:143:9
+    |
+141 |         response = client.get("/performance")
+142 |         APIAssertions.assert_json_response(response)
+143 |         performance = json.loads(response.data)
+    |         ^^^^^^^^^^^
+144 |
+145 |         # 2. Get detailed performance
+    |
+help: Remove assignment to unused variable `performance`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:158:37
+    |
+156 |         assert ".label_" in css_content
+157 |
+158 |     def test_batch_operations(self, client):
+    |                                     ^^^^^^ `client` redefined here
+159 |         """Test batch operations and bulk data handling"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:183:42
+    |
+181 |         # assert len(label_defs['labels']) >= 8  # Original 3 + new 5
+182 |     
+183 |     def test_concurrent_operations(self, client):
+    |                                          ^^^^^^ `client` redefined here
+184 |         """Test handling of concurrent API operations"""
+185 |         import threading
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:238:44
+    |
+236 |         assert successful_requests >= len(endpoints) * 0.8
+237 |     
+238 |     def test_error_recovery_workflow(self, client):
+    |                                            ^^^^^^ `client` redefined here
+239 |         """Test error handling and recovery"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:260:46
+    |
+258 |         assert response.status_code == 200
+259 |     
+260 |     def test_data_consistency_workflow(self, client):
+    |                                              ^^^^^^ `client` redefined here
+261 |         """Test data consistency across different endpoints"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:290:45
+    |
+288 |                     # Note: This might not always be true due to test data setup
+289 |     
+290 |     def test_ui_endpoints_integration(self, client):
+    |                                             ^^^^^^ `client` redefined here
+291 |         """Test UI rendering endpoints integration"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:311:37
+    |
+309 |     """Security-focused API tests"""
+310 |     
+311 |     def test_input_validation(self, client):
+    |                                     ^^^^^^ `client` redefined here
+312 |         """Test input validation and sanitization"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:344:53
+    |
+342 |         assert response.status_code in [200, 400, 413]
+343 |     
+344 |     def test_authentication_and_authorization(self, client):
+    |                                                     ^^^^^^ `client` redefined here
+345 |         """Test authentication and authorization mechanisms"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:359:45
+    |
+357 |             assert response.status_code == 200
+358 |     
+359 |     def test_rate_limiting_resilience(self, client):
+    |                                             ^^^^^^ `client` redefined here
+360 |         """Test resilience to rapid requests"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:376:35
+    |
+374 |     """Performance-focused API tests"""
+375 |     
+376 |     def test_response_times(self, client):
+    |                                   ^^^^^^ `client` redefined here
+377 |         """Test API response times"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `client` from line 35
+   --> annflux/tests/test_api_integration.py:398:43
+    |
+397 |     @pytest.mark.skip("fix later")
+398 |     def test_large_dataset_handling(self, client, temp_project_dir):
+    |                                           ^^^^^^ `client` redefined here
+399 |         """Test handling of larger datasets"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:41
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                         ------ previous definition of `client` here
+    |
+help: Remove definition: `client`
+
+F811 Redefinition of unused `temp_project_dir` from line 35
+   --> annflux/tests/test_api_integration.py:398:51
+    |
+397 |     @pytest.mark.skip("fix later")
+398 |     def test_large_dataset_handling(self, client, temp_project_dir):
+    |                                                   ^^^^^^^^^^^^^^^^ `temp_project_dir` redefined here
+399 |         """Test handling of larger datasets"""
+    |
+   ::: annflux/tests/test_api_integration.py:35:49
+    |
+ 33 |     APIAssertions
+ 34 | )
+ 35 | from annflux.tests.test_rest_api import client, temp_project_dir, mock_app
+    |                                                 ---------------- previous definition of `temp_project_dir` here
+    |
+help: Remove definition: `temp_project_dir`
+
+F401 [*] `typing.Dict` imported but unused
+  --> annflux/tests/test_api_utils.py:25:20
+   |
+23 | import shutil
+24 | from pathlib import Path
+25 | from typing import Dict, Any, Optional
+   |                    ^^^^
+26 | from unittest.mock import MagicMock, patch
+   |
+help: Remove unused import
+
+F401 [*] `typing.Any` imported but unused
+  --> annflux/tests/test_api_utils.py:25:26
+   |
+23 | import shutil
+24 | from pathlib import Path
+25 | from typing import Dict, Any, Optional
+   |                          ^^^
+26 | from unittest.mock import MagicMock, patch
+   |
+help: Remove unused import
+
+F401 [*] `annflux.ui.basic.run_server.app` imported but unused
+  --> annflux/tests/test_api_utils.py:33:41
+   |
+31 | from PIL import Image
+32 |
+33 | from annflux.ui.basic.run_server import app, get_app
+   |                                         ^^^
+34 | from annflux.tools.core import AnnFluxState
+   |
+help: Remove unused import: `annflux.ui.basic.run_server.app`
+
+F841 [*] Local variable `e` is assigned to but never used
+   --> annflux/tests/test_api_utils.py:232:41
+    |
+230 |                         from annflux.ui.basic.run_server import _init
+231 |                         _init()
+232 |                     except Exception as e:
+    |                                         ^
+233 |                         # Handle initialization errors gracefully
+234 |                         pass
+    |
+help: Remove assignment to unused variable `e`
+
+F841 [*] Local variable `e` is assigned to but never used
+   --> annflux/tests/test_api_utils.py:240:37
+    |
+238 |                     from annflux.ui.basic.run_server import _init
+239 |                     _init()
+240 |                 except Exception as e:
+    |                                     ^
+241 |                     # Handle initialization errors gracefully
+242 |                     pass
+    |
+help: Remove assignment to unused variable `e`
+
+F841 Local variable `response` is assigned to but never used
+  --> annflux/tests/test_server.py:94:5
+   |
+92 |     for active_uid in active_uids:
+93 |         labeling[active_uid] = true_labels[active_uid]
+94 |     response = client.post("/label", json=labeling)
+   |     ^^^^^^^^
+95 |     t = get_annflux_data(client)
+96 |     assert t["labeled"].sum() == 50
+   |
+help: Remove assignment to unused variable `response`
+
+F841 Local variable `response` is assigned to but never used
+   --> annflux/tests/test_server.py:102:5
+    |
+100 | def test_label_loop(client):
+101 |     true_labels = json.load(open(data_source.true_labels_path))
+102 |     response = client.post("/label", json={})  # TODO(issue): most_needed column not available before refresh
+    |     ^^^^^^^^
+103 |     t = get_annflux_data(client)
+104 |     t.sort_values("dp_most_needed", inplace=True)
+    |
+help: Remove assignment to unused variable `response`
+
+F841 Local variable `percentage_near_labeled` is assigned to but never used
+   --> annflux/tests/test_server.py:119:9
+    |
+117 |         j_performance = get_json(client, "/performance")
+118 |         print(j_performance)
+119 |         percentage_near_labeled = j_performance["percentage_near_labeled"]
+    |         ^^^^^^^^^^^^^^^^^^^^^^^
+120 |         print([t_[2] for t_ in j_performance["test_performance"]])
+    |
+help: Remove assignment to unused variable `percentage_near_labeled`
+
+E722 Do not use bare `except`
+   --> annflux/tools/data.py:402:5
+    |
+400 |     try:
+401 |         predicted_map.update(name_to_probability(label_predicted, scores_predicted))
+402 |     except:
+    |     ^^^^^^
+403 |         print("blurgh", label_predicted, scores_predicted)
+404 |     labels_true = set(label_true.split(","))
+    |
+
+E722 Do not use bare `except`
+   --> annflux/tools/io.py:145:5
+    |
+143 |     try:
+144 |         font = ImageFont.truetype("arial.ttf", 40)
+145 |     except:
+    |     ^^^^^^
+146 |         font = ImageFont.load_default()
+    |
+
+E402 Module level import not at top of file
+   --> annflux/tools/io.py:164:1
+    |
+162 |     ).to_parquet(annflux_pq_cache_path)
+163 |
+164 | import pandas as pd
+    | ^^^^^^^^^^^^^^^^^^^
+165 |
+166 | def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
+    |
+
+F841 Local variable `namespace` is assigned to but never used
+   --> annflux/tools/io.py:260:9
+    |
+258 |     try:
+259 |         # Create a dictionary of column names for eval()
+260 |         namespace = {col: df[col] for col in df.columns}
+    |         ^^^^^^^^^
+261 |         mask = eval(boolean_expr) #, {"__builtins__": None}, namespace)
+262 |     except Exception as e:
+    |
+help: Remove assignment to unused variable `namespace`
+
+F841 Local variable `average_brightness` is assigned to but never used
+  --> annflux/tools/visualization.py:27:5
+   |
+25 |     r, g, b = [int(x * 255) for x in (r, g, b)]
+26 |
+27 |     average_brightness = int(255 - np.mean([r, g, b]))
+   |     ^^^^^^^^^^^^^^^^^^
+28 |     # Convert to hex
+29 |     return "#{:02x}{:02x}{:02x}".format(r, g, b)
+   |
+help: Remove assignment to unused variable `average_brightness`
+
+F841 Local variable `ov_model` is assigned to but never used
+   --> annflux/training/annflux/clip.py:338:9
+    |
+336 |         #
+337 |         print(f"{feature_cache_path=}")
+338 |         ov_model = None
+    |         ^^^^^^^^
+339 |         # try:
+340 |         #     ov_model = self.convert_model()
+    |
+help: Remove assignment to unused variable `ov_model`
+
+F841 Local variable `test_loader` is assigned to but never used
+   --> annflux/training/annflux/clip.py:644:9
+    |
+642 |         )
+643 |
+644 |         test_loader = DataLoader(
+    |         ^^^^^^^^^^^
+645 |             test_set,
+646 |             batch_size=512,
+    |
+help: Remove assignment to unused variable `test_loader`
+
+F401 [*] `annflux.repository.model.Model` imported but unused
+  --> annflux/training/annflux/feature_extractor.py:26:38
+   |
+25 | from annflux.repository.dataset import Dataset
+26 | from annflux.repository.model import Model, ClipModel
+   |                                      ^^^^^
+27 | from annflux.repository.repository import Repository
+28 | from annflux.repository.resultset import Resultset
+   |
+help: Remove unused import: `annflux.repository.model.Model`
+
+F841 Local variable `X` is assigned to but never used
+   --> annflux/training/annflux/group_classifier_transformer.py:107:9
+    |
+105 |     sanity = False
+106 |     if sanity:
+107 |         X = np.vstack(list(itertools.chain.from_iterable(grouped_features)))
+    |         ^
+108 |         y = np.argmax(np.vstack(list(itertools.chain.from_iterable(grouped_labels))), axis=1)
+109 |         X_train, X_test, y_train, y_test = train_test_split(
+    |
+help: Remove assignment to unused variable `X`
+
+F841 Local variable `y` is assigned to but never used
+   --> annflux/training/annflux/group_classifier_transformer.py:108:9
+    |
+106 |     if sanity:
+107 |         X = np.vstack(list(itertools.chain.from_iterable(grouped_features)))
+108 |         y = np.argmax(np.vstack(list(itertools.chain.from_iterable(grouped_labels))), axis=1)
+    |         ^
+109 |         X_train, X_test, y_train, y_test = train_test_split(
+110 |             features[patch_data.index.tolist()],patch_data.label_original , test_size=0.33, random_state=42
+    |
+help: Remove assignment to unused variable `y`
+
+F401 [*] `shutil` imported but unused
+  --> annflux/ui/basic/run_server.py:16:8
+   |
+14 | import math
+15 | import os
+16 | import shutil
+   |        ^^^^^^
+17 | import tempfile
+   |
+help: Remove unused import: `shutil`
+
+F841 Local variable `has_records` is assigned to but never used
+   --> annflux/ui/basic/run_server.py:157:5
+    |
+155 |     t = pandas.read_csv(g_state.annflux_path)
+156 |     columns = t.columns
+157 |     has_records = "record_id" in t and len(t.record_id.unique()) < len(t)
+    |     ^^^^^^^^^^^
+158 |     if "patch_x" in columns: # or has_records:
+159 |         g_layout = "tileLabel"
+    |
+help: Remove assignment to unused variable `has_records`
+
+F841 Local variable `weights_path` is assigned to but never used
+   --> annflux/ui/basic/run_server.py:734:5
+    |
+732 |     state.g_quick_status = "training"
+733 |     load_data(state, logger, no_linear_features=True)
+734 |     weights_path = linear_retraining(state, StatusUpdate(state))
+    |     ^^^^^^^^^^^^
+735 |     # shutil.copy(
+736 |     #     weights_path,
+    |
+help: Remove assignment to unused variable `weights_path`
+
+F401 [*] `shutil` imported but unused
+  --> annflux/ui/basic/run_server_bak.py:17:8
+   |
+15 | import math
+16 | import os
+17 | import shutil
+   |        ^^^^^^
+18 | import tempfile
+19 | import time
+   |
+help: Remove unused import: `shutil`
+
+F401 [*] `datetime.datetime` imported but unused
+  --> annflux/ui/basic/run_server_bak.py:24:22
+   |
+22 | import sys
+23 | import threading
+24 | from datetime import datetime
+   |                      ^^^^^^^^
+25 | from typing import Dict, List, Optional, Tuple
+   |
+help: Remove unused import: `datetime.datetime`
+
+F401 [*] `flask.make_response` imported but unused
+  --> annflux/ui/basic/run_server_bak.py:32:19
+   |
+30 | import flask
+31 | import pandas
+32 | from flask import make_response, render_template, request, send_file, Response
+   |                   ^^^^^^^^^^^^^
+33 |
+34 | from annflux.repo_results_to_embedding import group_embedding
+   |
+help: Remove unused import: `flask.make_response`
+
+F401 [*] `annflux.repo_results_to_embedding.group_embedding` imported but unused
+  --> annflux/ui/basic/run_server_bak.py:34:47
+   |
+32 | from flask import make_response, render_template, request, send_file, Response
+33 |
+34 | from annflux.repo_results_to_embedding import group_embedding
+   |                                               ^^^^^^^^^^^^^^^
+35 | from annflux.repository.dataset import Dataset
+36 | from annflux.repository.repository import Repository
+   |
+help: Remove unused import: `annflux.repo_results_to_embedding.group_embedding`
+
+F401 [*] `annflux.repository.dataset.Dataset` imported but unused
+  --> annflux/ui/basic/run_server_bak.py:35:40
+   |
+34 | from annflux.repo_results_to_embedding import group_embedding
+35 | from annflux.repository.dataset import Dataset
+   |                                        ^^^^^^^
+36 | from annflux.repository.repository import Repository
+37 | from annflux.repository.resultset import Resultset
+   |
+help: Remove unused import: `annflux.repository.dataset.Dataset`
+
+F401 [*] `annflux.repository.repository.Repository` imported but unused
+  --> annflux/ui/basic/run_server_bak.py:36:43
+   |
+34 | from annflux.repo_results_to_embedding import group_embedding
+35 | from annflux.repository.dataset import Dataset
+36 | from annflux.repository.repository import Repository
+   |                                           ^^^^^^^^^^
+37 | from annflux.repository.resultset import Resultset
+38 | from annflux.shared import AnnfluxSource
+   |
+help: Remove unused import: `annflux.repository.repository.Repository`
+
+F401 [*] `annflux.repository.resultset.Resultset` imported but unused
+  --> annflux/ui/basic/run_server_bak.py:37:42
+   |
+35 | from annflux.repository.dataset import Dataset
+36 | from annflux.repository.repository import Repository
+37 | from annflux.repository.resultset import Resultset
+   |                                          ^^^^^^^^^
+38 | from annflux.shared import AnnfluxSource
+39 | from annflux.tools.io import (
+   |
+help: Remove unused import: `annflux.repository.resultset.Resultset`
+
+F401 [*] `annflux.shared.AnnfluxSource` imported but unused
+  --> annflux/ui/basic/run_server_bak.py:38:28
+   |
+36 | from annflux.repository.repository import Repository
+37 | from annflux.repository.resultset import Resultset
+38 | from annflux.shared import AnnfluxSource
+   |                            ^^^^^^^^^^^^^
+39 | from annflux.tools.io import (
+40 |     generate_missing_thumbnail,
+   |
+help: Remove unused import: `annflux.shared.AnnfluxSource`
+
+F401 [*] `annflux.tools.mixed.get_logger` imported but unused
+  --> annflux/ui/basic/run_server_bak.py:53:33
+   |
+51 |     make_backup,
+52 | )
+53 | from annflux.tools.mixed import get_logger, str2bool, get_version
+   |                                 ^^^^^^^^^^
+54 | from annflux.tools.io import file_hash
+55 | from annflux.training.annflux.feature_extractor import make_resultset
+   |
+help: Remove unused import: `annflux.tools.mixed.get_logger`
+
+F401 [*] `annflux.training.annflux.feature_extractor.make_resultset` imported but unused
+  --> annflux/ui/basic/run_server_bak.py:55:56
+   |
+53 | from annflux.tools.mixed import get_logger, str2bool, get_version
+54 | from annflux.tools.io import file_hash
+55 | from annflux.training.annflux.feature_extractor import make_resultset
+   |                                                        ^^^^^^^^^^^^^^
+56 |
+57 | # Import refactored modules
+   |
+help: Remove unused import: `annflux.training.annflux.feature_extractor.make_resultset`
+
+F401 [*] `numba.tests.compile_with_pycc.div` imported but unused
+  --> annflux/ui/basic/run_server_original.py:14:43
+   |
+12 | # See the License for the specific language governing permissions and
+13 | # limitations under the License.
+14 | from numba.tests.compile_with_pycc import div
+   |                                           ^^^
+15 | import math
+16 | import os
+   |
+help: Remove unused import: `numba.tests.compile_with_pycc.div`
+
+F401 [*] `shutil` imported but unused
+  --> annflux/ui/basic/run_server_original.py:17:8
+   |
+15 | import math
+16 | import os
+17 | import shutil
+   |        ^^^^^^
+18 | import tempfile
+   |
+help: Remove unused import: `shutil`
+
+F841 Local variable `weights_path` is assigned to but never used
+   --> annflux/ui/basic/run_server_original.py:684:5
+    |
+682 |     state.g_quick_status = "training"
+683 |     load_data(state, logger, no_linear_features=True)
+684 |     weights_path = linear_retraining(state, StatusUpdate(state))
+    |     ^^^^^^^^^^^^
+685 |     #
+686 |     repo: Repository = AnnfluxSource(state.project_folder).repository
+    |
+help: Remove assignment to unused variable `weights_path`
+
+F401 [*] `time` imported but unused
+  --> annflux/ui/basic/server_jobs.py:24:8
+   |
+22 | import pandas
+23 | import threading
+24 | import time
+   |        ^^^^
+25 | import logging
+26 | from datetime import datetime
+   |
+help: Remove unused import: `time`
+
+F401 [*] `logging` imported but unused
+  --> annflux/ui/basic/server_jobs.py:25:8
+   |
+23 | import threading
+24 | import time
+25 | import logging
+   |        ^^^^^^^
+26 | from datetime import datetime
+   |
+help: Remove unused import: `logging`
+
+F401 [*] `datetime.datetime` imported but unused
+  --> annflux/ui/basic/server_jobs.py:26:22
+   |
+24 | import time
+25 | import logging
+26 | from datetime import datetime
+   |                      ^^^^^^^^
+27 |
+28 | import numpy as np
+   |
+help: Remove unused import: `datetime.datetime`
+
+F401 [*] `annflux.tools.progress_learn.estimate_duration` imported but unused
+  --> annflux/ui/basic/server_jobs.py:41:42
+   |
+39 | from annflux.tools.core import AnnFluxState
+40 | from annflux.tools.data import create_group_flux_data
+41 | from annflux.tools.progress_learn import estimate_duration
+   |                                          ^^^^^^^^^^^^^^^^^
+42 | from annflux.training.annflux.feature_extractor import make_resultset
+43 | from annflux.training.annflux.quick import quick_reclassification, group_classification, load_data
+   |
+help: Remove unused import: `annflux.tools.progress_learn.estimate_duration`
+
+F841 Local variable `weights_path` is assigned to but never used
+  --> annflux/ui/basic/server_jobs.py:65:5
+   |
+63 |     state.g_quick_status = "training"
+64 |     load_data(state, logger, no_linear_features=True)
+65 |     weights_path = linear_retraining(state, StatusUpdate(state))
+   |     ^^^^^^^^^^^^
+66 |     
+67 |     repo: Repository = AnnfluxSource(state.project_folder).repository
+   |
+help: Remove assignment to unused variable `weights_path`
+
+F821 Undefined name `g_state`
+   --> annflux/ui/basic/server_jobs.py:125:9
+    |
+124 |     record_features, accuracy_group, record_table = group_classification(
+125 |         g_state.features,
+    |         ^^^^^^^
+126 |         pandas.read_csv(g_state.annflux_path),
+127 |         os.path.join(state.annflux_folder, "group_feature_images"),
+    |
+
+F821 Undefined name `g_state`
+   --> annflux/ui/basic/server_jobs.py:126:25
+    |
+124 |     record_features, accuracy_group, record_table = group_classification(
+125 |         g_state.features,
+126 |         pandas.read_csv(g_state.annflux_path),
+    |                         ^^^^^^^
+127 |         os.path.join(state.annflux_folder, "group_feature_images"),
+128 |         group_data,
+    |
+
+F821 Undefined name `g_state`
+   --> annflux/ui/basic/server_jobs.py:133:22
+    |
+131 |     print(record_features.shape, accuracy_group, len(record_table))
+132 |     record_table.to_csv(
+133 |         os.path.join(g_state.annflux_folder, "group0_annflux.csv"), index=False
+    |                      ^^^^^^^
+134 |     )
+    |
+
+F821 Undefined name `g_state`
+   --> annflux/ui/basic/server_jobs.py:137:22
+    |
+136 |     np.savez(
+137 |         os.path.join(g_state.annflux_folder, "group0_features.npz"),
+    |                      ^^^^^^^
+138 |         lastFull=record_features,
+139 |     )
+    |
+
+F821 Undefined name `g_state`
+   --> annflux/ui/basic/server_jobs.py:141:21
+    |
+139 |     )
+140 |     state.g_quick_status = "group embedding"
+141 |     group_embedding(g_state.project_folder)
+    |                     ^^^^^^^
+142 |     logger.info(f"group_train_job: done - {state.trained_for_version}")
+143 |     state.trained_for_version = len(state.labeled_indices)  # TODO(crit): for group
+    |
+
+F401 [*] `functools.wraps` imported but unused
+  --> annflux/ui/basic/server_utils.py:24:23
+   |
+22 | import flask
+23 | from flask import make_response, Response
+24 | from functools import wraps
+   |                       ^^^^^
+25 | from typing import Dict, Any
+   |
+help: Remove unused import: `functools.wraps`
+
+F401 [*] `typing.Dict` imported but unused
+  --> annflux/ui/basic/server_utils.py:25:20
+   |
+23 | from flask import make_response, Response
+24 | from functools import wraps
+25 | from typing import Dict, Any
+   |                    ^^^^
+   |
+help: Remove unused import
+
+F401 [*] `typing.Any` imported but unused
+  --> annflux/ui/basic/server_utils.py:25:26
+   |
+23 | from flask import make_response, Response
+24 | from functools import wraps
+25 | from typing import Dict, Any
+   |                          ^^^
+   |
+help: Remove unused import
+
+Found 90 errors.
+[*] 40 fixable with the `--fix` option (24 hidden fixes can be enabled with the `--unsafe-fixes` option).

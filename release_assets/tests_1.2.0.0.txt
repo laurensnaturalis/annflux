@@ -1,0 +1,2149 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-8.3.5, pluggy-1.6.0 -- /home/lhogeweg/Documents/annflux_ln/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/lhogeweg/Documents/annflux_ln
+configfile: pytest.ini
+plugins: cov-7.0.0
+collecting ... collected 75 items
+
+annflux/tests/test_active_learning.py::TestIncorrectScore::test_computation PASSED
+annflux/tests/test_api_integration.py::TestAPIIntegration::test_complete_annotation_workflow successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp_xx_3djd, images_path =/tmp/tmp_xx_3djd/images
+data_get: filter_query=None
+/tmp/tmp_xx_3djd/annflux/../annflux/annflux.csv took 0.07009506225585938 ms
+load data result_set.entry.message=''
+(3, 256)
+knn labeled 0.019674301147460938
+has_density_peak: near_labeled_perc=0.5
+predicted_test=[['label1']], true_test=[['label0']]
+1/2  took 0.011399507522583008 s
+len(data_predicted)=3
+5/8  took 0.0017223358154296875 s, len(data)=3
+len(data_true)=2
+3/4  took 0.0014996528625488281 s, len(data)=3
+compute_performance took 0.0026323795318603516 s
+data_get: filter_query=None
+/tmp/tmp_xx_3djd/annflux/../annflux/annflux.csv took 0.07987022399902344 ms
+PASSED
+annflux/tests/test_api_integration.py::TestAPIIntegration::test_filtering_and_search_workflow successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpetx_s44d, images_path =/tmp/tmpetx_s44d/images
+data_get: filter_query=None
+/tmp/tmpetx_s44d/annflux/../annflux/annflux.csv took 0.05793571472167969 ms
+data_get: filter_query="row.label_predicted = 'label0'"
+/tmp/tmpetx_s44d/annflux/../annflux/annflux.csv took 0.13303756713867188 ms
+mask=0    False
+1    False
+2    False
+Name: label_predicted, dtype: bool
+len(t)=0
+data_get: filter_query="row.label_predicted = 'label0' AND row.dp_most_needed > 0"
+/tmp/tmpetx_s44d/annflux/../annflux/annflux.csv took 0.07390975952148438 ms
+mask=0    False
+1    False
+2    False
+dtype: bool
+len(t)=0
+PASSED
+annflux/tests/test_api_integration.py::TestAPIIntegration::test_exclusivity_workflow successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmptg_06u95, images_path =/tmp/tmptg_06u95/images
+PASSED
+annflux/tests/test_api_integration.py::TestAPIIntegration::test_performance_tracking_workflow SKIPPED
+annflux/tests/test_api_integration.py::TestAPIIntegration::test_batch_operations successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpv28akr82, images_path =/tmp/tmpv28akr82/images
+load data result_set.entry.message=''
+(3, 256)
+knn labeled 0.006897926330566406
+has_density_peak: near_labeled_perc=1.0
+predicted_test=[['label0']], true_test=[['label1']]
+1/2  took 0.01507711410522461 s
+len(data_predicted)=3
+5/8  took 0.0016949176788330078 s, len(data)=3
+len(data_true)=3
+3/4  took 0.0008258819580078125 s, len(data)=3
+compute_performance took 0.002173185348510742 s
+PASSED
+annflux/tests/test_api_integration.py::TestAPIIntegration::test_concurrent_operations successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpmw6l9nex, images_path =/tmp/tmpmw6l9nex/images
+data_get: filter_query=None
+/tmp/tmpmw6l9nex/annflux/../annflux/annflux.csv took 0.1723766326904297 ms
+load data result_set.entry.message=''
+(3, 256)
+knn labeled 0.020053386688232422
+has_density_peak: near_labeled_perc=0.5
+predicted_test=[], true_test=[]
+1/2  took 0.0064661502838134766 s
+len(data_predicted)=2
+5/8  took 0.004080533981323242 s, len(data)=3
+len(data_true)=1
+3/4  took 0.0028235912322998047 s, len(data)=3
+compute_performance took 0.004144191741943359 s
+blurgh n/a None
+PASSED
+annflux/tests/test_api_integration.py::TestAPIIntegration::test_error_recovery_workflow successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp6d_kb_jb, images_path =/tmp/tmp6d_kb_jb/images
+data_get: filter_query='invalid_sql_syntax'
+/tmp/tmp6d_kb_jb/annflux/../annflux/annflux.csv took 0.07271766662597656 ms
+FAILED
+annflux/tests/test_api_integration.py::TestAPIIntegration::test_data_consistency_workflow successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpcq4v_c29, images_path =/tmp/tmpcq4v_c29/images
+data_get: filter_query=None
+/tmp/tmpcq4v_c29/annflux/../annflux/annflux.csv took 0.05745887756347656 ms
+PASSED
+annflux/tests/test_api_integration.py::TestAPIIntegration::test_ui_endpoints_integration successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmphy9xlcxd, images_path =/tmp/tmphy9xlcxd/images
+PASSED
+annflux/tests/test_api_integration.py::TestAPISecurity::test_input_validation successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp9_8hhmgu, images_path =/tmp/tmp9_8hhmgu/images
+data_get: filter_query="'; DROP TABLE annflux; --"
+/tmp/tmp9_8hhmgu/annflux/../annflux/annflux.csv took 0.06961822509765625 ms
+FAILED
+annflux/tests/test_api_integration.py::TestAPISecurity::test_authentication_and_authorization successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpvrmzpjeg, images_path =/tmp/tmpvrmzpjeg/images
+data_get: filter_query=None
+/tmp/tmpvrmzpjeg/annflux/../annflux/annflux.csv took 0.05269050598144531 ms
+PASSED
+annflux/tests/test_api_integration.py::TestAPISecurity::test_rate_limiting_resilience successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmps1hrjupl, images_path =/tmp/tmps1hrjupl/images
+PASSED
+annflux/tests/test_api_integration.py::TestAPIPerformance::test_response_times successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpbpfny5o_, images_path =/tmp/tmpbpfny5o_/images
+data_get: filter_query=None
+/tmp/tmpbpfny5o_/annflux/../annflux/annflux.csv took 0.05745887756347656 ms
+PASSED
+annflux/tests/test_api_integration.py::TestAPIPerformance::test_large_dataset_handling SKIPPED
+annflux/tests/test_cli.py::TestCli::test_cli START
+Testing go command
+Index(['image_id', 'label', 'filename', 'set', 'uid', 'record_id'], dtype='object')
+successfully committed 001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2
+Initialized AnnFlux in folder /home/lhogeweg/annflux/data/bombus-plant-test/annflux
+type(data)=<class 'pandas.core.frame.DataFrame'>, type(dataset)=<class 'annflux.repository.dataset.Dataset'>
+model_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+Looking for tag='clip:wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M', model_type=<class 'annflux.repository.model.ClipModel'>
+model=None
+successfully committed 0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444
+ftorch.cuda.is_available()=True
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+existing_feature_cache_path=None
+feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr'
+other_feature_cache_path None
+len(filenames)=500
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([256, 2]), probs_for_batch.shape=(256, 2)
+writing len(features_for_batch)=256 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (0, 256)
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([244, 2]), probs_for_batch.shape=(244, 2)
+writing len(features_for_batch)=244 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (256, 512)
+(256, 512)
+(244, 512)
+make_resultset 500 rows
+500 rows, 500
+successfully committed 61e0f63732663bed2eb7e6ff4bd2d2506ee8de1ac08798a3542be622
+embed_and_prepare: /home/lhogeweg/annflux/data/bombus-plant-test/annflux/datarepo/resultset-20260513143323-61e0f637
+features.shape (500, 2)
+(500,)
+len(child_to_ldp_parent) 486
+len(combined) 500
+max(combined_depth.values()) 18
+max(num_children) 504
+418
+[418 282 159 420 332 306 366 275 449 429  80 130 140 173 100 224 451  52
+  35 184 362 392  48 155 157 229  77 413 175 141 402 375  92  19 154 422
+ 323 246 312 493 216 223 158 345  41 115 206 211 339  10 143 249 290 488
+ 444 458 214 243 367 299 267 215  70 300  89 356 242 222  44 167 278 298
+ 266   6 149 378  17 161 174 421  91 368 136 450   5 336 372 279  90 164
+ 114  94 330 122  82  21  20 142 262 202 276 440 403 309  28 308  29 201
+  71 163  99 238 109 120  49  30 485 105 277 213  76 443 225 127 248 254
+ 371 119 268 236 145 425 325 304 495 273 328 327 240 197 106 358 340 196
+ 182  37 462  46  38  45 470 193 286 177 108   1 359 442 205 369 112 113
+ 329 297  87 131  16  18 295 317 150 455  39 146 480 180  51 460 473  33
+ 209 255 361  83 349 385 116 178 475 220  68  58 152 153  54 446 436   9
+   2  25 316 457 253 414  22 438 423 461  34 138 321 405 395 434 435 126
+ 160 307  98 341 383 379 380 233 186  72  73 408 244 479 496  69   4  64
+  67  55  61  50  40 482  14 228 219 207 256  74  78 416 407 231 235 183
+ 187 189 176 181 168 171 288 353 354 347 348 338 334 388 376 382 370 374
+ 360 363  95 102 314 305 310 296 302 132 125 111 271 265 270 162 148 394
+ 396 397 433 135 320 484 486 472 478 463 464 456 459  36  26  27 487   8
+ 426 427 258 252 411 399 401 404  42  43   7 489 490 491 492  59  60  62
+  47  53  65  66  56  57 424 428 430  63  24  15  11  31  32  23 465 466
+ 467 468 469 494 471 474 476 477 137 139 319 165 166 151 156 144 147 272
+ 274 263 264 269 292 293 294 280 281 283 284 285 117 118 103 104 107 110
+ 129 133 134 121 123 124 303 301 128 322 324 326 311 313 315 318 389 390
+ 377 381 342 331 333 384 386 387 346 350 335 337 351 352 355 357 343 344
+ 169 170 172 287 289 291 188 190 179 191 192 194 195 198 185 245 232 234
+ 237  75 415 417 419  79  81  84  85  86  96  97 101  88  93 373 364 365
+ 441 445 431 432 437 398 447 448 452 453 454 439 406 391 393 409 410 412
+ 400 261 247 250 251 239 241 200 203 204 257 259 260 218 221 208 210 212
+ 199  12  13 226 227 230 217   3 483 497 498 499   0 481]
+Writing to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+0 504
+cluster_counts['counts'].sum()=492
+500
+499
+len(cluster_counts)=14
+reduced_in_loop=3, sum_tail_factor=0.9900000000000001
+10
+peak_merge output written to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+Testing train_then_features command
+type(data)=<class 'pandas.core.frame.DataFrame'>, type(dataset)=<class 'annflux.repository.dataset.Dataset'>
+model_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+Looking for tag='clip:wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M', model_type=<class 'annflux.repository.model.ClipModel'>
+model=ClipModel(/home/lhogeweg/annflux/data/bombus-plant-test/annflux/datarepo/model-20260513143314-0e627184)
+ftorch.cuda.is_available()=True
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+Counter(data['label_true'])=Counter({'Flowering': 344, 'Vegetative': 108, 'No_plant': 48})
+data.caption=0       Flowering
+1        No_plant
+2       Flowering
+3       Flowering
+4       Flowering
+          ...    
+495    Vegetative
+496    Vegetative
+497     Flowering
+498     Flowering
+499     Flowering
+Name: caption, Length: 500, dtype: object
+      caption  count
+0   Flowering    305
+1    No_plant     46
+2  Vegetative     99
+sufficient_data_classes={'Flowering', 'No_plant', 'Vegetative'}
+Counter({'Flowering': 305, 'Vegetative': 99, 'No_plant': 46})
+Train set size: 405
+Val set size: 50
+Sample pixel_values shape  torch.Size([50, 3, 224, 224])
+Sample input_ids shape  torch.Size([50, 5])
+Sample attention_mask shape  torch.Size([50, 5])
+Sample caption shape  (50,)
+trainable params: 983040 || all params: 24429057 || trainable%: 4.02
+len(data_train) 405
+3
+Training complete in 0m 15s
+/tmp/tmpsqd5t7a9
+successfully committed 3e4ccdcba74828434f347ad6e406db9a8f6a528bb883c50cdd5f83ee
+Looking for tag='clip:wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M', model_type=<class 'annflux.repository.model.ClipModel'>
+model=ClipModel(/home/lhogeweg/annflux/data/bombus-plant-test/annflux/datarepo/model-20260513143352-3e4ccdcb)
+ftorch.cuda.is_available()=True
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+existing_feature_cache_path=None
+feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_3e4ccdcba74828434f347ad6e406db9a8f6a528bb883c50cdd5f83ee_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr'
+other_feature_cache_path None
+len(filenames)=500
+classes_=['Flowering', 'No_plant', 'Vegetative']
+logits_per_image.shape=torch.Size([256, 3]), probs_for_batch.shape=(256, 3)
+writing len(features_for_batch)=256 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_3e4ccdcba74828434f347ad6e406db9a8f6a528bb883c50cdd5f83ee_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (0, 256)
+classes_=['Flowering', 'No_plant', 'Vegetative']
+logits_per_image.shape=torch.Size([244, 3]), probs_for_batch.shape=(244, 3)
+writing len(features_for_batch)=244 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_3e4ccdcba74828434f347ad6e406db9a8f6a528bb883c50cdd5f83ee_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (256, 512)
+(256, 512)
+(244, 512)
+make_resultset 500 rows
+500 rows, 500
+successfully committed a64d9f678d5853884db937ebbdff8e8edae817a236d5e94a3c9ced50
+Skipping _test_ui because not in interactive mode
+Testing export command
+Usage 
+    source activate annflux_whl
+    cd /tmp/tmp5ofkaf3t/package
+    python clip_server.py .
+    # in another shell tab
+    curl -X POST -F "image=@GBIF_2833878594_0.jpg" http://127.0.0.1:8008/v1/predict | jq .
+    
+END
+PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_all_indices_valid PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_diversify_from_none_defaults_to_len PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_no_duplicate_indices PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_returns_correct_length PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_selects_spread_out_points PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_small_input PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_starts_with_zero PASSED
+annflux/tests/test_performance.py::TestPerformance::test_speed FAILED
+annflux/tests/test_query.py::TestQuery::test_in_query mask=0    False
+1     True
+Name: label_predicted, dtype: bool
+PASSED
+annflux/tests/test_query.py::TestQuery::test_not_in_query $OPEN$NOT.str.contains("~df.label_predicted NOT IN", na$IS$False)$CLOSE$
+$OPEN$NOT.str.contains$OPEN$"~df.label_predicted NOT IN", na$IS$False$CLOSE$$CLOSE$
+FAILED
+annflux/tests/test_query.py::TestQuery::test_not_query $OPEN$df.label_predicted != "Empty"$CLOSE$
+mask=0    True
+1    True
+Name: label_predicted, dtype: bool
+PASSED
+annflux/tests/test_query.py::TestQuery::test_query $OPEN$(df.label_predicted.str.contains("Pap", na$IS$False)) | (df.label_true.str.contains("Pap", na$IS$False))$CLOSE$
+$OPEN$(df.label_predicted.str.contains("Pap", na$IS$False)) | (df.label_true.str.contains$OPEN$"Pap", na$IS$False$CLOSE$)$CLOSE$
+$OPEN$(df.label_predicted.str.contains("Pap", na$IS$False)) | $OPEN$df.label_true.str.contains$OPEN$"Pap", na$IS$False$CLOSE$$CLOSE$$CLOSE$
+$OPEN$(df.label_predicted.str.contains$OPEN$"Pap", na$IS$False$CLOSE$) | $OPEN$df.label_true.str.contains$OPEN$"Pap", na$IS$False$CLOSE$$CLOSE$$CLOSE$
+$OPEN$$OPEN$df.label_predicted.str.contains$OPEN$"Pap", na$IS$False$CLOSE$$CLOSE$ | $OPEN$df.label_true.str.contains$OPEN$"Pap", na$IS$False$CLOSE$$CLOSE$$CLOSE$
+mask=0    True
+1    True
+dtype: bool
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_root_endpoint successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpfkjy6ny2, images_path =/tmp/tmpfkjy6ny2/images
+USERS {}
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_annflux_endpoint successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpk84hgjfc, images_path =/tmp/tmpk84hgjfc/images
+USERS {}
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_data_endpoint successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpkla551zw, images_path =/tmp/tmpkla551zw/images
+data_get: filter_query=None
+/tmp/tmpkla551zw/annflux/../annflux/annflux.csv took 0.061511993408203125 ms
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_data_endpoint_with_filter successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp4sn1gabo, images_path =/tmp/tmp4sn1gabo/images
+data_get: filter_query="row.label_predicted = 'label1'"
+/tmp/tmp4sn1gabo/annflux/../annflux/annflux.csv took 0.0858306884765625 ms
+mask=0     True
+1    False
+2     True
+Name: label_predicted, dtype: bool
+len(t)=2
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_data_group_endpoint successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp4pkqzq6g, images_path =/tmp/tmp4pkqzq6g/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_thumbnail_endpoint successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp2uxcd3pj, images_path =/tmp/tmp2uxcd3pj/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_thumbnail_missing_image successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp_rkastqq, images_path =/tmp/tmp_rkastqq/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_thumbnail_original successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpzfcggj2x, images_path =/tmp/tmpzfcggj2x/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_thumbnail_mask successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp_85nibu0, images_path =/tmp/tmp_85nibu0/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_images_full successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpghj0zqrp, images_path =/tmp/tmpghj0zqrp/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_images_full_missing successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp5bjvubsw, images_path =/tmp/tmp5bjvubsw/images
+/tmp/tmp5bjvubsw/images/nonexistent.jpg not found
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_sound_endpoint successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpxblcp6bk, images_path =/tmp/tmpxblcp6bk/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_label_definitions_sort successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpew93p1wr, images_path =/tmp/tmpew93p1wr/images
+File backed up to: /tmp/tmpew93p1wr/annflux/../annflux/backups/label_defs.json_20260513_143401
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_label_definitions_put successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp_aoxpl22, images_path =/tmp/tmp_aoxpl22/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_label_definitions_put_with_parent successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpdxj0rhd6, images_path =/tmp/tmpdxj0rhd6/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_label_definitions_put_exclusive successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpdeyknrfc, images_path =/tmp/tmpdeyknrfc/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_version_endpoint successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpx_z3qw8t, images_path =/tmp/tmpx_z3qw8t/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_label_endpoint successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpds2i7rtc, images_path =/tmp/tmpds2i7rtc/images
+load data result_set.entry.message=''
+(3, 256)
+knn labeled 0.006960630416870117
+has_density_peak: near_labeled_perc=0.5
+predicted_test=[['label2']], true_test=[['label1']]
+1/2  took 0.011174201965332031 s
+len(data_predicted)=3
+5/8  took 0.00156402587890625 s, len(data)=3
+len(data_true)=2
+3/4  took 0.0013980865478515625 s, len(data)=3
+compute_performance took 0.002680540084838867 s
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_label_endpoint_empty successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp4ypbki0r, images_path =/tmp/tmp4ypbki0r/images
+load data result_set.entry.message=''
+(3, 256)
+knn labeled 0.006669044494628906
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_performance_endpoint successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpmtayupjr, images_path =/tmp/tmpmtayupjr/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_detailed_performance_data successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpa70rv96v, images_path =/tmp/tmpa70rv96v/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_exclusivity_data_get successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpo0eulepm, images_path =/tmp/tmpo0eulepm/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_exclusivity_data_post successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpzx52y0tv, images_path =/tmp/tmpzx52y0tv/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_label_provider_data successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpg20d1f7q, images_path =/tmp/tmpg20d1f7q/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_labels_css successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp8it_lmnz, images_path =/tmp/tmp8it_lmnz/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_label_defs_list successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp95vpjzn8, images_path =/tmp/tmp95vpjzn8/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_status_endpoint successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpk2g_h757, images_path =/tmp/tmpk2g_h757/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_status_endpoint_with_group_train successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpnn9ud65h, images_path =/tmp/tmpnn9ud65h/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_status_endpoint_auto_train successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpyhl2kzrx, images_path =/tmp/tmpyhl2kzrx/images
+PASSED/tmp/tmpyhl2kzrx/annflux/datarepo/resultset-20260513143403-1bead038 <annflux.repository.repository.RepositoryEntry object at 0x7f2ee0555a50> 
+load data result_set.entry.message=''
+
+annflux/tests/test_rest_api.py::TestRestAPI::test_ui_endpoints successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpfc4pqfl6, images_path =/tmp/tmpfc4pqfl6/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_error_handling successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp0i32eg8m, images_path =/tmp/tmp0i32eg8m/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_no_cache_headers successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpjj1im9v3, images_path =/tmp/tmpjj1im9v3/images
+data_get: filter_query=None
+/tmp/tmpjj1im9v3/annflux/../annflux/annflux.csv took 0.06628036499023438 ms
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_content_types successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmp2inb9oc4, images_path =/tmp/tmp2inb9oc4/images
+data_get: filter_query=None
+/tmp/tmp2inb9oc4/annflux/../annflux/annflux.csv took 0.06508827209472656 ms
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_large_label_submission successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmptmosbklm, images_path =/tmp/tmptmosbklm/images
+load data result_set.entry.message=''
+(3, 256)
+knn labeled 0.007025718688964844
+has_density_peak: near_labeled_perc=1.0
+predicted_test=[['label3']], true_test=[['label1']]
+1/2  took 0.03702235221862793 s
+len(data_predicted)=3
+5/8  took 0.0013794898986816406 s, len(data)=3
+len(data_true)=3
+3/4  took 0.0008256435394287109 s, len(data)=3
+compute_performance took 0.0018928050994873047 s
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_concurrent_requests successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpvkmhu9aa, images_path =/tmp/tmpvkmhu9aa/images
+data_get: filter_query=None
+/tmp/tmpvkmhu9aa/annflux/../annflux/annflux.csv took 0.2818107604980469 ms
+data_get: filter_query=None
+data_get: filter_query=None
+data_get: filter_query=None
+/tmp/tmpvkmhu9aa/annflux/../annflux/annflux.csv took 3.565073013305664 ms
+/tmp/tmpvkmhu9aa/annflux/../annflux/annflux.csv took 0.6766319274902344 ms
+data_get: filter_query=None
+data_get: filter_query=None
+/tmp/tmpvkmhu9aa/annflux/../annflux/annflux.csv took 15.827178955078125 ms
+/tmp/tmpvkmhu9aa/annflux/../annflux/annflux.csv took 20.96104621887207 ms
+data_get: filter_query=None
+/tmp/tmpvkmhu9aa/annflux/../annflux/annflux.csv took 8.71419906616211 ms
+/tmp/tmpvkmhu9aa/annflux/../annflux/annflux.csv took 7.900238037109375 ms
+data_get: filter_query=None
+/tmp/tmpvkmhu9aa/annflux/../annflux/annflux.csv took 0.2276897430419922 ms
+data_get: filter_query=None
+data_get: filter_query=None
+/tmp/tmpvkmhu9aa/annflux/../annflux/annflux.csv took 23.71835708618164 ms
+/tmp/tmpvkmhu9aa/annflux/../annflux/annflux.csv took 0.8137226104736328 ms
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_invalid_json_handling successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpngy26lxh, images_path =/tmp/tmpngy26lxh/images
+PASSED
+annflux/tests/test_rest_api.py::TestRestAPI::test_missing_files_handling successfully committed 1bead0386921af37b947138b94f2673e036bb0b23e7e930d440f031f
+INFO
+Using project_root=/tmp/tmpswsg30uy, images_path =/tmp/tmpswsg30uy/images
+PASSED
+annflux/tests/test_rest_api.py::TestAuthentication::test_auth_required USERS {}
+FAILED
+annflux/tests/test_rest_api.py::TestAuthentication::test_no_auth_when_no_users USERS {}
+PASSED
+annflux/tests/test_rest_api.py::TestErrorHandling::test_missing_project_root USERS {}
+FAILED
+annflux/tests/test_rest_api.py::TestErrorHandling::test_corrupted_data_files FAILED
+annflux/tests/test_server.py::test_index here
+Index(['image_id', 'label', 'filename', 'set', 'uid', 'record_id'], dtype='object')
+successfully committed 001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2
+Initialized AnnFlux in folder /home/lhogeweg/annflux/data/bombus-plant-test/annflux
+type(data)=<class 'pandas.core.frame.DataFrame'>, type(dataset)=<class 'annflux.repository.dataset.Dataset'>
+model_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+Looking for tag='clip:wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M', model_type=<class 'annflux.repository.model.ClipModel'>
+model=None
+successfully committed 0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444
+ftorch.cuda.is_available()=True
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+existing_feature_cache_path=None
+feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr'
+other_feature_cache_path None
+len(filenames)=500
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([256, 2]), probs_for_batch.shape=(256, 2)
+writing len(features_for_batch)=256 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (0, 256)
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([244, 2]), probs_for_batch.shape=(244, 2)
+writing len(features_for_batch)=244 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (256, 512)
+(256, 512)
+(244, 512)
+make_resultset 500 rows
+500 rows, 500
+successfully committed 61e0f63732663bed2eb7e6ff4bd2d2506ee8de1ac08798a3542be622
+embed_and_prepare: /home/lhogeweg/annflux/data/bombus-plant-test/annflux/datarepo/resultset-20260513143414-61e0f637
+features.shape (500, 2)
+(500,)
+len(child_to_ldp_parent) 483
+len(combined) 500
+max(combined_depth.values()) 15
+max(num_children) 504
+127
+[127  37 422 255 367 374 268  80 240 143 159   1 416 239 233 354 335 313
+ 185 121 130 355 209 267 282 345 256  48 419 299 168 241 376 140 306 290
+ 300 226 227 393  92 211 295 285 289 444 366  77 359 294 264 105 179 433
+ 496  30 372   3  89 106 490  44 225 107 171  93 100  90 440 286  35 488
+ 200 414 356  70 456 458 120 192 122 135 246 161 401 337 396 224 228 210
+ 119 128  29 188  71 158 145 258 339 160 317  94 369  91 104 382 338  58
+ 340  16  10 180 315 387 275 383 386  52  49 467 457 495 379 281 494 101
+ 336  74 136  87 216  76  78 223 243 175 327 297 308 310 311 163 149  54
+  68 358 450 139 436  13 235 194 346 141 109 462 208   7 304  43 301 361
+ 276 110 380 370 403 278 407 439 215 126 117 113 193 189 397 399 408 343
+ 455 220  69 157 446 390 288 293 381 391  83  86 474  88 480  40  51 481
+  38  39  41 498 459 473 202 273 212 214  81 329 271 453 402 178 182 183
+ 187 351 254 451 259 152 153 156 176 138  22  53  57  25  34 162 298 151
+  26  27  31  20 424 425 429 431  59 483 484   2   4  14  15 261 423 410
+ 412 413 405 394 395 454 443 434 435 118 385 389 377 368 371 364  98  72
+ 148 142 353 344 348 349 328 331 333 334 129 131 133 112 116 213 205 277
+ 270 196 199 190 177 181 169 173 174 322 325 312 314 316 318 307 164 166
+ 155 146 477 479 466 468 460 461 263 248 252 245 232 236 238 221  61  62
+  63  50 492 482  47 489   8 491 493   6   5  55  42  45  46  64  65  66
+  67  56  60 438 426 427 428 430  17  18  19  21  23   9 463  32  33  36
+  24  28 465 469 470 471 487 472 475 476 478 464 165 167 154 144 147 319
+ 305 309 296 302 303 323 324 326 170 172 320 321 198 184 186 191 279 265
+ 266 269 195 197 292 280 283 284 287 272 274 201 203 204 206 207 291 134
+ 123 124 125 114 115 332 132 347 350 341 342 330 150 137 352 357  95  82
+  84  85  73  75  79 365  96  97  99 102 103 378 373 375 360 362 363 108
+ 111 384 388 442 445 447 432 437 398 448 449 452 441 415 400 404 406 392
+ 417 418 420 421 409 411 229 230 231 217 218 219 222 244 247 234 237 249
+ 250 251 253 242  11  12 257 260 262 497 486 499   0 485]
+Writing to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+0 504
+cluster_counts['counts'].sum()=490
+500
+499
+len(cluster_counts)=17
+reduced_in_loop=6, sum_tail_factor=0.9
+11
+peak_merge output written to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+INFO
+Using project_root=/home/lhogeweg/annflux/data/bombus-plant-test, images_path =/home/lhogeweg/annflux/data/bombus-plant-test/images
+USERS {}
+b'<!--\nCopyright 2025 Naturalis Biodiversity Center\n\nLicensed under the Apache License, Version 2.0 (the "License");\nyou may not use this file except in compliance with the License.\nYou may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\nUnless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an "AS IS" BASIS,\nWITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\nSee the License for the specific language governing permissions and\nlimitations under the License.\n-->\n<!DOCTYPE html>\n<script type="module">\n    import {asyncBufferFromUrl, parquetReadObjects} from \'/static/hyparquet/index.js\';\n\n    window.asyncBufferFromUrl = asyncBufferFromUrl;\n    window.parquetReadObjects = parquetReadObjects;\n</script>\n<script src="/static/d3.v4.js"></script>\n<script src="/static/jquery-3.7.1.min.js"></script>\n<script src="/static/underscore-1.13.7-umd-min.js"></script>\n<script\n        type="text/javascript"\n        src="/static/goldenlayout.min.js"\n></script>\n\n\n<script type="text/javascript" src="/static/annflux.js"></script>\n<script type="text/javascript" src="/static/annflux_layout.js"></script>\n<script type="text/javascript" src="/static/annflux_objects.js"></script>\n<script type="text/javascript" src="/static/lap.js"></script>\n<link rel="shortcut icon" href="/static/annflux.ico">\n<link\n        type="text/css"\n        rel="stylesheet"\n        href="/static/goldenlayout-base.css"\n/>\n<link\n        type="text/css"\n        rel="stylesheet"\n        href="/static/goldenlayout-dark-theme.css"\n/>\n<link type="text/css" rel="stylesheet" href="/static/annflux.css"/>\n<link type="text/css" rel="stylesheet" href="/labels/css"/>\n\n<body>\n<div id="help" style="position: fixed; max-width: 60%; background-color: #333333cc; display: none; z-index:100">\n    <div id="annflux_title">\n        <span style="color:rgb(134, 218, 25)" class="title_caps">IN</span>teractive <span\n            style="color:rgb(230, 226, 16)" class="title_caps">D</span>ata <span style="color:rgb(163, 44, 147)"\n                                                                                 class="title_caps">E</span>xploration\n        and <span style="color:rgb(43, 119, 170)" class="title_caps">E</span>nrichment <span\n            style="color:rgb(211, 46, 17)" class="title_caps">D</span>evice\n    </div>\n    <table>\n        <tr>\n            <td width="16%"><b>Map</b></td>\n            <td width="16%"></td>\n            <td width="16%"><b>Gallery</b></td>\n            <td width="16%"></td>\n            <td width="16%"><b>General</b></td>\n            <td width="16%"></td>\n        </tr>\n        <tr>\n            <td></td>\n            <td></td>\n            <td></td>\n            <td></td>\n            <td></td>\n            <td></td>\n        </tr>\n        <tr>\n            <td>Mouse scroll</td>\n            <td><i>Zoom</i></td>\n            <td>Click</td>\n            <td><i>Select single image</i></td>\n            <td>?</td>\n            <td><i>Toggle this help screen</i></td>\n        </tr>\n        <tr>\n            <td>Click & drag</td>\n            <td><i>Pan</i></td>\n            <td>Shift-click</td>\n            <td><i>Select multiple images</i></td>\n            <td>Reset UI</td>\n            <td><i>Ctrl + Alt + R</i></td>\n        </tr>\n        <tr>\n            <td>Ctrl+Click & drag</td>\n            <td><i>Select images</i></td>\n            <td>Label shortcuts (hover over labels on top)</td>\n            <td><i>Label by keyboard</i></td>\n            <td></td>\n            <td><i></i></td>\n        </tr>\n        <tr>\n            <td>i</td>\n            <td><i>disable thumbnails</i></td>\n            <td>Ctrl+click <span class="inline-help" title="the labels suggested by the tool">possible</span> label</td>\n            <td><i>Make label <span class="inline-help" title="whether the label applies is unsure">undetermined</span></i>\n            </td>\n            <td>Version</td>\n            <td><span id="package_version"></span></td>\n        </tr>\n    </table>\n</div>\n<div id="layoutContainer"></div>\n</body>\n<script>\n    let gLayout = "originalImageLabel";\n    <!--@formatter:off-->\n    let forceIdleTime = 1800 + 1;\n    <!--@formatter:on-->\n    var myLayout;\n    // localStorage.clear();\n    savedState = localStorage.getItem("savedState");\n    savedLayout = localStorage.getItem("savedLayout");\n\n    if (savedState !== null && savedLayout == gLayout) {\n        logUI("Loading custom layout state");\n        myLayout = new GoldenLayout(JSON.parse(savedState));\n    } else {\n        let layoutDef = new Map([\n            ["partLabel", partLabelConfig],\n            ["tileLabel", partLabelConfig],\n            ["label", labelConfig],\n            ["originalImageLabel", originalImageLabelConfig],\n        ]).get(gLayout);\n        console.log("layoutDef", layoutDef);\n        myLayout = new GoldenLayout(layoutDef);\n    }\n\n    localStorage.setItem("savedLayout", gLayout);\n\n\n    // myLayout = new GoldenLayout(labelConfig);\n    let mapContainer = null;\n    let labelContainer = null;\n    let galleryContainer = null;\n    let fullImageContainer = null;\n    let controlContainer = null;\n    let fullImageTileMap = null;\n    let embeddingMap = null;\n    let embeddingMapContainer = null;\n    let imageInfoContainer = null;\n    let fullImageEmbeddingMap = null;\n\n    function saveState() {\n        var state = JSON.stringify(myLayout.toConfig());\n        localStorage.setItem("savedState", state);\n        // location.reload();\n    }\n\n    function persistentToggle(elID) {\n        $(`#${elID}`).toggle();\n        localStorage.setItem(`${elID}_display`, $(`#${elID}`).css("display"));\n    }\n\n    myLayout.registerComponent("Map", function (container, componentState) {\n        if (componentState.label == "A") {\n            container.getElement().html(mapHtml);\n            mapContainer = container;\n        }\n    });\n    myLayout.registerComponent("Labels", function (container, componentState) {\n        if (componentState.label == "B") {\n            labelContainer = container;\n            container.getElement().html(`<div id="panel">\n<input type="text" id="searchLabel" onkeyup="filterLabels(event)"/>\n      <div id="labelPanel"><b style="color: red">Add labels first!</b></div>\n      <br/><a class="noButton" href="#" onclick="persistentToggle(\'addLabelPanel\')"><img src="/static/newlabel.svg" width="24px"></a>\n      <div id="addLabelPanel">\n        <a href="javascript:void(0)" onclick="setLabelParent(null)">+</a>\n        <input type="text" id="newLabel" /><-<input\n          type="text"\n          id="parentLabel"\n          value="null"\n        />\n        <input type="button" value="add" onclick="addLabel()" />\n        <a href="/exclusivity">Exclusivity</a>\n        <a href="/label_provider">Label provider</a>\n        <a href="/class_examples" target="class_examples">Class examples</a>\n        <a href="/v1/label_definitions/sort">Sort labels</a>\n      </div>\n    </div>`);\n        }\n    });\n    myLayout.registerComponent("Gallery", function (container, componentState) {\n        if (componentState.label == "C") {\n            galleryContainer = container;\n            container.getElement()\n                .html(`<div id="gallery" tabindex="0" style="position:relative">\n    <div id="fullscreen" style="position: absolute; max-width: 50%; display:none">\n      <img src="" style="max-width: 100%" />\n      <a href="#" onclick="$(\'#fullscreen\').hide();">x</a>\n    </div>\n      <div id="nlSearchBox" style="margin-bottom: 4px;">\n        <input type="text" id="nlSearchQuery" placeholder="Search images by description..." style="width: 250px;"\n          onkeydown="event.stopPropagation(); if(event.key===\'Enter\') searchNaturalLanguage()"\n          onkeyup="event.stopPropagation()"\n          onkeypress="event.stopPropagation()" />\n        <a href="#" onclick="searchNaturalLanguage()">Search</a>\n        <a href="#" onclick="clearNaturalLanguageSearch()">Clear</a>\n        <span id="nlSearchStatus" style="color: #888; font-size: 0.9em;"></span>\n      </div>\n      <a href="#" onclick="submitLabeledGallery(this)"\n        >Save all labels/images</a\n      >\n      <a href="#" onclick="refresh(this)">Refresh</a>\n      <a href="#" onclick="deselectGallery(this)">Deselect</a>\n      <a href="#" onclick="highlightGalleryInMap(this)">Highlight gallery</a>\n      <a href="#" onclick="clearLabels(this)">Clear labels</a>\n    </div>\n    `);\n        }\n    });\n    myLayout.registerComponent("Control", function (container, componentState) {\n        if (componentState.label == "D") {\n            controlContainer = container;\n            container.getElement().html(controlHtml);\n        }\n    });\n    myLayout.registerComponent("FullImage", function (container, componentState) {\n        if (componentState.label == "E") {\n            fullImageContainer = container;\n            container\n                .getElement()\n                .html(\n                    `<div id="fullImageTiled" tabindex="0"></div>`\n                );\n        }\n    });\n    myLayout.registerComponent(\n        "ImageInfo",\n        function (container, componentState) {\n            if (componentState.label === "G") {\n                imageInfoContainer = container;\n                container\n                    .getElement()\n                    .html(`<div id="imageInfoContent" tabindex="0"></div>`);\n            }\n        }\n    );\n    myLayout.registerComponent(\n        "FullEmbedding",\n        function (container, componentState) {\n            if (componentState.label == "F") {\n                embeddingMapContainer = container;\n                container\n                    .getElement()\n                    .html(`<div id="fullImageMap" tabindex="0"></div>`);\n            }\n        }\n    );\n\n    myLayout.init();\n\n    // = layout dependent UI\n    if (gLayout === "tileLabel") {\n        $("#groupTrainButton").css("display", "");\n    }\n\n\n    let gLabeled = new Map();\n    let selection = [];\n    let gallerySelection = [];\n    let zoom = null;\n    let x = null;\n    let y = null;\n    let time_x = null;\n    let time_y = null;\n    let svg = null;\n    let g = null;\n    let width = null;\n    let height = null;\n    let numUpdatesActive = 0;\n    let data = null;\n    let group_data = null;\n    let gallery = null;\n    let galleryImages = null;\n    let shortcuts = new Map();\n    let g_labels = []; // list of (child, parent, [category]) names\n    var idleTime = 0;\n    // localStorage.setItem("activeTime", 0);\n    var activeTime = parseInt(localStorage.getItem("activeTime") ?? 0);\n    let trained_for_version = null;\n    const exclusivity = new Map();\n    const childToParent = new Map();\n\n    function filterLabels(event) {\n        filterLabelsText(event.target.value);\n    }\n\n    function filterLabelsText(text) {\n        text = text.toLowerCase();\n        let filteredLabels = g_labels.filter(l => l[0].toLowerCase().startsWith(text)).concat(g_labels.filter(l => l[0].toLowerCase().indexOf(text) > -1 && !l[0].toLowerCase().startsWith(text)));\n        addLabelsinUI(filteredLabels);\n    }\n\n    function addSpaces() {\n        d3.selectAll(".quick_label").each(function () {\n            var t = document.createElement("span");\n            t.innerHTML = " ";\n            this.parentNode.insertBefore(t, this.nextSibling);\n        });\n        d3.selectAll(".quick_label_true").each(function () {\n            var t = document.createElement("span");\n            t.innerHTML = " ";\n            this.parentNode.insertBefore(t, this.nextSibling);\n        });\n        d3.selectAll(".quick_label_predicted").each(function () {\n            var t = document.createElement("span");\n            t.innerHTML = " ";\n            this.parentNode.insertBefore(t, this.nextSibling);\n        });\n    }\n\n    function createQuickLabel(imageId, class_, labels, bla, probabilities) {\n        d3.select("div#gallery-label-" + imageId)\n            .selectAll("*")\n            .remove();\n        if (bla) {\n            if (probabilities) {\n                d3.select("div#gallery-label-" + imageId)\n                    .selectAll("a")\n                    .data(zip(labels, probabilities))\n                    .enter()\n                    .append("a")\n                    .html(function (d) {\n                        return `${d[0]}(${Math.round(d[1] * 100)}%)`;\n                    })\n                    .attr("class", function (d) {\n                        return `${class_} label_${d[0].replace(" ", "_")}`;\n                    })\n                    .attr("onclick", function (d) {\n                        return `labelInGallery(\'${imageId}\', \'${d[0]}\', false)`;\n                    })\n                    .attr("href", `javascript:void(0)`);\n            } else {\n                d3.select("div#gallery-label-" + imageId)\n                    .selectAll("a")\n                    .data(labels)\n                    .enter()\n                    .append("a")\n                    .html(function (d) {\n                        return `${d}`;\n                    })\n                    .attr("class", function (d) {\n                        return `${class_} label_${d.replace(" ", "_")}`;\n                    })\n                    .attr("onclick", function (d) {\n                        return `labelInGallery(\'${imageId}\', \'${d}\', false)`;\n                    })\n                    .attr("href", `javascript:void(0)`);\n            }\n        }\n        addSpaces();\n    }\n\n    function drawGallery(show_data, as_ranking_column) {\n        console.log("hierzo", show_data.length);\n        as_ranking_column = as_ranking_column ?? urlParams.get("as_ranking_column");\n        //show_data.sort((a, b) => a.score_predicted - b.score_predicted);\n        const rank_modifier = urlParams.get("invert_ranking") == "on" ? -1 : +1;\n        console.log("drawGallery", as_ranking_column, rank_modifier);\n        show_data = show_data.sort(\n            (a, b) => rank_modifier * (Number(a[as_ranking_column]) - Number(b[as_ranking_column]))\n        );\n        if (localStorage.getItem("debug") === "2") {\n            console.log("drawGallery", show_data);\n        }\n        gallery.selectAll("div.gallery").remove();\n        let galleryImageWidth = "300px";\n        galleryImages = gallery\n            .selectAll("gallery_images")\n            .data(show_data)\n            .enter()\n            .append("div")\n            .attr("class", d => d.labeled == 1 ? "gallery gallery-labeled" : "gallery")\n            .attr("id", function (d) {\n                return "gallery-" + d.uid;\n            })\n            .style("display", "inline-block")\n            .style("width", galleryImageWidth)\n\n            .append("img")\n            .attr("title", function (d) {\n                return (\n                    d.labeled +\n                    " " +\n                    Math.round(d.score_predicted * 100, 0) +\n                    " " +\n                    Math.round(d.score_true * 100, 0)\n                );\n            })\n            .attr("src", function (d) {\n                return "/images/thumbnail/" + d.uid;\n            })\n            .attr("width", galleryImageWidth);\n        d3.selectAll("div.gallery img").on("click", selectImageGallery);\n        d3.selectAll("div.gallery img").on("dblclick", altImageAction);\n        // create container for gallery labels\n        galleryImages.each((d, i) => {\n            d3.select("div#gallery-" + d.uid)\n                .append("div")\n                .attr("id", "gallery-label-" + d.uid)\n                .attr("class", "gallery-label")\n                .attr("data-id", d.uid)\n                .attr("data", Number(d.labeled) === 0 ? d.label_predicted : d.label_true);\n        });\n        // create per image (quick) labels\n        let labelsFromStorage = null;\n        if (localStorage.getItem("labeled")) {\n            labelsFromStorage = JSON.parse(localStorage.getItem("labeled"));\n            logUI("Restored labeled from local storage", 1);\n        }\n\n        galleryImages.each((d2, i) => {\n\n            let isUnlabeled = Number(d2.labeled) == 0;\n            console.log(d2.uid, isUnlabeled)\n            let labelsFor = ((\n                isUnlabeled ? d2.label_predicted : d2.label_true\n            ) ?? "").split(",");\n            if (labelsFromStorage && d2.uid in labelsFromStorage) {\n                labelsFor = labelsFromStorage[d2.uid].split(",");\n                isUnlabeled = false;\n            }\n            if (isUnlabeled) {\n                createQuickLabel(\n                    d2.uid,\n                    "quick_label_predicted",\n                    labelsFor,\n                    true,\n                    (d2.scores_predicted ?? "").toString().split(",")\n                );\n            } else {\n                createQuickLabel(\n                    d2.uid,\n                    "quick_label_true",\n                    labelsFor,\n                    true,\n                );\n            }\n\n        });\n        // button for removing all labels\n        galleryImages.each((d, i) => {\n            d3.select("div#gallery-" + d.uid)\n                .append("a")\n                .attr("href", "javascript:void(0)")\n                .attr("onclick", "clearLabelInGallery(this)")\n                .attr("data-id", d.uid)\n                .html("x");\n        });\n        // ?\n        galleryImages.each((d, i) => {\n            d3.select("div#gallery-" + d.uid)\n                .append("div")\n                // .attr("max-width", "200px")\n                // .style("flex-basis", "200px")\n                .attr("id", "labels-" + d.uid);\n        });\n        // predicted (possible) labels\n        try {\n            galleryImages.each((d2, i) => {\n                if (d2.label_possible && d2.score_possible) {\n                    let localData = zip(d2.label_possible.toString().split(","), d2.score_possible.toString().split(","));\n                    d3.select("div#labels-" + d2.uid)\n                        .selectAll("a")\n                        .data(localData)\n                        .enter()\n                        .append("a")\n                        .html(function (d) {\n                            return `${d[0]}(${Math.round(d[1] * 100)}%)`;\n                        })\n                        .attr("class", "quick_label")\n                        .attr("onclick", function (d) {\n                            return `labelInGallery(\'${d2.uid}\', \'${d[0]}\', false, event)`;\n                        })\n\n                        .attr("href", `javascript:void(0)`);\n                } else if (d2.labeled == 1 && d2.label_predicted) {\n                    let localData = [];\n                    let labelPredicted = d2.label_predicted.toString();\n                    let scorePredicted = d2.score_predicted.toString();\n                    let labelsTrue = (d2.label_true ?? "").toString().split(",");\n\n                    localData = zip(labelPredicted.split(","), scorePredicted.split(",")).filter(a => labelsTrue.indexOf(a[0]) == -1);\n                    console.log(localData);\n                    d3.select("div#labels-" + d2.uid)\n                        .selectAll("a")\n                        .data(localData)\n                        .enter()\n                        .append("a")\n                        .html(function (row_) {\n                            return `${row_[0]}(${Math.round(row_[1] * 100)}%)`;\n                        })\n                        .attr("class", "quick_label")\n                        .attr("onclick", function (d) {\n                            return `labelInGallery(\'${d2.uid}\', \'${d[0]}\', false, event)`;\n                        })\n\n                        .attr("href", `javascript:void(0)`);\n                }\n            });\n        } catch (error) {\n            console.log(error);\n        }\n        // }\n\n        addSpaces();\n\n        gallerySelection = [];\n    }\n\n    function zip(a, b) {\n        return a.map(function (e, i) {\n            return [e, b[i]];\n        });\n    }\n\n    function toggleMapImageDisplay(elementId) {\n        console.log(\n            "toggleMapImageDisplay",\n            d3.select(elementId).selectAll("image")\n        );\n        const visibility = d3\n            .select(elementId)\n            .selectAll("image")\n            .style("visibility");\n        d3.select(elementId)\n            .selectAll("image")\n            .style("visibility", visibility == "hidden" ? "visible" : "hidden");\n        // console.log(d3.selectAll("image").style("visibility"));\n    }\n\n    function gridArrangeImages(elementId) {\n        images = d3.select(elementId).selectAll("image");\n        console.log("gridArrangeImages", images);\n        const mapObject = gReferences.get(elementId);\n        console.log("References", gReferences.get(elementId));\n        let originalCoordinates = [];\n        images.each((img) =>\n            originalCoordinates.push([img[mapObject.xName], img[mapObject.yName]])\n        );\n        // console.log(originalCoordinates);\n        console.log("originalCoordinates", originalCoordinates);\n        // in the domain space solve the linear assignment problem\n        const xDomainWidth = mapObject.xDomain[1] - mapObject.xDomain[0];\n        const yDomainWidth = mapObject.yDomain[1] - mapObject.yDomain[0];\n\n        const xRangeWidth = mapObject.x(mapObject.xDomain[1]) - mapObject.x(mapObject.xDomain[0]);\n        const yRangeWidth = mapObject.y(mapObject.xDomain[1]) - mapObject.y(mapObject.xDomain[0]);\n\n        const aspectRatio = xDomainWidth / yDomainWidth;\n\n        const numX = Math.ceil(Math.sqrt(aspectRatio * originalCoordinates.length));\n        const numY = Math.ceil(numX / aspectRatio);\n\n        const thumbSizeX = xRangeWidth / numX;\n        const thumbSizeY = yRangeWidth / numY;\n\n        let gridCoordinates = [];\n        for (let i = 0; i < originalCoordinates.length; i++) {\n            let indexX = i % (numX + 1);\n            let indexY = Math.floor(i / (numX + 1));\n\n            gridCoordinates.push([\n                mapObject.xDomain[0] + (indexX / (numX + 1)) * xDomainWidth,\n                mapObject.yDomain[0] + (indexY / (numY + 1)) * xDomainWidth,\n            ]);\n        }\n        console.log("gridCoordinates", gridCoordinates);\n\n        function cost_(i, j) {\n            return Math.sqrt(\n                (originalCoordinates[i][0] - gridCoordinates[j][0]) ** 2 +\n                (originalCoordinates[i][1] - gridCoordinates[j][1]) ** 2\n            );\n        }\n\n        result = lap(originalCoordinates.length, cost_);\n        console.log(result);\n        images.each((img, i) => {\n            const imgD3 = d3.select("#map-" + img.uid);\n            // console.log(img);\n            const gridCoordinate = gridCoordinates[result.row[i], result.col[i]];\n            imgD3.attr("x", mapObject.x(gridCoordinate[0]));\n            imgD3.attr("y", mapObject.y(gridCoordinate[1]));\n            console.log("thumbSizeX", [thumbSizeX, thumbSizeY]);\n            imgD3.attr("width", thumbSizeX);\n            imgD3.attr("height", thumbSizeY);\n\n            // console.log("aspect", imgD3.attr("width") / imgD3.attr("height"), imgD3.attr("width"), imgD3.attr("height"));\n        });\n    }\n\n    function selectImage(event) {\n        /*\n        Select image in the map\n         */\n        let image = d3.select("image#map-" + event.uid);\n        if (!selection.includes(event.uid)) {\n            image.style("outline", "2px solid red");\n            selection.push(event.uid);\n        } else {\n            image.style("outline", "");\n            let new_selection = [];\n            for (const x of selection) {\n                if (x !== event.uid) {\n                    new_selection.push(x);\n                }\n            }\n            selection = new_selection;\n        }\n        console.log("map selection", selection);\n        //\n        let show_data = [];\n        for (const d of data) {\n            if (selection.includes(d.uid)) {\n                show_data.push(d);\n            }\n        }\n        drawGallery(show_data);\n    }\n\n    function selectImageGallery(event) {\n        /*\n        Select image in the gallery\n         */\n        let imageBox = d3.select("div.gallery#gallery-" + event.uid);\n        if (d3.event.shiftKey) {\n            // multiple select\n            if (!gallerySelection.includes(event.uid)) {\n                imageBox.style("outline", "2px solid red");\n                gallerySelection.push(event.uid);\n            } else {\n                imageBox.style("outline", "");\n                let new_selection = [];\n                for (const x of gallerySelection) {\n                    if (x !== event.uid) {\n                        new_selection.push(x);\n                    }\n                }\n                gallerySelection = new_selection;\n            }\n        } else {\n            // single select\n            const selected = gallerySelection.includes(event.uid);\n            if (gallerySelection.length > 0) {\n                deselectGallery();\n            }\n            if (!selected) {\n                imageBox.style("outline", "2px solid red");\n                gallerySelection.push(event.uid);\n            } else {\n                imageBox.style("outline", "");\n                gallerySelection = [];\n            }\n            //\n            if (gLayout === "partLabel") {\n                showFullImage(event.uid);\n            }\n        }\n        // $("#fullscreen img").attr("src", "/images/thumbnail/" + event.uid);\n        // $("#fullscreen").show()\n        console.log("gallerySelection", gallerySelection);\n        // $("#individualImage").attr("src", "/images/thumbnail/" + event.uid);\n        // $("#individualPredictedLabel").html(event.label_predicted);\n        // $("#individualPredictedProbability").html(event.score_predicted);\n        // $("#individualId").html(event.uid);\n        //\n        $(".label_panel").css("font-weight", "");\n        for (const uid of gallerySelection) {\n            let labelString = d3.select("#gallery-label-" + uid).attr("data") ?? "";\n            if (labelString === "n/a") {\n                labelString = "";\n            }\n            const labels = labelString.split(",");\n            for (const label of labels) {\n                $(".label_panel:contains(\'" + label + "\')").css("font-weight", "bold");\n            }\n        }\n        //\n        if (d3.event.ctrlKey && false) {\n            let dot = d3.select("#dot-" + event.uid);\n            x_ = embeddingMap.x(event.e_0);\n            y_ = embeddingMap.y(event.e_1);\n            // dot.transition().duration(500).style("fill", "blue").transition().duration(500).style("fill", "red");\n            // dot\n            //   .transition()\n            //   .duration(500)\n            //   .attr("r", 20)\n            //   .transition()\n            //   .duration(500)\n            //   .attr("r", 3);\n\n            const trans = d3.zoomIdentity\n                .translate(width / 2, height / 2)\n                .scale(30)\n                .translate(-x_, -y_);\n            console.log("trans", trans);\n            embeddingMap.svg\n                // .select("g")\n                // .transition()\n                // .duration(750)\n                .call(\n                    embeddingMap.zoom.transform,\n                    trans\n                    // d3.pointer(event)\n                );\n            // d3.select("svg g").attr("transform", trans);\n            console.log(\n                "foekoe",\n                d3.zoomTransform(svg.select("g")),\n                d3.zoomTransform(svg),\n                d3.zoomTransform(zoom)\n            );\n        }\n    }\n\n    function labelInMap(el) {\n        selection.forEach((x, i) => gLabeled.set(x, el.innerText));\n        $("/label", JSON.stringify(Object.fromEntries(gLabeled)));\n        console.log("label - selection", selection);\n        for (const x of selection) {\n            d3.select("image#" + x).style("display", "none");\n        }\n        selection = [];\n        console.log(gLabeled);\n    }\n\n    function playMedia(event) {\n        console.log(`/sounds/${event.uid}`);\n        selectImageGallery(event);\n        var audio = new Audio(`/sounds/${event.uid}`);\n        audio.play();\n    }\n\n    function altImageAction(event) {\n        //TODO: re-add sound\n        logUI(gLayout);\n        const img = $(`#gallery-${event.uid} img`);\n        let curLayer = img.attr("data-curLayer");\n        console.log("img", img, curLayer);\n        if (gLayout == "instanceQuality") {\n            if (curLayer === undefined || curLayer == "masked") {\n                curLayer = "original";\n                img.attr("src", `/images/original/thumbnail/${event.uid}`);\n            } else if (curLayer == "original") {\n                curLayer = "mask";\n                img.attr("src", `/images/mask/thumbnail/${event.uid}`);\n            } else if (curLayer == "mask") {\n                curLayer = "masked";\n                img.attr("src", `/images/thumbnail/${event.uid}`);\n            }\n        } else if (gLayout === "tileLabel") {\n            const data = d3.select(`#gallery-${event.uid}`).data()[0];\n            let record_id = null;\n            if ("record_id" in data) {\n                record_id = data["record_id"]\n            } else {\n                record_id = data["uid"]\n            }\n            console.log("record_id", record_id, data);\n            fullImageTileMap.setFilter(\n                new Array([\n                    "record_id",\n                    "equals",\n                    record_id,\n                ])\n            );\n            fullImageTileMap.setData();\n            console.log("altImageAction", img);\n        } else if (gLayout === "originalImageLabel") {\n            if(!d3.event.ctrlKey) {\n                fullImageTileMap.setFilter(\n                    new Array([\n                        "uid",\n                        "equals",\n                        event.uid,\n                    ])\n                );\n                fullImageTileMap.setData();\n            }\n            else {\n                d3.csv(`/data/neighbors/${event.uid}`, function (data_) {\n                    console.log("data_", data_);\n                    \n                    fullImageTileMap.setData(data_, true, "embedding", false, "nn_sort", true);\n\n                });\n            }\n            console.log("altImageAction", img);\n            renderMapAsTable(d3.select(`#gallery-${event.uid}`).data()[0], \'imageInfoContent\');\n        }\n        img.attr("data-curLayer", curLayer);\n        selectImageGallery(event);\n    }\n\n    function showFullImage(uid) {\n        let fullImageId = "";\n        const tokens = uid.split("_");\n        for (let i = 0; i < tokens.length - 1; i++) {\n            fullImageId += tokens[i];\n            if (i < tokens.length - 2) {\n                fullImageId += "_";\n            }\n        }\n        $("#fullImage").attr("src", `/images/full/${fullImageId}`);\n    }\n\n    function labelInGallery(uid, selectedLabel, multipleSelected, event) {\n        let labelString = d3.select("#gallery-label-" + uid).attr("data") ?? "";\n        if (labelString === "n/a") {\n            labelString = "";\n        }\n        let undetermined;\n        if (event === undefined) {\n            undetermined = false;\n        } else {\n            undetermined = event.ctrlKey;\n        }\n        const labels = labelString.split(",");\n        if (labels.includes(selectedLabel)) {\n            if (!multipleSelected) {\n                // remove label\n                labelString = "";\n                for (const label2 of labels) {\n                    if (label2 != selectedLabel && label2 != "n/a") {\n                        labelString += (labelString.length > 0 ? "," : "") + label2;\n                    }\n                }\n            }\n            // TODO: remove child when parent is removed\n        } else {\n            let newLabels = [];\n            for (const label2 of labels) {\n                let removedLabel = null;\n                if (exclusivity.has(selectedLabel)) {\n                    if (\n                        !(\n                            exclusivity.get(selectedLabel).indexOf(label2) > -1 ||\n                            exclusivity.get(selectedLabel) == "*"\n                        )\n                    ) {\n                        newLabels.push(label2);\n                    } else {\n                        removedLabel = label2;\n                    }\n                } else if (exclusivity.has("*")) {\n                    if (exclusivity.get("*") != label2) {\n                        newLabels.push(label2);\n                    } else {\n                        removedLabel = label2;\n                    }\n                } else {\n                    newLabels.push(label2);\n                }\n            }\n            newLabels.push(!undetermined ? selectedLabel : selectedLabel + "=?");\n            // add ancestors for child\n            let childLabel = selectedLabel;\n            while (childToParent.has(childLabel)) {\n                let parentLabel = childToParent.get(childLabel);\n                if (!labels.includes(parentLabel)) {\n                    newLabels.push(parentLabel);\n                }\n                childLabel = parentLabel;\n            }\n            //\n            labelString = "";\n            for (const label2 of newLabels) {\n                labelString += (labelString.length > 0 ? "," : "") + label2;\n            }\n        }\n        // console.log("labelString", labelString);\n        d3.select("#gallery-label-" + uid).attr("data", labelString);\n        d2 = d3.select("#gallery-" + uid).data()[0];\n        createQuickLabel(\n            d2.uid,\n            d2.labeled == 0 ? "quick_label_predicted" : "quick_label_true",\n            labelString.length > 0 ? labelString.split(",") : [],\n            true\n        );\n        //\n        setLabeledGlobal();\n        localStorage.setItem(\n            "labeled",\n            JSON.stringify(Object.fromEntries(gLabeled))\n        );\n        logUI("Stored labeled in local storage");\n    }\n\n    function logUI(message, logLevel) {\n        if (logLevel === undefined) {\n            logLevel = 0;\n        }\n        $("#ui_log_last").html(message);\n        $("#ui_log_last").css("color", logLevel == 0 ? "white" : "orange");\n    }\n\n    function massLabelInGallery(label, multipleSelected) {\n        console.log("massLabelInGallery - selection", gallerySelection);\n        for (const uid of gallerySelection) {\n            labelInGallery(uid, label, multipleSelected);\n        }\n\n        console.log(gallerySelection);\n    }\n\n    function labelDelegate(el) {\n        if (selection.length > 0 && false) {\n            labelInMap(el);\n        } else if (gallerySelection.length > 0) {\n            massLabelInGallery(el.innerText, gallerySelection.length > 1);\n        } else {\n            //d3.selectAll(".gallery-label").html(el.innerText);\n        }\n    }\n\n    function setLabeledGlobal() {\n        /*\n            Stores the current labels for the gallery in the global `gLabeled` variable\n            */\n        d3.selectAll(".gallery-label").each((x, i) => {\n            const label = $("#gallery-label-" + x.uid).attr("data");\n            gLabeled.set(x.uid, label);\n        });\n        console.log("labeled", gLabeled);\n    }\n\n    function shardFlux(force) {\n        /*\n        RELOAD=YES\n        */\n        if (urlParams.get("flux_mode") == "active_learning_shard") {\n            console.log(urlParams.get("flux_mode"), force);\n            const label_predicted_url = urlParams.get("label_predicted");\n            if (\n                label_predicted_url == null ||\n                force\n            ) {\n                const min_ = 1; //TODO\n                let shards = new Array();\n\n                d3.csv("/detailed_performance/data", function (data_) {\n                    console.log("detailed_performance", data_);\n                    let total = 0;\n                    for (row of data_) {\n                        row.num_predicted =\n                            parseInt(row.num_predicted_certain) +\n                            parseInt(row.num_predicted_uncertain);\n                        total += row.num_predicted;\n                    }\n                    const max_ = 0.1 * total;\n                    for (row of data_) {\n                        console.log(min_, row.num_predicted, max_);\n                        if ((row.num_predicted >= min_) & (row.num_predicted <= max_)) {\n                            // figure out how many of this label are unlabeled, TODO: on server?\n\n                            shards.push(row);\n                        }\n                    }\n                    // random sample, TODO proper\n                    shards = _.shuffle(shards);\n                    for (const row of shards) {\n                        if (parseFloat(row.precision) < Math.random()) {\n                            // alert(row.label);\n                            $("#label_predicted").val(row.label.toLowerCase());\n                            changeOption(document.getElementById("label_predicted"));\n                            break;\n                        }\n                    }\n                    console.log("total", total, "shards", shards);\n                    location.reload();\n                });\n            } else {\n                location.reload();\n            }\n        }\n    }\n\n    function submitLabeledGallery() {\n        $("#loading_circle").toggle();\n        setLabeledGlobal();\n        console.log(JSON.stringify(Object.fromEntries(gLabeled)));\n        $.post("/label", JSON.stringify(Object.fromEntries(gLabeled)))\n            .done(function (data) {\n                localStorage.removeItem("labeled");\n\n                //shardFlux(true);\n                location.reload()\n            })\n            .fail(function (jqXHR, textStatus, error) {\n                alert(\n                    `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(\n                        jqXHR\n                    )}, ${textStatus}, ${error}`\n                );\n            });\n    }\n\n    function refresh() {\n        $("#loading_circle").toggle();\n        $.post("/label", JSON.stringify(Object.fromEntries(new Map())))\n            .done(function (data) {\n                location.reload();\n            })\n            .fail(function (jqXHR, textStatus, error) {\n                alert(\n                    `Failed to save labels, please contact laurens.hogeweg@naturalis.nl. Details ${JSON.stringify(\n                        jqXHR\n                    )}, ${textStatus}, ${error}`\n                );\n            });\n    }\n\n    let urlOptions = new Map();\n    const options = [\n        "label_predicted",\n        "label_true",\n        "label_undetermined",\n        "filter_query",\n        "as_ranking_column",\n        "show_labeled",\n        "color_map",\n        "not_label_true",\n        "not_label_predicted",\n        "invert_ranking",\n        "num_in_gallery",\n        "ignore_double_checked",\n        "linear_auto_train",\n        "flux_mode",\n    ];\n    const urlParams = new URLSearchParams(window.location.search);\n\n    function addLabelsinUI(labels, labelToShortcuts, addSetLabelParent) {\n        if (labels.length > 0) {\n            d3.select("#labelPanel").selectAll("*").remove();\n        }\n\n        d3.select("#labelPanel")\n            .selectAll("a")\n            .data(labels)\n            .enter()\n            .append("a")\n            .attr("onclick", "labelDelegate(this)")\n            .attr("href", "javascript:void(0)")\n            .attr("title", function (d) {\n                return labelToShortcuts ? labelToShortcuts.get(d[0]) : "";\n            })\n            // .attr("class", "label_panel")\n            .attr("class", function (d) {\n                return `label_${d[0].replace(" ", "_")}`;\n            })\n            .attr("id", function (d) {\n                return `label_panel_${d[0].replace(" ", "_")}`;\n            })\n            .html(function (d) {\n                return d[0];\n            });\n\n        //\n        d3.selectAll("#labelPanel a").each(function (d) {\n            var t = document.createElement("span");\n            t.innerHTML = addSetLabelParent ? "<a href=\'javascript:void(0)\' onclick=\'setLabelParent(\\"" +\n                d[0] +\n                "\\")\'>+</a> " : " ";\n            this.parentNode.insertBefore(t, this.nextSibling);\n        });\n\n    }\n\n    $(document).ready(function () {\n        $.get("/performance", function (data) {\n            renderPerformance(data);\n        });\n        $.get("/label_defs", function (data) {\n            g_labels = data["labels"];\n            patch_labels = new Array();\n            for (const label of g_labels) {\n                if (label[1] != "null") {\n                    childToParent.set(label[0], label[1]);\n                }\n                if (label.length > 2 && label[2] == "patch") {\n                    patch_labels.push(label[0]);\n                }\n            }\n            if (patch_labels.length > 0 && gLayout == "tileLabel") {\n                g_labels = g_labels.filter((label) => patch_labels.indexOf(label[0]) > -1);\n            }\n            console.log(patch_labels, gLayout);\n            console.log(childToParent);\n            const parentToChildren = invertMap(childToParent);\n            console.log("invertMap", parentToChildren);\n\n            //\n            d3.csv("/exclusivity/data", function (data) {\n                data.forEach(function (x, i) {\n                    if (!exclusivity.get(x.left)) {\n                        exclusivity.set(x.left, []);\n                    }\n                    exclusivity.get(x.left).push(x.right);\n                    //\n                    if (!exclusivity.get(x.right)) {\n                        exclusivity.set(x.right, []);\n                    }\n                    exclusivity.get(x.right).push(x.left);\n                });\n                if (localStorage.getItem("debug") === "2") {\n                    console.log("exclusivity", exclusivity);\n                }\n                //\n                for (const [left, right] of exclusivity) {\n                    excludeDescendants(left, right, parentToChildren, exclusivity);\n                }\n                if (localStorage.getItem("debug") === "2") {\n                    console.log("exclusivity", exclusivity);\n                }\n            });\n            //\n\n            for (const label of g_labels) {\n                for (const char of label[0].toLocaleLowerCase()) {\n                    if (\n                        !shortcuts.has(char) &&\n                        char != " "\n                        // char != "d" &&\n                        // char != "i"\n                    ) {\n                        shortcuts.set(char, label[0]);\n                        break;\n                    }\n                }\n            }\n            const labelToShortcuts = new Map(\n                Array.from(shortcuts, (a) => a.reverse())\n            );\n            console.log(shortcuts);\n\n            addLabelsinUI(g_labels, labelToShortcuts, true);\n            //\n            if (localStorage.getItem("debug") === "1") {\n                console.log(g_labels);\n            }\n            let no_sys_labels = g_labels.filter(\n                (label_) => label_[0].indexOf("sys:") == -1\n            );\n            if (localStorage.getItem("debug") === "1") {\n                console.log(no_sys_labels);\n            }\n            //\n            // Array of select element IDs and their corresponding data sources\n            const selectElements = [\n                {id: "#label_predicted", data: no_sys_labels},\n                {id: "#label_true", data: g_labels},\n                {id: "#label_undetermined", data: g_labels},\n                {id: "#label_ignore", data: g_labels}\n            ];\n\n            // Loop through each select element\n            selectElements.forEach(({id, data}) => {\n                // Select the element\n                const select = d3.select(id);\n\n                // Add options for each data item\n                select\n                    .selectAll("option")\n                    .data(data)\n                    .enter()\n                    .append("option")\n                    .attr("value", (d) => d[0].toLowerCase())\n                    .html((d) => d[0]);\n\n                // Insert the default "--none--" option\n                select\n                    .insert("option", ":first-child")\n                    .html("--none--")\n                    .attr("selected", "selected")\n                    .attr("value", "null");\n            });\n\n            //\n            for (const option of options) {\n                const optionValFromUrl = urlParams.get(option);\n                if (optionValFromUrl) {\n                    if (optionValFromUrl == "on") {\n                        $("#" + option).attr("checked", true);\n                    } else {\n                        $("#" + option).val(optionValFromUrl);\n                    }\n                    urlOptions.set(option, optionValFromUrl);\n                }\n            }\n            //\n            // shardFlux();\n            //\n            $("#gallery img").on("load", function () {\n                let height = $(this).height();\n                let width = $(this).width();\n                if (height / width > 1.0) {\n                    $(this).height(1.0 * $(this).width());\n                    $(this).width($(this).width() * (1.0 / (height / width)));\n                }\n            });\n            $("#fullImage").on("load", function () {\n                var rectsize = 100;\n                const svgContainer = $("#fullImageWrapper");\n                var svg = d3\n                    .select("#fullImageWrapper")\n                    .append("svg")\n                    .attr("height", rectsize * 10)\n                    .attr("width", rectsize * 10);\n\n                // var rectangle = svg\n                //   .append("rect")\n                //   .attr("x", 150)\n                //   .attr("y", 50)\n                //   .attr("width", 50)\n                //   .attr("height", 140);\n\n                $("#fullImage").attr("z-index", 100);\n            });\n        });\n\n        let typingTimer; // Timer identifier\n        let typedText = "";\n        const doneTypingInterval = 200; // Time in ms (200 ms)\n\n        $("#gallery").on("keydown", function () {\n            clearTimeout(typingTimer);\n        });\n\n        // User is "finished typing," do something\n        function doneTyping() {\n            logUI(typedText.length);\n            if (typedText.length === 1) {\n                const key = typedText.toLowerCase()[0];\n                if (shortcuts.has(key)) {\n                    massLabelInGallery(shortcuts.get(key));\n                    typedText = "";\n                }\n                return;\n            }\n            // let matchedLabels = new Array();\n            // g_labels.forEach((val, _) => {\n            //     if (val[0].toLowerCase().indexOf(typedText.toLowerCase()) > -1) {\n            //         matchedLabels.push(val[0]);\n            //     }\n            // });\n            // addQuickLabel(gallerySelection[0], matchedLabels);\n            filterLabelsText(typedText);\n            $("#searchLabel").val(typedText.toLowerCase());\n            $("#searchLabel").focus();\n            typedText = "";\n        }\n\n        function addQuickLabel(uid, possible_labels) {\n            const d3El = d3.select("div#labels-" + uid);\n            const numExisting = d3El.selectAll("a").size();\n            const labelData = zip(\n                new Array(numExisting).fill(""),\n                new Array(numExisting).fill(0)\n            ).concat(\n                zip(possible_labels, new Array(possible_labels.length).fill(0.0))\n            );\n            d3El\n                .selectAll("a")\n                .data(labelData)\n                .enter()\n                .append("a")\n                .html(function (d) {\n                    return `${d[0]}(${d[1]})`;\n                })\n                .attr("class", "quick_label")\n                .attr("onclick", function (d) {\n                    return `labelInGallery(\'${uid}\', \'${d[0]}\', false, event)`;\n                })\n\n                .attr("href", `javascript:void(0)`);\n            addSpaces();\n        }\n\n        //\n        $("#gallery").on("keyup", function (eventData) {\n            const key = eventData.originalEvent.key;\n            // if (key == "d" & false) { // TODO: add shift\n            //   deselectGallery();\n            // } else if (key == "i" & false) { // TODO: add shift\n            //   toggleMapImageDisplay();\n            // } else if (shortcuts.has(key)) {\n            //   massLabelInGallery(shortcuts.get(key));\n            // }\n\n            typedText += String.fromCharCode(eventData.which);\n            $("#typingDiv").text(typedText);\n\n            // Clear the existing timer\n            clearTimeout(typingTimer);\n\n            // Set a new timer\n            typingTimer = setTimeout(doneTyping, doneTypingInterval);\n        });\n\n        $("#my_dataviz").on("keypress", function (eventData) {\n            const key = eventData.originalEvent.key;\n            if (key == "d") {\n                //deselectGallery();\n            } else if (key == "i") {\n                toggleMapImageDisplay("#my_dataviz");\n            }\n        });\n\n        //\n        $.fn.center = function () {\n            this.css("position", "fixed");\n            // this.css("top", $(window).height() / 2 - this.height() / 2 + "px");\n            this.css("top", 100 + "px");\n            // this.css("left", $(window).width() / 2 - this.width() / 2 + "px");\n            this.css("left", 100 + "px");\n            return this;\n        };\n        // $("#fullscreen").center();\n        $("#help").center();\n        //\n        $.post("/status", JSON.stringify({idleTime: 0, first: true}))\n            .done(function (data) {\n                $("#status").attr("title", JSON.stringify(data, null, " "));\n                $("#status").html(data["status"]);\n                $("#progress").css(\n                    "width",\n                    Math.min(100, (1 - data["duration_perc"]) * 100) + "%"\n                );\n                trained_for_version = data["trained_for_version"];\n            })\n            .fail(function (e) {\n                alert("Failed to get status, is the backend running?");\n            });\n        // Increment the idle time counter every minute.\n        var idleInterval = setInterval(statusPoll, 1000);\n\n        // Zero the idle timer on mouse movement.\n        $(this).mousemove(function (e) {\n            activeTime += idleTime * 1;\n            localStorage.setItem("activeTime", activeTime);\n            idleTime = 0;\n        });\n        $(this).keypress(function (e) {\n            activeTime += idleTime * 1;\n            localStorage.setItem("activeTime", activeTime);\n            idleTime = 0;\n        });\n\n        $("#addLabelPanel").css(\n            "display",\n            localStorage.getItem(`addLabelPanel_display`)\n        );\n        $("#view_config").css(\n            "display",\n            localStorage.getItem(`view_config_display`)\n        );\n    });\n\n    function formatTimeWithSuperscript(seconds) {\n        let hrs = Math.floor(seconds / 3600);\n        let mins = Math.floor((seconds % 3600) / 60);\n        let secs = seconds % 60;\n\n        return (\n            `${String(hrs).padStart(2, "0")}\xca\xb0 : ` +\n            `${String(mins).padStart(2, "0")}\xe1\xb5\x90 : ` +\n            `${String(secs).padStart(2, "0")}\xcb\xa2`\n        );\n    }\n\n    function statusPoll(forceIdleTime, groupTrain) {\n        // if (urlParams.get("linear_auto_train") == "on") {\n        idleTime++;\n        // logUI(`idleTime = ${idleTime}`);\n        // }\n        groupTrain = groupTrain ?? false;\n        const idleTimeForPost =\n            forceIdleTime !== undefined ? forceIdleTime : idleTime;\n        if (idleTimeForPost > 1000) {\n            console.log(`idleTimeForPost = ${idleTimeForPost}, forceIdleTime = ${forceIdleTime}, idleTime = ${idleTime}`);\n        }\n        // console.log(`idleTimeForPost = ${idleTimeForPost}`);\n        $.post("/status", JSON.stringify({idleTime: idleTimeForPost, groupTrain: groupTrain})).done(\n            function (data) {\n                $("#status").attr("title", JSON.stringify(data, null, " "));\n                $("#status").html(data["status"]);\n                $("#progress").css(\n                    "width",\n                    Math.min(100, (1 - data["duration_perc"]) * 100) + "%"\n                );\n                // console.log(trained_for_version, data["trained_for_version"]);\n                if (\n                    trained_for_version != data["trained_for_version"] &&\n                    data["trained_for_version"] != null\n                ) {\n                    location.reload();\n                }\n                trained_for_version = data["trained_for_version"];\n                // alert(data["package_version"]);\n                $("#package_version").html(data["package_version"]["version"]);\n                // speed\n                // console.log("activeTime", activeTime)\n                $("#speed_active_time").html(formatTimeWithSuperscript(activeTime));\n                $("#speed_annotation").html(\n                    Math.round((data["num_labeled"] / (activeTime / 3600)) * 10) / 10\n                );\n                $("#speed_certain").html(\n                    Math.round(data["num_unlabeled_certain"] / (activeTime / 3600), 1)\n                );\n                $("#likely_certain_perc").html(\n                    Math.round(parseFloat(data["perc_likely_certain"]) * 1000, 1) / 10\n                );\n                $("#likely_certain_perc").attr("title",\n                    `${data[\'num_labeled\']}/${data[\'num_total\']} = ${Math.round(parseFloat(data[\'num_labeled\'] / data[\'num_total\']) * 1000, 1) / 10} %`\n                );\n                $("#average_precision").html(\n                    round(data["average_precision"] * 100.0, 1)\n                );\n                $("#average_recall").html(round(data["average_recall"] * 100.0, 1));\n            }\n        );\n    }\n\n    function changeOption(el) {\n        /*\n\n        RELOAD=YES\n        */\n        console.log(el.value, el.id);\n        urlOptions.set(\n            el.id,\n            el.value === "on" ? $("#" + el.id + ":checked").val() : el.value\n        );\n        if (["label_undetermined", "label_true"].indexOf(el.id) > -1) {\n            urlOptions.set("show_labeled", "labeled");\n        }\n        if (el.value.indexOf("sys:") > -1) {\n            urlOptions.set("ignore_double_checked", "on");\n        }\n        let url = "/annflux?";\n        //window.location.href = "/annflux?" +\n        for (const [key, value] of urlOptions) {\n            let modifiedValue = value;\n            if (key === "filter_query") {\n                modifiedValue = encodeURIComponent(modifiedValue);\n            }\n            if (value && value !== "null") {\n                url += `&${key}=${modifiedValue}`;\n            }\n        }\n        window.location.href = url;\n    }\n\n    function clearLabelInGallery(el) {\n        const uid = $(el).attr("data-id");\n        $("#gallery-label-" + uid).attr("data", "");\n        d2 = d3.select("#gallery-" + uid).data()[0];\n        createQuickLabel(\n            d2.uid,\n            d2.labeled == 0 ? "quick_label_predicted" : "quick_label_true",\n            [],\n            true\n        );\n    }\n\n    function clearLabels() {\n        for (const uid of gallerySelection) {\n            createQuickLabel(\n                uid,\n                "quick_label_true",\n                [],\n                true\n            );\n            $("#gallery-label-" + uid).attr("data", "");\n        }\n    }\n\n    function deselectGallery() {\n        if (gallerySelection.length > 0) {\n            for (const uid of gallerySelection) {\n                d3.select("div.gallery#gallery-" + uid).style("outline", "");\n            }\n            gallerySelection = [];\n        } else {\n            console.log(galleryImages);\n            galleryImages.each(function (d, i) {\n                d3.select("div.gallery#gallery-" + d.uid).style(\n                    "outline",\n                    "1px solid red"\n                );\n                gallerySelection.push(d.uid);\n            });\n        }\n        console.log("gallerySelection", gallerySelection);\n    }\n\n    function forceLinearTrain() {\n        $("#loading_circle").toggle();\n        statusPoll(forceIdleTime);\n    }\n\n    function groupTrain() {\n        $("#loading_circle").toggle();\n        statusPoll(1, true);\n    }\n\n\n    function highlightGalleryInMap() {\n        galleryImages.each((d, i) => {\n            console.log(d.uid);\n            let dot = d3.select("#dot-" + d.uid);\n\n            dot\n                .transition()\n                .duration(500)\n                .style("fill", "blue")\n                .transition()\n                .duration(500)\n                .style("fill", "red");\n            dot\n                .transition()\n                .duration(500)\n                .attr("r", 20)\n                .transition()\n                .duration(500)\n                .attr("r", 3);\n        });\n    }\n\n    function _highlightGalleryInMap() {\n        let dot = d3.select("#dot-" + "ZMA_INS_1332711");\n        console.log (dot);\n\n        dot\n            .transition()\n            .duration(500)\n            .style("fill", "blue")\n            .transition()\n            .duration(500)\n            .style("fill", "red");\n        dot\n            .transition()\n            .duration(500)\n            .attr("r", 20)\n            .transition()\n            .duration(500)\n            .attr("r", 3);\n    }\n\n    function setFlash(elementId) {\n        console.log("setFlash", elementId);\n        localStorage.setItem("flashAtLoad", elementId.toString());\n    }\n\n    function flashElements() {\n        if (localStorage.getItem("flashAtLoad")) {\n            console.log("flashElements", localStorage.getItem("flashAtLoad"));\n            $(localStorage.getItem("flashAtLoad"))\n                .fadeOut(100)\n                .fadeIn(100)\n                .fadeOut(100)\n                .fadeIn(100);\n        }\n    }\n\n    function addLabel(parent) {\n        const newLabel = $("#newLabel").val();\n        setFlash(`#label_panel_${newLabel.replace(" ", "_")}`);\n        $.ajax({\n            url: "/label_defs",\n            type: "PUT",\n            success: function (response) {\n                location.reload();\n            },\n            data: JSON.stringify([newLabel, $("#parentLabel").val()]),\n        });\n    }\n\n    function setLabelParent(val) {\n        $("#parentLabel").val(val);\n    }\n\n    function searchNaturalLanguage() {\n        const query = $("#nlSearchQuery").val();\n        if (!query) return;\n        const n = parseInt(urlParams.get("num_in_gallery") || "50");\n        $("#nlSearchStatus").html("Searching...");\n        $.get("/search/natural_language", {query: query, n: n}, function (result) {\n            console.log(result.uids.length);\n            if (result.uids && result.uids.length > 0) {\n                const uidToScore = new Map();\n                for (let i = 0; i < result.uids.length; i++) {\n                    uidToScore.set(result.uids[i], result.scores[i]);\n                }\n                let show_data = [];\n                for (const uid of result.uids) {\n                    const found = data.find(d => d.uid == uid);\n                    if (found) show_data.push(found);\n                }\n                $("#nlSearchStatus").html(`${show_data.length} results`);\n                drawGallery(show_data);\n            } else {\n                $("#nlSearchStatus").html(result.error || "No results");\n            }\n        }).fail(function (jqXHR) {\n            const msg = jqXHR.responseJSON ? jqXHR.responseJSON.error : "Search failed";\n            $("#nlSearchStatus").html(msg);\n            logUI("Search failed: " + msg, 1);\n        });\n    }\n\n    function clearNaturalLanguageSearch() {\n        $("#nlSearchQuery").val("");\n        $("#nlSearchStatus").html("");\n        if (embeddingMap) {\n            embeddingMap.setData(data);\n        }\n    }\n</script>\n\n<script type="module">\n    myLayout.on("initialised", function () {\n            for (const container of [\n                mapContainer,\n                labelContainer,\n                galleryContainer,\n                fullImageContainer,\n                controlContainer,\n            ]) {\n                if (container) {\n                    container.on("resize", saveState);\n                }\n            }\n\n            embeddingMap = new Map2D();\n            embeddingMap.init(mapContainer, "#my_dataviz");\n            logUI(gLayout);\n            if (gLayout === "tileLabel") {\n                fullImageTileMap = new Map2D();\n                fullImageTileMap.init(mapContainer, "#fullImageTiled", "tiles"); //TODO\n                fullImageEmbeddingMap = new Map2D();\n                fullImageEmbeddingMap.init(embeddingMapContainer, "#fullImageMap");\n\n            } else if (gLayout === "originalImageLabel") {\n                fullImageTileMap = new Map2D();\n                fullImageTileMap.init(mapContainer, "#fullImageTiled", "fullImage");\n\n            }\n\n            async function loadParquetFile(url) {\n                const now = new Date().getTime() / 1000;\n                const file = await window.asyncBufferFromUrl({url});\n                const now2 = new Date().getTime() / 1000;\n                const data_ = await window.parquetReadObjects({\n                    file\n                })\n                console.log("parquetReadObjects took", new Date().getTime() / 1000 - now2);\n                console.log("loadParquetFile took", new Date().getTime() / 1000 - now);\n                return data_;\n            }\n\n            // d3.csv("/data", function (data_p) {\n            const filter_query = urlParams.get(\'filter_query\') ?? null;\n            loadParquetFile(!filter_query ? \'/data\' : `/data?filter_query=${filter_query}`).then(data_p => {\n                data = data_p;\n                if (localStorage.getItem("debug") === "1") {\n                    console.log("|data|", data.length);\n                }\n                data.sort((a, b) => Number(a.display_order) - Number(b.display_order));\n                embeddingMap.setData(data);\n                if (gLayout === "tileLabel" || gLayout === "originalImageLabel") {\n                    fullImageTileMap.setData(data, false);\n                }\n\n                $("body").on("keyup", function (eventData) {\n                    const key = eventData.originalEvent.key;\n                    if (key === "?") {\n                        $("#help").toggle();\n                    } else if (key === "l" || key === "L") {\n                        if (embeddingMap) {\n                            embeddingMap.toggleLines();\n                        }\n                    } else if (key === "r" && eventData.originalEvent.altKey && eventData.originalEvent.ctrlKey) {\n                        localStorage.clear();\n                        location.reload();\n                    }\n                });\n            })//.catch(error => {\n//            console.error(\'Error loading Parquet file:\', error);\n//        });\n\n            //\n            d3.csv("/data/group", function (data_p) {\n                group_data = data_p;\n                if (group_data.length > 0) {\n                    if (localStorage.getItem("debug") === "1") {\n                        console.log("|group_data|", group_data.length);\n                    }\n\n                    fullImageEmbeddingMap.setData(group_data);\n                    // fullImageTileMap.setData(data);\n                }\n            });\n        }\n    )\n    ;\n</script>'
+PASSED
+annflux/tests/test_server.py::test_refresh here
+Index(['image_id', 'label', 'filename', 'set', 'uid', 'record_id'], dtype='object')
+successfully committed 001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2
+Initialized AnnFlux in folder /home/lhogeweg/annflux/data/bombus-plant-test/annflux
+type(data)=<class 'pandas.core.frame.DataFrame'>, type(dataset)=<class 'annflux.repository.dataset.Dataset'>
+model_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+Looking for tag='clip:wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M', model_type=<class 'annflux.repository.model.ClipModel'>
+model=None
+successfully committed 0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444
+ftorch.cuda.is_available()=True
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+existing_feature_cache_path=None
+feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr'
+other_feature_cache_path None
+len(filenames)=500
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([256, 2]), probs_for_batch.shape=(256, 2)
+writing len(features_for_batch)=256 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (0, 256)
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([244, 2]), probs_for_batch.shape=(244, 2)
+writing len(features_for_batch)=244 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (256, 512)
+(256, 512)
+(244, 512)
+make_resultset 500 rows
+500 rows, 500
+successfully committed 61e0f63732663bed2eb7e6ff4bd2d2506ee8de1ac08798a3542be622
+embed_and_prepare: /home/lhogeweg/annflux/data/bombus-plant-test/annflux/datarepo/resultset-20260513143423-61e0f637
+features.shape (500, 2)
+(500,)
+len(child_to_ldp_parent) 484
+len(combined) 500
+max(combined_depth.values()) 19
+max(num_children) 503
+126
+[126 437  89 240 268 159 261  49 224  48 362 444 241  96 312 255 375 313
+ 167 116 493  82 242  77 364 140 451 325 174 433  16 358 377 298 227 432
+ 394 470  90 180 306  70 149 246 392  13 345 198 330  35  80 488 212 196
+ 360 346 295 105 193 347 489   2 271 104 324 228  93 145 276 418 419   3
+ 142 100 380 420 409 402 108 327 494  38 282 351 172 401 333 197 125 122
+  92  85  74  44 139 150 483 487  37  75 141 370 136 356 304 232 106 182
+ 417 200 344 337 288 277 269 440 259 181 441  61 243 238  54 308 164 103
+ 316 163 147 318  86 427  94  62 309 107 110 214  19 143 157 480  26 376
+ 209 369 403 266 339 265 338  50 236 248 495 463 471 421 121 115 357 133
+ 135 311 299 301 458  17  22  27  29 435  71 429 390 371 144 156 343 189
+ 190  55  57 490   7  46 455 479 462  78  87  68 340 349 329 326 328  99
+ 466 386 372 442 407 289 270 253 120 113 117 446 426 430  51  20 127 321
+ 221 201 205 118 400 449 450 452 476 484  33  40 456   1 475  34  39  73
+  91  95 210 225 206  72  21 119 124 109 112 423 404 406 267 274 334 335
+ 178 385 162 237 102 399 464 485 459 460  69 395 410 223 222 220 219 411
+ 412 231 416 405 297 216 305 320 319 239 101  81  88 244 256 251 258 187
+ 384 374 361 391 389 387 368 169 184 166 168 397 152 332 131 348 134 354
+ 353 123 111 202  60 286 492 469 472 285  67 457 294 436  64  14  10  25
+  28  31  18 438 434 496 278   4 130   8 467 137 138 129 497 151 498 373
+ 132  47 481 499 491   6 148 146 363 160 158 365 155 154 153 366 367 165
+   5 161 425 396 191 398  97  98 431 428  83  84  65 439  76  79 453 454
+ 443 445 447 448  63 114  43  42  41 422 424  56  53  52 128 413 414 415
+  59 408  58 393  66 264 283 284 287 273 275 279 280 272 257 260 262 263
+ 281 249 250 252 254 245 247 233 234 235 322 323  32 482 486 473 474 477
+ 478 465  45 468 461  36  30 314  23  24   9  11  12  15 290 291 292 293
+ 296 179 342 331 336 194 195 199 185 186 188   0 192 177 341 183 170 171
+ 173 175 176 388 378 379 381 382 218 315 317 307 310 300 302 303 226 229
+ 230 217 383 211 213 215 203 204 207 208 355 359 350 352]
+Writing to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+0 503
+cluster_counts['counts'].sum()=491
+500
+499
+len(cluster_counts)=16
+reduced_in_loop=5, sum_tail_factor=0.9
+11
+peak_merge output written to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+INFO
+Using project_root=/home/lhogeweg/annflux/data/bombus-plant-test, images_path =/home/lhogeweg/annflux/data/bombus-plant-test/images
+load data result_set.entry.message=''
+(500, 512)
+(9, 512)
+knn labeled 0.04465436935424805
+b'{"success":true}\n'
+PASSED
+annflux/tests/test_server.py::test_label here
+Index(['image_id', 'label', 'filename', 'set', 'uid', 'record_id'], dtype='object')
+successfully committed 001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2
+Initialized AnnFlux in folder /home/lhogeweg/annflux/data/bombus-plant-test/annflux
+type(data)=<class 'pandas.core.frame.DataFrame'>, type(dataset)=<class 'annflux.repository.dataset.Dataset'>
+model_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+Looking for tag='clip:wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M', model_type=<class 'annflux.repository.model.ClipModel'>
+model=None
+successfully committed 0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444
+ftorch.cuda.is_available()=True
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+existing_feature_cache_path=None
+feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr'
+other_feature_cache_path None
+len(filenames)=500
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([256, 2]), probs_for_batch.shape=(256, 2)
+writing len(features_for_batch)=256 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (0, 256)
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([244, 2]), probs_for_batch.shape=(244, 2)
+writing len(features_for_batch)=244 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (256, 512)
+(256, 512)
+(244, 512)
+make_resultset 500 rows
+500 rows, 500
+successfully committed 61e0f63732663bed2eb7e6ff4bd2d2506ee8de1ac08798a3542be622
+embed_and_prepare: /home/lhogeweg/annflux/data/bombus-plant-test/annflux/datarepo/resultset-20260513143432-61e0f637
+features.shape (500, 2)
+(500,)
+len(child_to_ldp_parent) 486
+len(combined) 500
+max(combined_depth.values()) 18
+max(num_children) 502
+403
+[403 437  89 240 296 321 249  49 290 271 322  48 422 449 181 133 339 231
+ 180 189 444 451 489 299 284 362  92 165 396 139 417 317 146 131 377 282
+ 130 364  77 486 196 288 469 209 207 223 281 402 212 267  70 487 463 372
+ 423 157 122 159 214 217 456 215 211 135 276 263 478 140 356 312 434 102
+ 173 119 466 375 441  37  87 337  99 106 483   3  90 338 327 331 293 380
+ 236 374 316  55 142 158 307 306 347 325 346 178 277 467  15 367 498 197
+ 199 313 192 175 210  28 220  21  26 167 497 412   2  56 427  51  68  44
+ 145 488 153 418 136 141 202 246 190 237  38 264 336 103 104 113 243 461
+  80 344 355 301 138 310 308 421 154 156  71  65 191  31 205 201 260 261
+ 404  20 341 391 398 376 266 117 285 455 287  43   1 468 474 477 493 176
+ 314 358 328 335 121 123 129 382 384 361 366  91  96   8  12  13  18  76
+  78  81  86 405 409 410  23  29  35 394 400 440 446  60 459  47  50  54
+   5 496 491  62  59 227 251 252 255 244 101  72 414 112 116 107 110 371
+ 137 128 182 171 320 160 162 234 239 273 275 269 472 470  33 399 450 436
+  69 283 286 272 232  64  67  58 438   7 429  53  41 228 219  61 221 360
+ 365 452 453   9 419 413 401 407  74  39  25 126 127 108 386 388  30  17
+ 457 458 460 144 148 379 381 368 353 354 166 349 340 151 198 184 332 359
+ 348 177 179 187 279 291 319 309 235 300 303 208 257 248  88 253 241  95
+  84 490 484 481  46 492   6 494 495 482  66  57 439 295 280 247 233 238
+ 289 298 302 161 163 315 318 304 305 311 274 278 265 268 292 294 297 170
+ 172 174 323 324 326 188 183 168 169 343 329 330 333 334 132 345 270 193
+ 194 195 185 186 350 351 342 150 143 352 357 164 152 155  32  34 473 475
+ 476 479 464 465 147 149 383  16 471 462 369 370 373 111 385 387 389 390
+ 378 115 118 105 109 134 120 124 125 114 411  14 224 225  36  24  27 415
+ 406 392  73  75  79 416 420 408  93  94 448  19  22  10  11  82  83  85
+ 363  97  98 100 254 242 245 256 258 259 262 250 445 447 432 433 435 393
+ 395 397 222 213 200 203 204 206 226 229 230 216 218 485  63  52  40  42
+  45 424 425 426 428 454 442 443 431   4 499   0 480 430]
+Writing to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+0 502
+cluster_counts['counts'].sum()=493
+500
+499
+len(cluster_counts)=14
+reduced_in_loop=4, sum_tail_factor=0.9900000000000001
+11
+peak_merge output written to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+INFO
+Using project_root=/home/lhogeweg/annflux/data/bombus-plant-test, images_path =/home/lhogeweg/annflux/data/bombus-plant-test/images
+load data result_set.entry.message=''
+(500, 512)
+(9, 512)
+knn labeled 0.04718804359436035
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.28705596923828125 ms
+Index(['image_id', 'label', 'filename', 'set', 'uid', 'record_id',
+       'label_predicted', 'score_predicted', 'e_0', 'e_1', 'in_test',
+       'dp_is_ldp', 'dp_depth', 'dp_depth_alt', 'dp_parent', 'display_order',
+       'num_children', 'dp_cluster', 'num_children_alt', 'dp_most_needed',
+       'label_true', 'labeled', 'dp_cluster_color', 'color_class',
+       'label_undetermined', 'double_checked'],
+      dtype='object')
+load data result_set.entry.message=''
+knn labeled 0.014945268630981445
+has_density_peak: near_labeled_perc=1.0
+len(unpredicted_idx)=0 after make_predictions
+predicted_test=[['Flowering'], ['Flowering'], ['Flowering'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Flowering']], true_test=[['Flowering'], ['Flowering'], ['Flowering'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Flowering']]
+1/2  took 0.025249242782592773 s
+len(data_predicted)=500
+5/8  took 0.004293918609619141 s, len(data)=500
+len(data_true)=50
+3/4  took 0.010018348693847656 s, len(data)=500
+compute_performance took 0.0029113292694091797 s
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.3764629364013672 ms
+{'percentage_labeled_possible': 1.0, 'percentage_near_labeled': 1.0, 'test_performance': [[43, 7, 1.0]]}
+PASSED
+annflux/tests/test_server.py::test_label_loop here
+Index(['image_id', 'label', 'filename', 'set', 'uid', 'record_id'], dtype='object')
+successfully committed 001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2
+Initialized AnnFlux in folder /home/lhogeweg/annflux/data/bombus-plant-test/annflux
+type(data)=<class 'pandas.core.frame.DataFrame'>, type(dataset)=<class 'annflux.repository.dataset.Dataset'>
+model_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+Looking for tag='clip:wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M', model_type=<class 'annflux.repository.model.ClipModel'>
+model=None
+successfully committed 0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444
+ftorch.cuda.is_available()=True
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+existing_feature_cache_path=None
+feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr'
+other_feature_cache_path None
+len(filenames)=500
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([256, 2]), probs_for_batch.shape=(256, 2)
+writing len(features_for_batch)=256 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (0, 256)
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([244, 2]), probs_for_batch.shape=(244, 2)
+writing len(features_for_batch)=244 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (256, 512)
+(256, 512)
+(244, 512)
+make_resultset 500 rows
+500 rows, 500
+successfully committed 61e0f63732663bed2eb7e6ff4bd2d2506ee8de1ac08798a3542be622
+embed_and_prepare: /home/lhogeweg/annflux/data/bombus-plant-test/annflux/datarepo/resultset-20260513143444-61e0f637
+features.shape (500, 2)
+(500,)
+len(child_to_ldp_parent) 483
+len(combined) 500
+max(combined_depth.values()) 19
+max(num_children) 503
+125
+[125 108  50 239 158  35 152 167 362 293 376 447 224 300 267 173 429 345
+ 233  82  16  49 467 281 266 271 225 122 159 493 238 392 180 228 130 147
+ 317  92 433 434 140 420 200 240 338 141 337  44 255 211  70 214  85  99
+ 261 282 349  56  91   2 332 227 413 217 120 142  90 174 401 171 306 348
+ 126  19 437  23 470 497 487 489 495 270 359 196  89 304  37 498 135 113
+  52 494 480 145 372  94 290 136 379 297 422 321 360 209 427  71  62 313
+ 432  12  15  20 444 395 416 259 354 138 150 256 257 258 403 404 339 116
+ 160 192 199 371  93  96 109 285 289 296 491  54  58  38 488   6 324 325
+  29 458 398 399 215 430 383 386 114 418 264 202 450 455 105 179 181  87
+ 252 327 346 408 333 115 121 246 248 298 466 471 459 468 478 479   4  39
+   9 277 279 284 472 301 302 241 344 157 328 347 143 411 102 187  77 188
+ 414 265 206 168 387 269 380 382 221 231  18 435 443  24  28  33  68  40
+ 318 323 326 295 368 165 482   1 496  42   5  47 475  83  88 232 454  26
+  31  21 315 320 311 461 412 137 162 156 275 358 353 106 389 104 198 178
+ 184 391 370 366 367 242  69  61  64  51  67  59  65  57 219 220 212 262
+ 250 251 253 385 373 365 103 189 190 176 177 394 396 400 453 107 111 283
+ 278 361 340 335 132 127 164 166 155 161 146 148 149 153 139 144 329  80
+  81 423 425 410 415 417 307 309 312 462  27  22  25  11  14 456 457 442
+ 438 440 431 243 234 236  84  75  78 485  63  53  55  66  72  73  60 436
+ 439 441 426 428 445 446 448 449  13  17 226 229 230 218  30  32 490 463
+ 464 465  34  36  41  43 477 481 469 473 460 308 310 299 303 322 314 316
+ 319 151 273 163 169 154 123 124 128 129 117 118 119 334 336 131 133 134
+ 352 341 342 343 330 331 305 355 356 357 350 351 288 274 276 280 268 272
+ 291 292 294 286 287 182 183 185 170 172 175 197 201 186 191 193 369  98
+ 100 101  95  97 374 375 377 363 364 393 378 381 384 110 112 388 390 409
+ 397 451 452 402 405 406 407  79 419 421 424  86  74  76 247 249 235 237
+ 194 195 254 244 245 203 204 205 207 208 260 263 222 223 210 213 216  45
+  46 476  48  10 492   8   7 474 486   3 484 499   0 483]
+Writing to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+0 503
+cluster_counts['counts'].sum()=492
+500
+499
+len(cluster_counts)=17
+reduced_in_loop=7, sum_tail_factor=0.9
+11
+peak_merge output written to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+INFO
+Using project_root=/home/lhogeweg/annflux/data/bombus-plant-test, images_path =/home/lhogeweg/annflux/data/bombus-plant-test/images
+load data result_set.entry.message=''
+(500, 512)
+(9, 512)
+knn labeled 0.04037141799926758
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.2865791320800781 ms
+load data result_set.entry.message=''
+knn labeled 0.025233983993530273
+has_density_peak: near_labeled_perc=1.0
+len(unpredicted_idx)=0 after make_predictions
+predicted_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering']], true_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering']]
+1/2  took 0.016339540481567383 s
+len(data_predicted)=500
+5/8  took 0.00397038459777832 s, len(data)=500
+len(data_true)=50
+3/4  took 0.009560108184814453 s, len(data)=500
+compute_performance took 0.0029382705688476562 s
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.39124488830566406 ms
+{'percentage_labeled_possible': 1.0, 'percentage_near_labeled': 1.0, 'test_performance': [[46, 4, 1.0]]}
+[1.0]
+load data result_set.entry.message=''
+knn labeled 0.03268837928771973
+has_density_peak: near_labeled_perc=1.0
+len(unpredicted_idx)=0 after make_predictions
+predicted_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['No_plant']], true_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['No_plant']]
+1/2  took 0.015114545822143555 s
+len(data_predicted)=500
+5/8  took 0.0029573440551757812 s, len(data)=500
+len(data_true)=100
+3/4  took 0.009366989135742188 s, len(data)=500
+compute_performance took 0.001965761184692383 s
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.3910064697265625 ms
+{'percentage_labeled_possible': 1.0, 'percentage_near_labeled': 1.0, 'test_performance': [[46, 4, 1.0], [93, 7, 1.0]]}
+[1.0, 1.0]
+load data result_set.entry.message=''
+knn labeled 0.025911808013916016
+has_density_peak: near_labeled_perc=1.0
+len(unpredicted_idx)=0 after make_predictions
+predicted_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['No_plant']], true_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['No_plant']]
+1/2  took 0.01645183563232422 s
+len(data_predicted)=500
+5/8  took 0.0040628910064697266 s, len(data)=500
+len(data_true)=150
+3/4  took 0.02353835105895996 s, len(data)=500
+compute_performance took 0.0030510425567626953 s
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.3943443298339844 ms
+{'percentage_labeled_possible': 1.0, 'percentage_near_labeled': 1.0, 'test_performance': [[46, 4, 1.0], [93, 7, 1.0], [135, 15, 0.8]]}
+[1.0, 1.0, 0.8]
+load data result_set.entry.message=''
+knn labeled 0.020790815353393555
+has_density_peak: near_labeled_perc=1.0
+len(unpredicted_idx)=0 after make_predictions
+predicted_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['No_plant']], true_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant']]
+1/2  took 0.015275716781616211 s
+len(data_predicted)=500
+5/8  took 0.004082202911376953 s, len(data)=500
+len(data_true)=200
+3/4  took 0.028445959091186523 s, len(data)=500
+compute_performance took 0.0022208690643310547 s
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.4031658172607422 ms
+{'percentage_labeled_possible': 1.0, 'percentage_near_labeled': 1.0, 'test_performance': [[46, 4, 1.0], [93, 7, 1.0], [135, 15, 0.8], [181, 19, 0.8421052631578947]]}
+[1.0, 1.0, 0.8, 0.8421052631578947]
+load data result_set.entry.message=''
+knn labeled 0.03451871871948242
+has_density_peak: near_labeled_perc=1.0
+len(unpredicted_idx)=0 after make_predictions
+predicted_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['No_plant']], true_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['No_plant']]
+1/2  took 0.020583391189575195 s
+len(data_predicted)=500
+5/8  took 0.004742145538330078 s, len(data)=500
+len(data_true)=250
+3/4  took 0.03313803672790527 s, len(data)=500
+compute_performance took 0.0023610591888427734 s
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.3993511199951172 ms
+{'percentage_labeled_possible': 1.0, 'percentage_near_labeled': 1.0, 'test_performance': [[46, 4, 1.0], [93, 7, 1.0], [135, 15, 0.8], [181, 19, 0.8421052631578947], [226, 24, 0.875]]}
+[1.0, 1.0, 0.8, 0.8421052631578947, 0.875]
+load data result_set.entry.message=''
+knn labeled 0.017916202545166016
+has_density_peak: near_labeled_perc=1.0
+len(unpredicted_idx)=0 after make_predictions
+predicted_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['No_plant']], true_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['No_plant']]
+1/2  took 0.015131711959838867 s
+len(data_predicted)=500
+5/8  took 0.004148960113525391 s, len(data)=500
+len(data_true)=300
+3/4  took 0.03748321533203125 s, len(data)=500
+compute_performance took 0.002255678176879883 s
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.3998279571533203 ms
+{'percentage_labeled_possible': 1.0, 'percentage_near_labeled': 1.0, 'test_performance': [[46, 4, 1.0], [93, 7, 1.0], [135, 15, 0.8], [181, 19, 0.8421052631578947], [226, 24, 0.875], [273, 27, 0.9259259259259259]]}
+[1.0, 1.0, 0.8, 0.8421052631578947, 0.875, 0.9259259259259259]
+load data result_set.entry.message=''
+knn labeled 0.017745494842529297
+has_density_peak: near_labeled_perc=1.0
+len(unpredicted_idx)=0 after make_predictions
+predicted_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Flowering'], ['No_plant'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Flowering'], ['No_plant']], true_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Flowering'], ['No_plant'], ['No_plant'], ['Flowering'], ['No_plant'], ['Flowering'], ['No_plant']]
+1/2  took 0.024329423904418945 s
+len(data_predicted)=500
+5/8  took 0.0030107498168945312 s, len(data)=500
+len(data_true)=350
+3/4  took 0.03004932403564453 s, len(data)=500
+compute_performance took 0.0021338462829589844 s
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.4153251647949219 ms
+{'percentage_labeled_possible': 1.0, 'percentage_near_labeled': 1.0, 'test_performance': [[46, 4, 1.0], [93, 7, 1.0], [135, 15, 0.8], [181, 19, 0.8421052631578947], [226, 24, 0.875], [273, 27, 0.9259259259259259], [314, 36, 0.9166666666666666]]}
+[1.0, 1.0, 0.8, 0.8421052631578947, 0.875, 0.9259259259259259, 0.9166666666666666]
+load data result_set.entry.message=''
+knn labeled 0.019021272659301758
+has_density_peak: near_labeled_perc=1.0
+len(unpredicted_idx)=0 after make_predictions
+predicted_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Flowering'], ['No_plant'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant']], true_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Flowering'], ['No_plant'], ['No_plant'], ['Flowering'], ['No_plant'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['No_plant']]
+1/2  took 0.01697516441345215 s
+len(data_predicted)=500
+5/8  took 0.004011392593383789 s, len(data)=500
+len(data_true)=400
+3/4  took 0.047255754470825195 s, len(data)=500
+compute_performance took 0.0020818710327148438 s
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.4124641418457031 ms
+{'percentage_labeled_possible': 1.0, 'percentage_near_labeled': 1.0, 'test_performance': [[46, 4, 1.0], [93, 7, 1.0], [135, 15, 0.8], [181, 19, 0.8421052631578947], [226, 24, 0.875], [273, 27, 0.9259259259259259], [314, 36, 0.9166666666666666], [360, 40, 0.9]]}
+[1.0, 1.0, 0.8, 0.8421052631578947, 0.875, 0.9259259259259259, 0.9166666666666666, 0.9]
+load data result_set.entry.message=''
+knn labeled 0.01812267303466797
+has_density_peak: near_labeled_perc=1.0
+len(unpredicted_idx)=0 after make_predictions
+predicted_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Flowering'], ['No_plant'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant']], true_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Flowering'], ['No_plant'], ['No_plant'], ['Flowering'], ['No_plant'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant']]
+1/2  took 0.01589059829711914 s
+len(data_predicted)=500
+5/8  took 0.003984689712524414 s, len(data)=500
+len(data_true)=450
+3/4  took 0.054139137268066406 s, len(data)=500
+compute_performance took 0.0019762516021728516 s
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.4017353057861328 ms
+{'percentage_labeled_possible': 1.0, 'percentage_near_labeled': 1.0, 'test_performance': [[46, 4, 1.0], [93, 7, 1.0], [135, 15, 0.8], [181, 19, 0.8421052631578947], [226, 24, 0.875], [273, 27, 0.9259259259259259], [314, 36, 0.9166666666666666], [360, 40, 0.9], [407, 43, 0.9069767441860465]]}
+[1.0, 1.0, 0.8, 0.8421052631578947, 0.875, 0.9259259259259259, 0.9166666666666666, 0.9, 0.9069767441860465]
+load data result_set.entry.message=''
+knn labeled 0.03167605400085449
+has_density_peak: near_labeled_perc=1.0
+len(unpredicted_idx)=0 after make_predictions
+predicted_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Flowering'], ['No_plant'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['No_plant'], ['No_plant'], ['Vegetative']], true_test=[['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['No_plant'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Vegetative'], ['Flowering'], ['Flowering'], ['No_plant'], ['Flowering'], ['No_plant'], ['No_plant'], ['Flowering'], ['No_plant'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['Vegetative'], ['Flowering'], ['Flowering'], ['Flowering'], ['Flowering'], ['No_plant'], ['No_plant'], ['Vegetative']]
+1/2  took 0.015946149826049805 s
+len(data_predicted)=500
+5/8  took 0.00396275520324707 s, len(data)=500
+len(data_true)=500
+3/4  took 0.05617690086364746 s, len(data)=500
+compute_performance took 0.0020117759704589844 s
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.4439353942871094 ms
+{'percentage_labeled_possible': 1.0, 'percentage_near_labeled': 1.0, 'test_performance': [[46, 4, 1.0], [93, 7, 1.0], [135, 15, 0.8], [181, 19, 0.8421052631578947], [226, 24, 0.875], [273, 27, 0.9259259259259259], [314, 36, 0.9166666666666666], [360, 40, 0.9], [407, 43, 0.9069767441860465], [450, 50, 0.94]]}
+[1.0, 1.0, 0.8, 0.8421052631578947, 0.875, 0.9259259259259259, 0.9166666666666666, 0.9, 0.9069767441860465, 0.94]
+PASSED
+annflux/tests/test_server.py::test_al_strategies here
+Index(['image_id', 'label', 'filename', 'set', 'uid', 'record_id'], dtype='object')
+successfully committed 001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2
+Initialized AnnFlux in folder /home/lhogeweg/annflux/data/bombus-plant-test/annflux
+type(data)=<class 'pandas.core.frame.DataFrame'>, type(dataset)=<class 'annflux.repository.dataset.Dataset'>
+model_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+Looking for tag='clip:wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M', model_type=<class 'annflux.repository.model.ClipModel'>
+model=None
+successfully committed 0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444
+ftorch.cuda.is_available()=True
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+existing_feature_cache_path=None
+feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr'
+other_feature_cache_path None
+len(filenames)=500
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([256, 2]), probs_for_batch.shape=(256, 2)
+writing len(features_for_batch)=256 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (0, 256)
+classes_=['foo', 'bar']
+logits_per_image.shape=torch.Size([244, 2]), probs_for_batch.shape=(244, 2)
+writing len(features_for_batch)=244 to feature_cache_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/feature_cache/model_0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444_dataset_001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2.zarr' at (256, 512)
+(256, 512)
+(244, 512)
+make_resultset 500 rows
+500 rows, 500
+successfully committed 61e0f63732663bed2eb7e6ff4bd2d2506ee8de1ac08798a3542be622
+embed_and_prepare: /home/lhogeweg/annflux/data/bombus-plant-test/annflux/datarepo/resultset-20260513143513-61e0f637
+features.shape (500, 2)
+(500,)
+len(child_to_ldp_parent) 483
+len(combined) 500
+max(combined_depth.values()) 17
+max(num_children) 503
+7
+[  7 224 173 284 267 294 157 116 339 482 255 152  82 100 306 189 227 271
+ 120  49 274 434 493 128 362 312 188 467 133 422 392 364 105 332  90 240
+  77 130 375 132 212 437 268 487 211 193 376 178 372 233 225 454 318  13
+  12 356 295 171 229 231 345 147  41 200  89 213  99 377  93 140  37   2
+ 250 126 344 433 176 198  42 287 242 337  47 299 401  20 135 359 145 333
+ 161 300 326 159 402 497 298 276 447 488 180 277 196 430  70  35 494 346
+ 285 414 421 270 106 243 303 396 158 304 111 324 175 349 358 498  87  86
+  92 366 156 141 139 369  83 107 335  68 321 199 205 395 367 413 103 410
+ 296 297 473  29   9  62  16  18  21  24  26 122 248 253 246 310 322 317
+ 309 163  91 348 336 448 451  71  76 387  58 481 436 429  56  30 383 382
+ 455 462  28  54 239 235 236 293 269 121 353 399 400 251 329 331  96  98
+ 226 217 219 136 142 256 179 181 201 164 115 109 110 305 144 446 432 495
+ 485  15  22  11 185  51 479  61   3 435  69 483  46 313 316 307 301 222
+ 160 162 125 108 150 138 177 215 182 174 409 261 252 405 449 439  72 354
+ 340 327 234 275 476 468 459 460  40 472 386 381 371 360 254 257 258  60
+  48  67   4 484 480 425 426 428  64  44  45 490 168 183 184 461  31  33
+ 469 417 420  53 403 406 441 442 444 393  74 127 129 123 379 385 347 361
+ 415 273 279 342 328  80  97 206 221 207 272 288 166 153 323 320 143 149
+ 308 289 241 245 262 247 475  43 423  25  27 187 191 194   5 486 496   1
+ 499   0  50  52  65  66  55 249 259 260 290 291 292 244 232 146 148 137
+ 302 351 352 325 311 314 315 104 319 124 112 113 114 117 118 165 151 154
+ 155 214 202 203 281 282 283 286 237 238 204 220 208 209 210 223 228 230
+ 216 218 102  88  94  79  81  84 330 334  95 101 338 341 355 357 343 278
+ 263 264 265 266 280 350 373 374 363 365 416 378 380 368 370 384 465 466
+ 131 134 119 388 389 390  85  73  75  78 452 453 440 443 394 397 398 450
+ 412 404 456 457 458 477 478 463 464 391 418 419 407 408 411  32  34  36
+ 470 167 169 170 172 186 190  10  14 192 195 445 431 438  38  23 197  17
+  19   8  39 474 471   6 489 491 492  57 424 427  63  59]
+Writing to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+0 503
+cluster_counts['counts'].sum()=491
+500
+499
+len(cluster_counts)=17
+reduced_in_loop=7, sum_tail_factor=0.9
+11
+peak_merge output written to source.data_state_path='/home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.csv'
+INFO
+Using project_root=/home/lhogeweg/annflux/data/bombus-plant-test, images_path =/home/lhogeweg/annflux/data/bombus-plant-test/images
+load data result_set.entry.message=''
+(500, 512)
+(8, 512)
+knn labeled 0.04495573043823242
+data_get: filter_query=None
+/home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv took 0.29587745666503906 ms
+load data result_set.entry.message=''
+knn labeled 0.01733255386352539
+{}
+FAILED
+annflux/tests/test_train.py::TestTrain::test_train Index(['image_id', 'label', 'filename', 'set', 'uid', 'record_id'], dtype='object')
+successfully committed 001b677faa08743c28570c836be1428ffa746e92b0ef10c9d0df28f2
+Looking for tag='clip:wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M', model_type=<class 'annflux.repository.model.ClipModel'>
+model=None
+successfully committed 0e627184de1ec11ed8dccf0ba5dde8624a45a4bbe8cce74d8fcbb444
+ftorch.cuda.is_available()=True
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+self.clip_variant='wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M'
+Counter(data['label_true'])=Counter({'Flowering': 344, 'Vegetative': 108, 'No_plant': 48})
+data.caption=0       Flowering
+1        No_plant
+2       Flowering
+3       Flowering
+4       Flowering
+          ...    
+495    Vegetative
+496    Vegetative
+497     Flowering
+498     Flowering
+499     Flowering
+Name: caption, Length: 500, dtype: object
+      caption  count
+0   Flowering    309
+1    No_plant     41
+2  Vegetative    100
+sufficient_data_classes={'Flowering', 'No_plant', 'Vegetative'}
+Counter({'Flowering': 309, 'Vegetative': 100, 'No_plant': 41})
+Train set size: 405
+Val set size: 50
+Sample pixel_values shape  torch.Size([50, 3, 224, 224])
+Sample input_ids shape  torch.Size([50, 5])
+Sample attention_mask shape  torch.Size([50, 5])
+Sample caption shape  (50,)
+trainable params: 983040 || all params: 24429057 || trainable%: 4.02
+len(data_train) 405
+3
+3
+3
+Training complete in 0m 44s
+PASSED
+
+=================================== FAILURES ===================================
+_______________ TestAPIIntegration.test_error_recovery_workflow ________________
+
+pseudo_sql = 'invalid_sql_syntax'
+df =        uid label_predicted  score_predicted  dp_most_needed  labeled  in_test
+0  img_001          label1              ...    0.6               2        0        0
+2  img_003          label1              0.9               0        0        0
+
+    def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Translates pseudo-SQL conditions (including AND, OR, and groups) into pandas queries.
+    
+        Args:
+            pseudo_sql (str): Pseudo-SQL condition (e.g., '("Papilionidae" IN row.label_predicted) AND (row.value > 10)').
+            df (pd.DataFrame): The DataFrame to filter.
+    
+        Returns:
+            pd.DataFrame: Filtered DataFrame based on the pseudo-SQL condition.
+        """
+        # Replace SQL-like syntax with pandas-compatible syntax
+        def parse_condition(condition):
+            # Remove row. prefix and replace with df[]
+            condition = condition.replace("row.", "df.")
+    
+            # Replace IN with str.contains
+            not_in_condition = " NOT IN " in condition
+            if not_in_condition:
+                condition = condition.split()[-1] + " NOT IN " + " ".join(condition.split()[0:len(condition.split())-2])
+                condition = "~" + condition.replace(" IN NOT ", ".str.contains('")
+            in_condition = " IN " in condition
+            if in_condition:
+                condition = condition.split()[-1] + " IN " + " ".join(condition.split()[0:len(condition.split())-2])
+    
+            condition = condition.replace(" IN ", ".str.contains('")
+            if in_condition or not_in_condition:
+                condition += "', na$IS$False)"
+    
+            # Replace =, !=, >, <, >=, <= with pandas-compatible operators
+            condition = (
+                condition.replace(" = ", " == ")
+                # .replace("!=", "!=")
+                # .replace(">", ">")
+                # .replace("<", "<")
+                # .replace(">=", ">=")
+                # .replace("<=", "<=")
+            )
+    
+            # Replace IS NULL with .isna()
+            condition = condition.replace(" IS NULL", ".isna()")
+    
+            # Replace IS NOT NULL with .notna()
+            condition = condition.replace(" IS NOT NULL", ".notna()")
+    
+            # Replace LIKE with str.contains (note: this is a simplified version)
+            if " LIKE " in condition:
+                column, pattern = condition.split(" LIKE ", 1)
+                pattern = pattern.strip().strip("'").replace("%", ".*")
+                condition = f"{column}.str.contains(r'{pattern}', na=False, regex=True)"
+    
+            # Replace quoted strings with Python strings
+            condition = condition.replace("'", '"')
+    
+            # condition += "]"
+    
+            return condition
+    
+        # Parse the entire pseudo-SQL into a pandas-compatible boolean expression
+        def parse_expression(expr):
+            # Split into clauses for AND/OR
+            expr = expr.strip()
+    
+            # Handle parentheses (groups)
+            while "(" in expr:
+                start = expr.rfind("(")
+                end = expr.find(")", start)
+                if end == -1:
+                    raise ValueError("Mismatched parentheses in pseudo-SQL condition.")
+                group = expr[start + 1:end]
+                parsed_group = parse_expression(group)
+                expr = expr[:start] + f"$OPEN${parsed_group}$CLOSE$" + expr[end + 1:]
+                print(expr)
+    
+            # Split by AND/OR
+            and_clauses = [c.strip() for c in expr.split(" AND ") if c]
+            if len(and_clauses) > 1:
+                return " & ".join(f"({parse_condition(c)})" for c in and_clauses)
+    
+            or_clauses = [c.strip() for c in expr.split(" OR ") if c]
+            if len(or_clauses) > 1:
+                return " | ".join(f"({parse_condition(c)})" for c in or_clauses)
+    
+            return parse_condition(expr)
+    
+        # Parse the pseudo-SQL into a pandas-compatible boolean expression
+        try:
+            boolean_expr = parse_expression(pseudo_sql).replace("$OPEN$", "(").replace("$CLOSE$", ")").replace("$IS$", '=')
+        except Exception as e:
+            raise ValueError(f"Failed to parse pseudo-SQL: {e}")
+    
+        # Evaluate the boolean expression safely
+        try:
+            # Create a dictionary of column names for eval()
+            namespace = {col: df[col] for col in df.columns}
+>           mask = eval(boolean_expr) #, {"__builtins__": None}, namespace)
+E           NameError: name 'invalid_sql_syntax' is not defined
+
+annflux/tools/io.py:261: NameError
+
+During handling of the above exception, another exception occurred:
+
+self = <src.annflux.tests.test_api_integration.TestAPIIntegration object at 0x7f307d6d7ed0>
+client = <FlaskClient <Flask 'annflux.ui.basic.run_server'>>
+
+    def test_error_recovery_workflow(self, client):
+        """Test error handling and recovery"""
+    
+        # 1. Test invalid JSON
+        response = client.post("/label",
+                               data="invalid json",
+                               content_type='application/json')
+        assert response.status_code >= 400
+    
+        # 2. Test invalid filter query
+>       response = client.get("/data?filter_query=invalid_sql_syntax")
+
+annflux/tests/test_api_integration.py:248: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:1162: in get
+    return self.open(*args, **kw)
+../.venv/lib/python3.11/site-packages/flask/testing.py:235: in open
+    response = super().open(
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+../.venv/lib/python3.11/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+../.venv/lib/python3.11/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+../.venv/lib/python3.11/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+../.venv/lib/python3.11/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+../.venv/lib/python3.11/site-packages/flask/app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+../.venv/lib/python3.11/site-packages/flask/app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+annflux/ui/basic/run_server.py:203: in no_cache
+    response = make_response(view(*args, **kwargs))
+annflux/ui/basic/run_server.py:259: in data_get
+    raise e
+annflux/ui/basic/run_server.py:252: in data_get
+    t = sql_to_pandas_query(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+pseudo_sql = 'invalid_sql_syntax'
+df =        uid label_predicted  score_predicted  dp_most_needed  labeled  in_test
+0  img_001          label1              ...    0.6               2        0        0
+2  img_003          label1              0.9               0        0        0
+
+    def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Translates pseudo-SQL conditions (including AND, OR, and groups) into pandas queries.
+    
+        Args:
+            pseudo_sql (str): Pseudo-SQL condition (e.g., '("Papilionidae" IN row.label_predicted) AND (row.value > 10)').
+            df (pd.DataFrame): The DataFrame to filter.
+    
+        Returns:
+            pd.DataFrame: Filtered DataFrame based on the pseudo-SQL condition.
+        """
+        # Replace SQL-like syntax with pandas-compatible syntax
+        def parse_condition(condition):
+            # Remove row. prefix and replace with df[]
+            condition = condition.replace("row.", "df.")
+    
+            # Replace IN with str.contains
+            not_in_condition = " NOT IN " in condition
+            if not_in_condition:
+                condition = condition.split()[-1] + " NOT IN " + " ".join(condition.split()[0:len(condition.split())-2])
+                condition = "~" + condition.replace(" IN NOT ", ".str.contains('")
+            in_condition = " IN " in condition
+            if in_condition:
+                condition = condition.split()[-1] + " IN " + " ".join(condition.split()[0:len(condition.split())-2])
+    
+            condition = condition.replace(" IN ", ".str.contains('")
+            if in_condition or not_in_condition:
+                condition += "', na$IS$False)"
+    
+            # Replace =, !=, >, <, >=, <= with pandas-compatible operators
+            condition = (
+                condition.replace(" = ", " == ")
+                # .replace("!=", "!=")
+                # .replace(">", ">")
+                # .replace("<", "<")
+                # .replace(">=", ">=")
+                # .replace("<=", "<=")
+            )
+    
+            # Replace IS NULL with .isna()
+            condition = condition.replace(" IS NULL", ".isna()")
+    
+            # Replace IS NOT NULL with .notna()
+            condition = condition.replace(" IS NOT NULL", ".notna()")
+    
+            # Replace LIKE with str.contains (note: this is a simplified version)
+            if " LIKE " in condition:
+                column, pattern = condition.split(" LIKE ", 1)
+                pattern = pattern.strip().strip("'").replace("%", ".*")
+                condition = f"{column}.str.contains(r'{pattern}', na=False, regex=True)"
+    
+            # Replace quoted strings with Python strings
+            condition = condition.replace("'", '"')
+    
+            # condition += "]"
+    
+            return condition
+    
+        # Parse the entire pseudo-SQL into a pandas-compatible boolean expression
+        def parse_expression(expr):
+            # Split into clauses for AND/OR
+            expr = expr.strip()
+    
+            # Handle parentheses (groups)
+            while "(" in expr:
+                start = expr.rfind("(")
+                end = expr.find(")", start)
+                if end == -1:
+                    raise ValueError("Mismatched parentheses in pseudo-SQL condition.")
+                group = expr[start + 1:end]
+                parsed_group = parse_expression(group)
+                expr = expr[:start] + f"$OPEN${parsed_group}$CLOSE$" + expr[end + 1:]
+                print(expr)
+    
+            # Split by AND/OR
+            and_clauses = [c.strip() for c in expr.split(" AND ") if c]
+            if len(and_clauses) > 1:
+                return " & ".join(f"({parse_condition(c)})" for c in and_clauses)
+    
+            or_clauses = [c.strip() for c in expr.split(" OR ") if c]
+            if len(or_clauses) > 1:
+                return " | ".join(f"({parse_condition(c)})" for c in or_clauses)
+    
+            return parse_condition(expr)
+    
+        # Parse the pseudo-SQL into a pandas-compatible boolean expression
+        try:
+            boolean_expr = parse_expression(pseudo_sql).replace("$OPEN$", "(").replace("$CLOSE$", ")").replace("$IS$", '=')
+        except Exception as e:
+            raise ValueError(f"Failed to parse pseudo-SQL: {e}")
+    
+        # Evaluate the boolean expression safely
+        try:
+            # Create a dictionary of column names for eval()
+            namespace = {col: df[col] for col in df.columns}
+            mask = eval(boolean_expr) #, {"__builtins__": None}, namespace)
+        except Exception as e:
+>           raise ValueError(f"Failed to evaluate pseudo-SQL: {e}, {boolean_expr}")
+E           ValueError: Failed to evaluate pseudo-SQL: name 'invalid_sql_syntax' is not defined, invalid_sql_syntax
+
+annflux/tools/io.py:263: ValueError
+------------------------------ Captured log setup ------------------------------
+WARNING  annflux_server:run_server.py:150 Logging to /tmp/tmp6d_kb_jb/annflux/annflux.log with level INFO
+____________________ TestAPISecurity.test_input_validation _____________________
+
+pseudo_sql = "'; DROP TABLE annflux; --"
+df =        uid label_predicted  score_predicted  dp_most_needed  labeled  in_test
+0  img_001          label1              ...    0.6               2        0        0
+2  img_003          label1              0.9               0        0        0
+
+    def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Translates pseudo-SQL conditions (including AND, OR, and groups) into pandas queries.
+    
+        Args:
+            pseudo_sql (str): Pseudo-SQL condition (e.g., '("Papilionidae" IN row.label_predicted) AND (row.value > 10)').
+            df (pd.DataFrame): The DataFrame to filter.
+    
+        Returns:
+            pd.DataFrame: Filtered DataFrame based on the pseudo-SQL condition.
+        """
+        # Replace SQL-like syntax with pandas-compatible syntax
+        def parse_condition(condition):
+            # Remove row. prefix and replace with df[]
+            condition = condition.replace("row.", "df.")
+    
+            # Replace IN with str.contains
+            not_in_condition = " NOT IN " in condition
+            if not_in_condition:
+                condition = condition.split()[-1] + " NOT IN " + " ".join(condition.split()[0:len(condition.split())-2])
+                condition = "~" + condition.replace(" IN NOT ", ".str.contains('")
+            in_condition = " IN " in condition
+            if in_condition:
+                condition = condition.split()[-1] + " IN " + " ".join(condition.split()[0:len(condition.split())-2])
+    
+            condition = condition.replace(" IN ", ".str.contains('")
+            if in_condition or not_in_condition:
+                condition += "', na$IS$False)"
+    
+            # Replace =, !=, >, <, >=, <= with pandas-compatible operators
+            condition = (
+                condition.replace(" = ", " == ")
+                # .replace("!=", "!=")
+                # .replace(">", ">")
+                # .replace("<", "<")
+                # .replace(">=", ">=")
+                # .replace("<=", "<=")
+            )
+    
+            # Replace IS NULL with .isna()
+            condition = condition.replace(" IS NULL", ".isna()")
+    
+            # Replace IS NOT NULL with .notna()
+            condition = condition.replace(" IS NOT NULL", ".notna()")
+    
+            # Replace LIKE with str.contains (note: this is a simplified version)
+            if " LIKE " in condition:
+                column, pattern = condition.split(" LIKE ", 1)
+                pattern = pattern.strip().strip("'").replace("%", ".*")
+                condition = f"{column}.str.contains(r'{pattern}', na=False, regex=True)"
+    
+            # Replace quoted strings with Python strings
+            condition = condition.replace("'", '"')
+    
+            # condition += "]"
+    
+            return condition
+    
+        # Parse the entire pseudo-SQL into a pandas-compatible boolean expression
+        def parse_expression(expr):
+            # Split into clauses for AND/OR
+            expr = expr.strip()
+    
+            # Handle parentheses (groups)
+            while "(" in expr:
+                start = expr.rfind("(")
+                end = expr.find(")", start)
+                if end == -1:
+                    raise ValueError("Mismatched parentheses in pseudo-SQL condition.")
+                group = expr[start + 1:end]
+                parsed_group = parse_expression(group)
+                expr = expr[:start] + f"$OPEN${parsed_group}$CLOSE$" + expr[end + 1:]
+                print(expr)
+    
+            # Split by AND/OR
+            and_clauses = [c.strip() for c in expr.split(" AND ") if c]
+            if len(and_clauses) > 1:
+                return " & ".join(f"({parse_condition(c)})" for c in and_clauses)
+    
+            or_clauses = [c.strip() for c in expr.split(" OR ") if c]
+            if len(or_clauses) > 1:
+                return " | ".join(f"({parse_condition(c)})" for c in or_clauses)
+    
+            return parse_condition(expr)
+    
+        # Parse the pseudo-SQL into a pandas-compatible boolean expression
+        try:
+            boolean_expr = parse_expression(pseudo_sql).replace("$OPEN$", "(").replace("$CLOSE$", ")").replace("$IS$", '=')
+        except Exception as e:
+            raise ValueError(f"Failed to parse pseudo-SQL: {e}")
+    
+        # Evaluate the boolean expression safely
+        try:
+            # Create a dictionary of column names for eval()
+            namespace = {col: df[col] for col in df.columns}
+>           mask = eval(boolean_expr) #, {"__builtins__": None}, namespace)
+E             File "<string>", line 1
+E               "; DROP TABLE annflux; --
+E               ^
+E           SyntaxError: unterminated string literal (detected at line 1)
+
+annflux/tools/io.py:261: SyntaxError
+
+During handling of the above exception, another exception occurred:
+
+self = <src.annflux.tests.test_api_integration.TestAPISecurity object at 0x7f307d6d5d90>
+client = <FlaskClient <Flask 'annflux.ui.basic.run_server'>>
+
+    def test_input_validation(self, client):
+        """Test input validation and sanitization"""
+    
+        # 1. Test SQL injection attempts
+        malicious_inputs = [
+            "'; DROP TABLE annflux; --",
+            "' OR '1'='1",
+            "'; SELECT * FROM annflux; --"
+        ]
+    
+        for malicious_input in malicious_inputs:
+>           response = client.get(f"/data?filter_query={malicious_input}")
+
+annflux/tests/test_api_integration.py:322: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:1162: in get
+    return self.open(*args, **kw)
+../.venv/lib/python3.11/site-packages/flask/testing.py:235: in open
+    response = super().open(
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+../.venv/lib/python3.11/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+../.venv/lib/python3.11/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+../.venv/lib/python3.11/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+../.venv/lib/python3.11/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+../.venv/lib/python3.11/site-packages/flask/app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+../.venv/lib/python3.11/site-packages/flask/app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+annflux/ui/basic/run_server.py:203: in no_cache
+    response = make_response(view(*args, **kwargs))
+annflux/ui/basic/run_server.py:259: in data_get
+    raise e
+annflux/ui/basic/run_server.py:252: in data_get
+    t = sql_to_pandas_query(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+pseudo_sql = "'; DROP TABLE annflux; --"
+df =        uid label_predicted  score_predicted  dp_most_needed  labeled  in_test
+0  img_001          label1              ...    0.6               2        0        0
+2  img_003          label1              0.9               0        0        0
+
+    def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Translates pseudo-SQL conditions (including AND, OR, and groups) into pandas queries.
+    
+        Args:
+            pseudo_sql (str): Pseudo-SQL condition (e.g., '("Papilionidae" IN row.label_predicted) AND (row.value > 10)').
+            df (pd.DataFrame): The DataFrame to filter.
+    
+        Returns:
+            pd.DataFrame: Filtered DataFrame based on the pseudo-SQL condition.
+        """
+        # Replace SQL-like syntax with pandas-compatible syntax
+        def parse_condition(condition):
+            # Remove row. prefix and replace with df[]
+            condition = condition.replace("row.", "df.")
+    
+            # Replace IN with str.contains
+            not_in_condition = " NOT IN " in condition
+            if not_in_condition:
+                condition = condition.split()[-1] + " NOT IN " + " ".join(condition.split()[0:len(condition.split())-2])
+                condition = "~" + condition.replace(" IN NOT ", ".str.contains('")
+            in_condition = " IN " in condition
+            if in_condition:
+                condition = condition.split()[-1] + " IN " + " ".join(condition.split()[0:len(condition.split())-2])
+    
+            condition = condition.replace(" IN ", ".str.contains('")
+            if in_condition or not_in_condition:
+                condition += "', na$IS$False)"
+    
+            # Replace =, !=, >, <, >=, <= with pandas-compatible operators
+            condition = (
+                condition.replace(" = ", " == ")
+                # .replace("!=", "!=")
+                # .replace(">", ">")
+                # .replace("<", "<")
+                # .replace(">=", ">=")
+                # .replace("<=", "<=")
+            )
+    
+            # Replace IS NULL with .isna()
+            condition = condition.replace(" IS NULL", ".isna()")
+    
+            # Replace IS NOT NULL with .notna()
+            condition = condition.replace(" IS NOT NULL", ".notna()")
+    
+            # Replace LIKE with str.contains (note: this is a simplified version)
+            if " LIKE " in condition:
+                column, pattern = condition.split(" LIKE ", 1)
+                pattern = pattern.strip().strip("'").replace("%", ".*")
+                condition = f"{column}.str.contains(r'{pattern}', na=False, regex=True)"
+    
+            # Replace quoted strings with Python strings
+            condition = condition.replace("'", '"')
+    
+            # condition += "]"
+    
+            return condition
+    
+        # Parse the entire pseudo-SQL into a pandas-compatible boolean expression
+        def parse_expression(expr):
+            # Split into clauses for AND/OR
+            expr = expr.strip()
+    
+            # Handle parentheses (groups)
+            while "(" in expr:
+                start = expr.rfind("(")
+                end = expr.find(")", start)
+                if end == -1:
+                    raise ValueError("Mismatched parentheses in pseudo-SQL condition.")
+                group = expr[start + 1:end]
+                parsed_group = parse_expression(group)
+                expr = expr[:start] + f"$OPEN${parsed_group}$CLOSE$" + expr[end + 1:]
+                print(expr)
+    
+            # Split by AND/OR
+            and_clauses = [c.strip() for c in expr.split(" AND ") if c]
+            if len(and_clauses) > 1:
+                return " & ".join(f"({parse_condition(c)})" for c in and_clauses)
+    
+            or_clauses = [c.strip() for c in expr.split(" OR ") if c]
+            if len(or_clauses) > 1:
+                return " | ".join(f"({parse_condition(c)})" for c in or_clauses)
+    
+            return parse_condition(expr)
+    
+        # Parse the pseudo-SQL into a pandas-compatible boolean expression
+        try:
+            boolean_expr = parse_expression(pseudo_sql).replace("$OPEN$", "(").replace("$CLOSE$", ")").replace("$IS$", '=')
+        except Exception as e:
+            raise ValueError(f"Failed to parse pseudo-SQL: {e}")
+    
+        # Evaluate the boolean expression safely
+        try:
+            # Create a dictionary of column names for eval()
+            namespace = {col: df[col] for col in df.columns}
+            mask = eval(boolean_expr) #, {"__builtins__": None}, namespace)
+        except Exception as e:
+>           raise ValueError(f"Failed to evaluate pseudo-SQL: {e}, {boolean_expr}")
+E           ValueError: Failed to evaluate pseudo-SQL: unterminated string literal (detected at line 1) (<string>, line 1), "; DROP TABLE annflux; --
+
+annflux/tools/io.py:263: ValueError
+------------------------------ Captured log setup ------------------------------
+WARNING  annflux_server:run_server.py:150 Logging to /tmp/tmp9_8hhmgu/annflux/annflux.log with level INFO
+__________________________ TestPerformance.test_speed __________________________
+
+self = <src.annflux.tests.test_performance.TestPerformance testMethod=test_speed>
+
+    def test_speed(self):
+>       with open(
+            "/home/lhogeweg/Documents/annflux_ln/src/annflux/ui/basic/compute_performance_test.pkl",
+            "rb",
+        ) as f:
+E       FileNotFoundError: [Errno 2] No such file or directory: '/home/lhogeweg/Documents/annflux_ln/src/annflux/ui/basic/compute_performance_test.pkl'
+
+annflux/tests/test_performance.py:8: FileNotFoundError
+_________________________ TestQuery.test_not_in_query __________________________
+
+pseudo_sql = '(Empty NOT IN row.label_predicted)'
+df =   label_predicted label_true
+0             Pap        Bap
+1             Bap        Pap
+
+    def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Translates pseudo-SQL conditions (including AND, OR, and groups) into pandas queries.
+    
+        Args:
+            pseudo_sql (str): Pseudo-SQL condition (e.g., '("Papilionidae" IN row.label_predicted) AND (row.value > 10)').
+            df (pd.DataFrame): The DataFrame to filter.
+    
+        Returns:
+            pd.DataFrame: Filtered DataFrame based on the pseudo-SQL condition.
+        """
+        # Replace SQL-like syntax with pandas-compatible syntax
+        def parse_condition(condition):
+            # Remove row. prefix and replace with df[]
+            condition = condition.replace("row.", "df.")
+    
+            # Replace IN with str.contains
+            not_in_condition = " NOT IN " in condition
+            if not_in_condition:
+                condition = condition.split()[-1] + " NOT IN " + " ".join(condition.split()[0:len(condition.split())-2])
+                condition = "~" + condition.replace(" IN NOT ", ".str.contains('")
+            in_condition = " IN " in condition
+            if in_condition:
+                condition = condition.split()[-1] + " IN " + " ".join(condition.split()[0:len(condition.split())-2])
+    
+            condition = condition.replace(" IN ", ".str.contains('")
+            if in_condition or not_in_condition:
+                condition += "', na$IS$False)"
+    
+            # Replace =, !=, >, <, >=, <= with pandas-compatible operators
+            condition = (
+                condition.replace(" = ", " == ")
+                # .replace("!=", "!=")
+                # .replace(">", ">")
+                # .replace("<", "<")
+                # .replace(">=", ">=")
+                # .replace("<=", "<=")
+            )
+    
+            # Replace IS NULL with .isna()
+            condition = condition.replace(" IS NULL", ".isna()")
+    
+            # Replace IS NOT NULL with .notna()
+            condition = condition.replace(" IS NOT NULL", ".notna()")
+    
+            # Replace LIKE with str.contains (note: this is a simplified version)
+            if " LIKE " in condition:
+                column, pattern = condition.split(" LIKE ", 1)
+                pattern = pattern.strip().strip("'").replace("%", ".*")
+                condition = f"{column}.str.contains(r'{pattern}', na=False, regex=True)"
+    
+            # Replace quoted strings with Python strings
+            condition = condition.replace("'", '"')
+    
+            # condition += "]"
+    
+            return condition
+    
+        # Parse the entire pseudo-SQL into a pandas-compatible boolean expression
+        def parse_expression(expr):
+            # Split into clauses for AND/OR
+            expr = expr.strip()
+    
+            # Handle parentheses (groups)
+            while "(" in expr:
+                start = expr.rfind("(")
+                end = expr.find(")", start)
+                if end == -1:
+                    raise ValueError("Mismatched parentheses in pseudo-SQL condition.")
+                group = expr[start + 1:end]
+                parsed_group = parse_expression(group)
+                expr = expr[:start] + f"$OPEN${parsed_group}$CLOSE$" + expr[end + 1:]
+                print(expr)
+    
+            # Split by AND/OR
+            and_clauses = [c.strip() for c in expr.split(" AND ") if c]
+            if len(and_clauses) > 1:
+                return " & ".join(f"({parse_condition(c)})" for c in and_clauses)
+    
+            or_clauses = [c.strip() for c in expr.split(" OR ") if c]
+            if len(or_clauses) > 1:
+                return " | ".join(f"({parse_condition(c)})" for c in or_clauses)
+    
+            return parse_condition(expr)
+    
+        # Parse the pseudo-SQL into a pandas-compatible boolean expression
+        try:
+            boolean_expr = parse_expression(pseudo_sql).replace("$OPEN$", "(").replace("$CLOSE$", ")").replace("$IS$", '=')
+        except Exception as e:
+            raise ValueError(f"Failed to parse pseudo-SQL: {e}")
+    
+        # Evaluate the boolean expression safely
+        try:
+            # Create a dictionary of column names for eval()
+            namespace = {col: df[col] for col in df.columns}
+>           mask = eval(boolean_expr) #, {"__builtins__": None}, namespace)
+E           NameError: name 'NOT' is not defined
+
+annflux/tools/io.py:261: NameError
+
+During handling of the above exception, another exception occurred:
+
+self = <src.annflux.tests.test_query.TestQuery testMethod=test_not_in_query>
+
+    def test_not_in_query(self):
+>       sql_to_pandas_query(
+            "(Empty NOT IN row.label_predicted)",
+            pandas.DataFrame(
+                data={"label_predicted": ["Pap", "Bap"], "label_true": ["Bap", "Pap"]}
+            ),
+        )
+
+annflux/tests/test_query.py:29: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+pseudo_sql = '(Empty NOT IN row.label_predicted)'
+df =   label_predicted label_true
+0             Pap        Bap
+1             Bap        Pap
+
+    def sql_to_pandas_query(pseudo_sql: str, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Translates pseudo-SQL conditions (including AND, OR, and groups) into pandas queries.
+    
+        Args:
+            pseudo_sql (str): Pseudo-SQL condition (e.g., '("Papilionidae" IN row.label_predicted) AND (row.value > 10)').
+            df (pd.DataFrame): The DataFrame to filter.
+    
+        Returns:
+            pd.DataFrame: Filtered DataFrame based on the pseudo-SQL condition.
+        """
+        # Replace SQL-like syntax with pandas-compatible syntax
+        def parse_condition(condition):
+            # Remove row. prefix and replace with df[]
+            condition = condition.replace("row.", "df.")
+    
+            # Replace IN with str.contains
+            not_in_condition = " NOT IN " in condition
+            if not_in_condition:
+                condition = condition.split()[-1] + " NOT IN " + " ".join(condition.split()[0:len(condition.split())-2])
+                condition = "~" + condition.replace(" IN NOT ", ".str.contains('")
+            in_condition = " IN " in condition
+            if in_condition:
+                condition = condition.split()[-1] + " IN " + " ".join(condition.split()[0:len(condition.split())-2])
+    
+            condition = condition.replace(" IN ", ".str.contains('")
+            if in_condition or not_in_condition:
+                condition += "', na$IS$False)"
+    
+            # Replace =, !=, >, <, >=, <= with pandas-compatible operators
+            condition = (
+                condition.replace(" = ", " == ")
+                # .replace("!=", "!=")
+                # .replace(">", ">")
+                # .replace("<", "<")
+                # .replace(">=", ">=")
+                # .replace("<=", "<=")
+            )
+    
+            # Replace IS NULL with .isna()
+            condition = condition.replace(" IS NULL", ".isna()")
+    
+            # Replace IS NOT NULL with .notna()
+            condition = condition.replace(" IS NOT NULL", ".notna()")
+    
+            # Replace LIKE with str.contains (note: this is a simplified version)
+            if " LIKE " in condition:
+                column, pattern = condition.split(" LIKE ", 1)
+                pattern = pattern.strip().strip("'").replace("%", ".*")
+                condition = f"{column}.str.contains(r'{pattern}', na=False, regex=True)"
+    
+            # Replace quoted strings with Python strings
+            condition = condition.replace("'", '"')
+    
+            # condition += "]"
+    
+            return condition
+    
+        # Parse the entire pseudo-SQL into a pandas-compatible boolean expression
+        def parse_expression(expr):
+            # Split into clauses for AND/OR
+            expr = expr.strip()
+    
+            # Handle parentheses (groups)
+            while "(" in expr:
+                start = expr.rfind("(")
+                end = expr.find(")", start)
+                if end == -1:
+                    raise ValueError("Mismatched parentheses in pseudo-SQL condition.")
+                group = expr[start + 1:end]
+                parsed_group = parse_expression(group)
+                expr = expr[:start] + f"$OPEN${parsed_group}$CLOSE$" + expr[end + 1:]
+                print(expr)
+    
+            # Split by AND/OR
+            and_clauses = [c.strip() for c in expr.split(" AND ") if c]
+            if len(and_clauses) > 1:
+                return " & ".join(f"({parse_condition(c)})" for c in and_clauses)
+    
+            or_clauses = [c.strip() for c in expr.split(" OR ") if c]
+            if len(or_clauses) > 1:
+                return " | ".join(f"({parse_condition(c)})" for c in or_clauses)
+    
+            return parse_condition(expr)
+    
+        # Parse the pseudo-SQL into a pandas-compatible boolean expression
+        try:
+            boolean_expr = parse_expression(pseudo_sql).replace("$OPEN$", "(").replace("$CLOSE$", ")").replace("$IS$", '=')
+        except Exception as e:
+            raise ValueError(f"Failed to parse pseudo-SQL: {e}")
+    
+        # Evaluate the boolean expression safely
+        try:
+            # Create a dictionary of column names for eval()
+            namespace = {col: df[col] for col in df.columns}
+            mask = eval(boolean_expr) #, {"__builtins__": None}, namespace)
+        except Exception as e:
+>           raise ValueError(f"Failed to evaluate pseudo-SQL: {e}, {boolean_expr}")
+E           ValueError: Failed to evaluate pseudo-SQL: name 'NOT' is not defined, (NOT.str.contains("~df.label_predicted NOT IN", na=False))
+
+annflux/tools/io.py:263: ValueError
+____________________ TestAuthentication.test_auth_required _____________________
+
+self = <src.annflux.tests.test_rest_api.TestAuthentication object at 0x7f307e1eedd0>
+
+    def test_auth_required(self):
+        """Test that authentication is required when users are configured"""
+        os.environ["PROJECT_ROOT"] = "/tmp"
+        os.environ["USERS"] = "testuser|hashedpassword"
+        with patch("annflux.ui.basic.run_server._init"):
+            test_app = get_app()
+            client = test_app.test_client()
+    
+            response = client.get("/")
+            # Should require authentication
+>           assert response.status_code == 401
+E           assert 200 == 401
+E            +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+annflux/tests/test_rest_api.py:564: AssertionError
+_________________ TestErrorHandling.test_missing_project_root __________________
+
+self = <src.annflux.tests.test_rest_api.TestErrorHandling object at 0x7f307e1ec290>
+error_client = <FlaskClient <Flask 'annflux.ui.basic.run_server'>>
+
+    def test_missing_project_root(self, error_client):
+        """Test behavior when PROJECT_ROOT is missing"""
+        with patch(
+            "annflux.ui.basic.run_server._init",
+            side_effect=RuntimeError("PROJECT_ROOT not set"),
+        ):
+            response = error_client.get("/")
+            # Should handle error gracefully
+>           assert response.status_code in [500, 404]
+E           assert 200 in [500, 404]
+E            +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+annflux/tests/test_rest_api.py:606: AssertionError
+_________________ TestErrorHandling.test_corrupted_data_files __________________
+
+self = <src.annflux.tests.test_rest_api.TestErrorHandling object at 0x7f307e1ec9d0>
+error_client = <FlaskClient <Flask 'annflux.ui.basic.run_server'>>
+
+    def test_corrupted_data_files(self, error_client):
+        """Test behavior with corrupted data files"""
+        # This would require mocking file operations
+        # For now, just test that the server doesn't crash
+>       response = error_client.get("/data")
+
+annflux/tests/test_rest_api.py:612: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:1162: in get
+    return self.open(*args, **kw)
+../.venv/lib/python3.11/site-packages/flask/testing.py:235: in open
+    response = super().open(
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+../.venv/lib/python3.11/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+../.venv/lib/python3.11/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+../.venv/lib/python3.11/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+../.venv/lib/python3.11/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+../.venv/lib/python3.11/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+../.venv/lib/python3.11/site-packages/flask/app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+../.venv/lib/python3.11/site-packages/flask/app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+annflux/ui/basic/run_server.py:203: in no_cache
+    response = make_response(view(*args, **kwargs))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @app.route("/data")
+    @app.route("/v1/data")
+    @nocache
+    def data_get():
+        """
+        http://127.0.0.1:8006/data?filter_query=Papi%20in%20row.label_predicted
+        blurry-or-low-res NOT IN row.label_possible AND blurry-or-low-res NOT IN row.label_predicted
+        """
+>       annflux_data_path = os.path.join(g_state.project_folder, "annflux", "annflux.csv")
+E       NameError: name 'g_state' is not defined
+
+annflux/ui/basic/run_server.py:237: NameError
+______________________________ test_al_strategies ______________________________
+
+client = <FlaskClient <Flask 'annflux.ui.basic.run_server'>>
+
+    def test_al_strategies(client):
+        true_labels = json.load(open(data_source.true_labels_path))
+        client.post("/label", json={})  # TODO(issue): most_needed column not available before refresh
+        t = get_annflux_data(client)
+        num_test_images = 50
+        assert t["in_test"].sum() == num_test_images
+        test_labeling = {uid_: true_labels[uid_] for uid_ in t[t["in_test"]==1]["uid"]}
+        client.post("/label", json=test_labeling)
+        print(get_json(client, "/performance"))
+>       assert len(get_json(client, "/performance")["test_performance"]) == 0
+E       KeyError: 'test_performance'
+
+annflux/tests/test_server.py:132: KeyError
+------------------------------ Captured log setup ------------------------------
+WARNING  bombus-plant-test:data.py:37 /home/lhogeweg/annflux/datasources/bombus-plant-test already exists
+WARNING  bombus-plant-test:data.py:50 Copied to /home/lhogeweg/annflux/datasources/bombus-plant-test
+INFO     color_and_label:data.py:112 color_and_label start=1778675713.713505
+INFO     color_and_label:data.py:119 color_and_label: updating 500 media
+INFO     color_and_label:data.py:177 unique_labels end=0.003317117691040039
+INFO     color_and_label:data.py:188 color_prob took=0.006473064422607422
+INFO     color_and_label:data.py:202 coloring dp_cluster took=0.014198780059814453
+INFO     color_and_label:data.py:309 color_class took=0.02573847770690918
+INFO     color_and_label:data.py:383 label_possible took=0.025902509689331055
+INFO     color_and_label:data.py:384 coloring took=0.01938319206237793
+WARNING  annflux_server:run_server.py:150 Logging to /home/lhogeweg/annflux/data/bombus-plant-test/annflux/annflux.log with level INFO
+------------------------------ Captured log call -------------------------------
+INFO     annflux_server:run_server.py:602 label_update={}
+INFO     annflux_server:quick.py:449 instant_reclassification 2=0.007096767425537109
+INFO     annflux_server:quick.py:454 instant_reclassification 3=1778675713.7590446
+INFO     annflux_server:quick.py:456 result_set.entry.uid='61e0f63732663bed2eb7e6ff4bd2d2506ee8de1ac08798a3542be622',state.trained_for_version_previous=None
+INFO     annflux_server:quick.py:468 instant_reclassification 4=0.008889198303222656
+INFO     annflux_server:data.py:112 color_and_label start=1778675713.796839
+INFO     annflux_server:data.py:119 color_and_label: updating 500 media
+INFO     annflux_server:data.py:177 unique_labels end=0.0040130615234375
+INFO     annflux_server:data.py:188 color_prob took=0.007998943328857422
+INFO     annflux_server:data.py:202 coloring dp_cluster took=0.016182899475097656
+INFO     annflux_server:data.py:309 color_class took=0.02744579315185547
+INFO     annflux_server:data.py:383 label_possible took=0.02761220932006836
+INFO     annflux_server:data.py:384 coloring took=0.01951456069946289
+INFO     annflux_server:quick.py:396 no prediction=394
+INFO     annflux_server:quick.py:399 instant_reclassification done = 0.08074259757995605
+INFO     annflux_server:run_server.py:270 annflux_data_path = /home/lhogeweg/annflux/data/bombus-plant-test/annflux/../annflux/annflux.csv
+INFO     annflux_server:run_server.py:602 label_update={'GBIF_2833436648_0': 'No_plant', 'GBIF_2833478440_1': 'Flowering', 'GBIF_2833500771_3': 'Flowering', 'GBIF_2833526252_2': 'Vegetative', 'GBIF_2833533080_0': 'Flowering', 'GBIF_2833557335_0': 'Vegetative', 'GBIF_2833568835_1': 'No_plant', 'GBIF_2833569282_0': 'Flowering', 'GBIF_2833585922_1': 'Vegetative', 'GBIF_2833592313_2': 'Flowering', 'GBIF_2833608571_0': 'Flowering', 'GBIF_2833612151_1': 'Flowering', 'GBIF_2833620145_0': 'No_plant', 'GBIF_2833631251_0': 'Vegetative', 'GBIF_2833638256_0': 'Vegetative', 'GBIF_2833639897_0': 'Flowering', 'GBIF_2833641599_3': 'Flowering', 'GBIF_2833648033_1': 'Vegetative', 'GBIF_2833661790_0': 'Vegetative', 'GBIF_2833687564_0': 'Flowering', 'GBIF_2833707833_0': 'Vegetative', 'GBIF_2833710386_1': 'Flowering', 'GBIF_2833720354_2': 'Flowering', 'GBIF_2833726584_0': 'Vegetative', 'GBIF_2833728870_0': 'Vegetative', 'GBIF_2833745473_0': 'Flowering', 'GBIF_2833754534_2': 'Flowering', 'GBIF_2833756341_0': 'Vegetative', 'GBIF_2833758026_0': 'Flowering', 'GBIF_2833762429_0': 'Flowering', 'GBIF_2833768128_0': 'Flowering', 'GBIF_2833779347_4': 'Flowering', 'GBIF_2833795592_1': 'No_plant', 'GBIF_2833796451_0': 'Vegetative', 'GBIF_2833816096_0': 'Flowering', 'GBIF_2833816096_3': 'Flowering', 'GBIF_2833820462_1': 'Flowering', 'GBIF_2833824512_1': 'Flowering', 'GBIF_2833839613_0': 'Flowering', 'GBIF_2833850629_0': 'Flowering', 'GBIF_2833852529_1': 'Flowering', 'GBIF_2833853692_2': 'Vegetative', 'GBIF_2833864210_0': 'Flowering', 'GBIF_2833871036_1': 'Flowering', 'GBIF_2833873943_0': 'Flowering', 'GBIF_2833878361_1': 'Flowering', 'GBIF_2833896966_0': 'Flowering', 'GBIF_2833907457_1': 'No_plant', 'GBIF_2833918608_0': 'Flowering', 'GBIF_2833923179_0': 'Flowering'}
+INFO     annflux_server:quick.py:449 instant_reclassification 2=0.009196996688842773
+INFO     annflux_server:quick.py:454 instant_reclassification 3=1778675713.880865
+INFO     annflux_server:quick.py:456 result_set.entry.uid='61e0f63732663bed2eb7e6ff4bd2d2506ee8de1ac08798a3542be622',state.trained_for_version_previous=None
+INFO     annflux_server:quick.py:468 instant_reclassification 4=0.010172367095947266
+INFO     annflux_server:quick.py:571 Loading kNN results from /home/lhogeweg/annflux/data/bombus-plant-test/annflux/datarepo/resultset-20260513143513-61e0f637/knn_results.npz
+INFO     annflux_server:quick.py:571 Loading kNN results from /home/lhogeweg/annflux/data/bombus-plant-test/annflux/datarepo/resultset-20260513143513-61e0f637/knn_results_dp.npz
+INFO     annflux_server:data.py:112 color_and_label start=1778675713.8888388
+INFO     annflux_server:data.py:119 color_and_label: updating 500 media
+INFO     annflux_server:data.py:177 unique_labels end=0.002759218215942383
+INFO     annflux_server:data.py:188 color_prob took=0.006084918975830078
+INFO     annflux_server:data.py:202 coloring dp_cluster took=0.014008760452270508
+INFO     annflux_server:data.py:309 color_class took=0.02554798126220703
+INFO     annflux_server:data.py:383 label_possible took=0.025716781616210938
+INFO     annflux_server:data.py:384 coloring took=0.019640684127807617
+INFO     annflux_server:quick.py:396 no prediction=355
+INFO     annflux_server:quick.py:399 instant_reclassification done = 0.05115866661071777
+=============================== warnings summary ===============================
+../.venv/lib/python3.11/site-packages/numcodecs/__init__.py:106
+  /home/lhogeweg/Documents/annflux_ln/.venv/lib/python3.11/site-packages/numcodecs/__init__.py:106: DeprecationWarning: crc32c usage is deprecated since numcodecs v0.16.4. It is recommended to install google_crc32c instead.
+    from numcodecs.checksum32 import CRC32, Adler32, JenkinsLookup3
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.11.14-final-0 _______________
+
+Name                                                 Stmts   Miss  Cover
+------------------------------------------------------------------------
+__init__.py                                              0      0   100%
+annflux/__init__.py                                      0      0   100%
+annflux/algorithms/__init__.py                           0      0   100%
+annflux/algorithms/embeddings.py                        20      3    85%
+annflux/algorithms/fastdpeak.py                        202     65    68%
+annflux/algorithms/fastdpeak_merge.py                  140     26    81%
+annflux/algorithms/feature_reconstruction_error.py     103     12    88%
+annflux/algorithms/most_needed.py                       68     31    54%
+annflux/data/__init__.py                                 0      0   100%
+annflux/data/bombus_plant_test/data.py                  86     30    65%
+annflux/performance/__init__.py                          0      0   100%
+annflux/performance/basic.py                           108      6    94%
+annflux/projects/__init__.py                             0      0   100%
+annflux/projects/bioscan/__init__.py                     0      0   100%
+annflux/projects/bioscan/align.py                       85     68    20%
+annflux/repo_results_to_embedding.py                   106     35    67%
+annflux/repository/__init__.py                           0      0   100%
+annflux/repository/dataset.py                           65     16    75%
+annflux/repository/model.py                            131     54    59%
+annflux/repository/repository.py                       165     49    70%
+annflux/repository/resultset.py                        100     37    63%
+annflux/scripts/__init__.py                              0      0   100%
+annflux/scripts/annflux_cli.py                         344    193    44%
+annflux/scripts/extract_video_frames.py                 68     54    21%
+annflux/scripts/run_tests.py                            70     22    69%
+annflux/scripts/tile_images.py                         110     93    15%
+annflux/shared.py                                       68      5    93%
+annflux/tests/__init__.py                                0      0   100%
+annflux/tests/test_active_learning.py                    6      0   100%
+annflux/tests/test_api_integration.py                  205     50    76%
+annflux/tests/test_api_utils.py                        165    100    39%
+annflux/tests/test_cli.py                                5      0   100%
+annflux/tests/test_diversify.py                         59      1    98%
+annflux/tests/test_performance.py                       12      6    50%
+annflux/tests/test_query.py                             14      0   100%
+annflux/tests/test_rest_api.py                         331      2    99%
+annflux/tests/test_server.py                           132     32    76%
+annflux/tests/test_train.py                             29      0   100%
+annflux/tools/__init__.py                                0      0   100%
+annflux/tools/api_sdk.py                                28     18    36%
+annflux/tools/core.py                                   79      1    99%
+annflux/tools/data.py                                  346    117    66%
+annflux/tools/io.py                                    152     39    74%
+annflux/tools/mixed.py                                  54     10    81%
+annflux/tools/progress_learn.py                         37      5    86%
+annflux/tools/remote_io.py                              64     51    20%
+annflux/tools/visualization.py                          20      0   100%
+annflux/train_features.py                              187     83    56%
+annflux/training/__init__.py                             0      0   100%
+annflux/training/annflux/__init__.py                     0      0   100%
+annflux/training/annflux/clip.py                       332     36    89%
+annflux/training/annflux/clip_shared.py                 72     44    39%
+annflux/training/annflux/feature_extractor.py           59      9    85%
+annflux/training/annflux/group_classifier_cnn.py       210    177    16%
+annflux/training/annflux/quick.py                      371    106    71%
+annflux/training/tensorflow/__init__.py                  0      0   100%
+annflux/training/tensorflow/tf_backend.py               77     55    29%
+annflux/ui/__init__.py                                   0      0   100%
+annflux/ui/basic/__init__.py                             0      0   100%
+annflux/ui/basic/run_server.py                         517    163    68%
+------------------------------------------------------------------------
+TOTAL                                                 5602   1904    66%
+=========================== short test summary info ============================
+SKIPPED [1] annflux/tests/test_api_integration.py:136: needs work
+SKIPPED [1] annflux/tests/test_api_integration.py:397: fix later
+FAILED annflux/tests/test_api_integration.py::TestAPIIntegration::test_error_recovery_workflow - ValueError: Failed to evaluate pseudo-SQL: name 'invalid_sql_syntax' is not defined, invalid_sql_syntax
+FAILED annflux/tests/test_api_integration.py::TestAPISecurity::test_input_validation - ValueError: Failed to evaluate pseudo-SQL: unterminated string literal (detected at line 1) (<string>, line 1), "; DROP TABLE annflux; --
+FAILED annflux/tests/test_performance.py::TestPerformance::test_speed - FileNotFoundError: [Errno 2] No such file or directory: '/home/lhogeweg/Documents/annflux_ln/src/annflux/ui/basic/compute_performance_test.pkl'
+FAILED annflux/tests/test_query.py::TestQuery::test_not_in_query - ValueError: Failed to evaluate pseudo-SQL: name 'NOT' is not defined, (NOT.str.contains("~df.label_predicted NOT IN", na=False))
+FAILED annflux/tests/test_rest_api.py::TestAuthentication::test_auth_required - assert 200 == 401
+ +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+FAILED annflux/tests/test_rest_api.py::TestErrorHandling::test_missing_project_root - assert 200 in [500, 404]
+ +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+FAILED annflux/tests/test_rest_api.py::TestErrorHandling::test_corrupted_data_files - NameError: name 'g_state' is not defined
+FAILED annflux/tests/test_server.py::test_al_strategies - KeyError: 'test_performance'
+======== 8 failed, 65 passed, 2 skipped, 1 warning in 188.29s (0:03:08) ========

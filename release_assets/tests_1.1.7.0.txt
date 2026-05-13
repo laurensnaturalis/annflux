@@ -1,0 +1,30 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-8.3.5, pluggy-1.6.0 -- /home/lhogeweg/Documents/annflux_ln/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/lhogeweg/Documents/annflux_ln
+configfile: pytest.ini
+plugins: cov-7.0.0
+collecting ... collected 7 items
+
+annflux/tests/test_diversify.py::TestDiversify::test_all_indices_valid PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_diversify_from_none_defaults_to_len PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_no_duplicate_indices PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_returns_correct_length PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_selects_spread_out_points PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_small_input PASSED
+annflux/tests/test_diversify.py::TestDiversify::test_starts_with_zero PASSED
+
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.11.14-final-0 _______________
+
+Name                                Stmts   Miss  Cover
+-------------------------------------------------------
+__init__.py                             0      0   100%
+annflux/__init__.py                     0      0   100%
+annflux/algorithms/__init__.py          0      0   100%
+annflux/algorithms/most_needed.py      68     42    38%
+annflux/tests/__init__.py               0      0   100%
+annflux/tests/test_diversify.py        59      1    98%
+-------------------------------------------------------
+TOTAL                                 127     43    66%
+============================== 7 passed in 0.34s ===============================
