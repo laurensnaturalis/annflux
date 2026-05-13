@@ -48,7 +48,7 @@ def m():
         # n += 1
         pass
 
-    pandas.DataFrame(data=rows, columns=("image_id", "barcode", "label")).to_csv("/mnt/big/datasets/bioannflux2/images.csv")
+    pandas.DataFrame(data=rows, columns=("image_id", "barcode", "label_true")).to_csv("/mnt/big/datasets/bioannflux2/images.csv")
 
     x = np.vstack(embeddings)
     print(x.shape)

@@ -25,12 +25,17 @@ function Map2D($container) {
     this.lastZoomUpdate = new Date().getTime() / 1000;
     this.numUpdatesActive = 0;
     let localData = null;
-    this.showLines = true;
+    const LINE_THRESHOLDS = [0, 5, 10, null];
+    this.lineThresholdIndex = 1;
 
     this.toggleLines = function () {
-        this.showLines = !this.showLines;
+        this.lineThresholdIndex = (this.lineThresholdIndex + 1) % LINE_THRESHOLDS.length;
+        const threshold = LINE_THRESHOLDS[this.lineThresholdIndex];
         d3.select(`#${dotsId}`).selectAll("line.alt-link")
-            .style("display", this.showLines ? null : "none");
+            .style("display", (d) => {
+                if (threshold === null) return "none";
+                return parseFloat(d.alt_line_angle) > threshold ? null : "none";
+            });
     };
 
     // Initialize the map
@@ -414,7 +419,7 @@ function Map2D($container) {
                 d3Group,
                 dotsId,
                 this.filters,
-                this.showLines
+                LINE_THRESHOLDS[this.lineThresholdIndex]
             );
             console.timeEnd("render::addDots")
             //

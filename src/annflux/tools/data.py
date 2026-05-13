@@ -674,7 +674,7 @@ def init_folder(
         dataset = Dataset(unseen_dataset_path, taxon_mapping_path=taxon_mapping_path)
         repo.commit(dataset, tag="unseen")
 
-    if "label_true" in unseen_data.columns:
+    if "label" in unseen_data.columns:
         labels_path = source.labels_path
         if os.path.exists(labels_path):
             with open(labels_path) as f:
@@ -682,14 +682,14 @@ def init_folder(
         else:
             existing_labels = {}
         imported = {
-            str(row["uid"]): str(row["label_true"])
+            str(row["uid"]): str(row["label"])
             for _, row in unseen_data.iterrows()
-            if pandas.notna(row["label_true"]) and str(row["label_true"]).strip() != ""
+            if pandas.notna(row["label"]) and str(row["label"]).strip() != ""
         }
         existing_labels.update(imported)
         with open(labels_path, "w") as f:
             json.dump(existing_labels, f)
-        print(f"Imported {len(imported)} label_true values into {labels_path}")
+        print(f"Imported {len(imported)} label values into {labels_path}")
         label_defs_path = source.label_definitions_path
         if os.path.exists(label_defs_path):
             with open(label_defs_path) as f:
