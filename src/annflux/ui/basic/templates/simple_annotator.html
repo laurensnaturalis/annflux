@@ -48,17 +48,6 @@ limitations under the License.
     #save-btn:hover { background: #3b7; }
     #save-btn:disabled { background: #555; cursor: default; }
 
-    #label-bar {
-        display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 16px;
-        background: #252525; border-bottom: 1px solid #3a3a3a; position: sticky; top: 49px; z-index: 9;
-    }
-    .label-btn {
-        padding: 3px 10px; border-radius: 4px; border: 2px solid #666;
-        cursor: pointer; font-size: 0.82em; background: #333; color: #ddd;
-        white-space: nowrap;
-    }
-    .label-btn:hover { opacity: 0.85; }
-    .label-btn.active-filter { outline: 2px solid white; }
 
     #table-wrap { overflow-x: auto; padding: 0 0 40px 0; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -92,6 +81,11 @@ limitations under the License.
     .cur-label:not(.unlabeled):hover { opacity: 0.7; }
 
     .label-picker { display: flex; flex-wrap: wrap; gap: 4px; }
+    .label-search {
+        width: 100%; padding: 3px 7px; margin-bottom: 4px;
+        background: #2a2a2a; color: #ddd; border: 1px solid #555; border-radius: 4px;
+        font-size: 0.82em;
+    }
     .pick-btn {
         padding: 2px 8px; border-radius: 3px; border: 2px solid #555;
         cursor: pointer; font-size: 0.8em; background: #333; color: #ddd;
@@ -137,8 +131,6 @@ limitations under the License.
     <button id="save-btn" disabled>Save</button>
 </div>
 
-<div id="label-bar"></div>
-
 <div id="table-wrap">
     <table id="main-table">
         <colgroup>
@@ -165,10 +157,22 @@ limitations under the License.
     let pending = {};       // uid -> label string (unsaved changes)
     let activeLabel = null; // the label selected in the label bar
 
+    let childToParent = new Map(); // label -> parent label (or null)
+    let parentToChildren = new Map(); // label -> [child labels]
+
     /* ── load label defs ── */
     async function loadLabelDefs() {
         const j = await $.getJSON('/label_defs');
         labelDefs = (j.labels || []).map(l => l[0]);
+        childToParent = new Map();
+        parentToChildren = new Map();
+        (j.labels || []).forEach(([lbl, parent]) => {
+            if (parent && parent !== 'null') {
+                childToParent.set(lbl, parent);
+                if (!parentToChildren.has(parent)) parentToChildren.set(parent, []);
+                parentToChildren.get(parent).push(lbl);
+            }
+        });
     }
 
     /* ── load parquet data ── */
@@ -201,24 +205,6 @@ limitations under the License.
     function sliceN(data) {
         const n = parseInt($('#n-select').val());
         return n > 0 ? data.slice(0, n) : data;
-    }
-
-    /* ── render label bar ── */
-    function renderLabelBar() {
-        const $bar = $('#label-bar').empty();
-        $.each(labelDefs, (_, lbl) => {
-            $('<button>').addClass('label-btn').text(lbl).attr('data-label', lbl)
-                .on('click', () => selectActiveLabel(lbl))
-                .appendTo($bar);
-        });
-    }
-
-    /* ── select / deselect active label ── */
-    function selectActiveLabel(lbl) {
-        activeLabel = (activeLabel === lbl) ? null : lbl;
-        $('.label-btn').each(function () {
-            $(this).toggleClass('active-filter', $(this).data('label') === activeLabel);
-        });
     }
 
     /* ── apply filter + n-limit ── */
@@ -258,7 +244,8 @@ limitations under the License.
         if (lbls.length === 0) {
             $chips.append($('<span>').addClass('cur-label unlabeled').text('unlabeled'));
         } else {
-            $.each(lbls, (_, lbl) => {
+            const sorted = [...lbls].sort((a, b) => ancestors(a).length - ancestors(b).length);
+            $.each(sorted, (_, lbl) => {
                 $('<span>').addClass(`cur-label label_${lbl.replace(/ /g, '_')}`)
                     .text(lbl + ' ✕')
                     .css('cursor', 'pointer')
@@ -269,25 +256,85 @@ limitations under the License.
         }
         $cell.append($chips);
 
-        /* per-row label picker */
+        /* per-row label search + picker */
+        const $pickerWrap = $('<div>');
+        const $search = $('<input>').addClass('label-search')
+            .attr({type: 'text', placeholder: 'Search labels…'})
+            .on('input', function () { renderPicker($(this).val().toLowerCase().trim()); });
         const $picker = $('<div>').addClass('label-picker');
-        $.each(labelDefs, (_, lbl) => {
-            $('<button>').addClass('pick-btn')
-                .toggleClass('selected', lbls.includes(lbl))
-                .text(lbl)
-                .on('click', (e) => { e.stopPropagation(); assignLabel(d, lbl, $tr); })
-                .appendTo($picker);
-        });
-        $cell.append($picker);
+
+        function renderPicker(q) {
+            $picker.empty();
+            const matches = q
+                ? labelDefs.filter(l => l.toLowerCase().includes(q))
+                : labelDefs;
+            matches.slice(0, 50).forEach(lbl => {
+                $('<button>').addClass('pick-btn')
+                    .toggleClass('selected', currentLabels(d).includes(lbl))
+                    .text(lbl)
+                    .on('click', (e) => { e.stopPropagation(); assignLabel(d, lbl, $tr); renderPicker($search.val().toLowerCase().trim()); })
+                    .appendTo($picker);
+            });
+            if (matches.length > 50) {
+                $picker.append($('<span>').css({fontSize:'0.75em', color:'#888'}).text(`…${matches.length - 50} more, refine search`));
+            }
+        }
+
+        renderPicker('');
+        $pickerWrap.append($search, $picker);
+        $cell.append($pickerWrap);
     }
 
-    /* ── add a label to a row ── */
-    function assignLabel(d, lbl, $tr) {
-        const lbls = currentLabels(d);
-        if (!lbls.includes(lbl)) {
-            lbls.push(lbl);
-            pending[d.uid] = labelsToString(lbls);
+    /* ── walk ancestors of a label ── */
+    function ancestors(lbl) {
+        const result = [];
+        let cur = childToParent.get(lbl);
+        while (cur) {
+            result.push(cur);
+            cur = childToParent.get(cur);
         }
+        return result;
+    }
+
+    /* ── walk all descendants of a label (recursive) ── */
+    function descendants(lbl) {
+        const result = [];
+        const stack = parentToChildren.get(lbl) ? [...parentToChildren.get(lbl)] : [];
+        while (stack.length) {
+            const cur = stack.pop();
+            result.push(cur);
+            if (parentToChildren.has(cur)) stack.push(...parentToChildren.get(cur));
+        }
+        return result;
+    }
+
+    /* ── add a label (and its parents) to a row; remove hierarchical conflicts ── */
+    function assignLabel(d, lbl, $tr) {
+        const anc = ancestors(lbl);
+        const ancSet = new Set([lbl, ...anc]);          // new label + all its ancestors
+        const descSet = new Set(descendants(lbl));      // all descendants of new label
+
+        const before = currentLabels(d);
+
+        /* An existing label conflicts if it shares ANY ancestor (or is itself an
+           ancestor/descendant) with the new label, but is NOT in the new label's
+           own lineage. We drop it and re-add the new lineage cleanly. */
+        const kept = before.filter(existing => {
+            if (ancSet.has(existing)) return false;   // is ancestor of new label (will be re-added)
+            if (descSet.has(existing)) return false;  // is descendant of new label (superseded)
+            if (existing === lbl) return false;
+            /* check if existing shares any ancestor with the new label → conflict */
+            const existingAnc = new Set([existing, ...ancestors(existing)]);
+            for (const a of ancSet) {
+                if (existingAnc.has(a)) return false; // shares a node → conflicting branch
+            }
+            return true; // truly unrelated hierarchy
+        });
+
+        /* add lbl then its ancestors */
+        const toAdd = [lbl, ...anc].filter(a => !kept.includes(a));
+        const result = [...kept, ...toAdd];
+        pending[d.uid] = labelsToString(result);
         refreshRow(d, $tr);
         updateSaveBtn();
     }
@@ -366,7 +413,6 @@ limitations under the License.
 
     /* ── init ── */
     await loadLabelDefs();
-    renderLabelBar();
     const raw = await loadData();
     allData = sortByFreStrat(getActive(raw));
     filteredData = sliceN(allData);
