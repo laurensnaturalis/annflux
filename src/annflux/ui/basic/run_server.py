@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import fcntl
 import math
 import os
 import shutil
@@ -179,6 +180,33 @@ dump_linear_features = False
 optimize_weight_exponent = False
 
 num_unlabeled_certain = None
+
+_reclassification_lock = threading.Lock()
+_annflux_csv_version = 0
+
+
+class _AnnfluxCsvFileLock:
+    """Exclusive advisory lock on annflux.csv using a .lock sidecar file."""
+
+    def __init__(self, csv_path: str, bump_version: bool = False):
+        self._lock_path = csv_path + ".lock"
+        self._bump = bump_version
+        self._fh = None
+
+    def __enter__(self):
+        self._fh = open(self._lock_path, "w")
+        fcntl.flock(self._fh, fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, *_):
+        fcntl.flock(self._fh, fcntl.LOCK_UN)
+        self._fh.close()
+        self._fh = None
+
+    def _bump_version(self):
+        if self._bump:
+            global _annflux_csv_version
+            _annflux_csv_version += 1
 
 auth = HTTPBasicAuth()
 
@@ -627,6 +655,23 @@ def label():
     with open(g_state.labels_path, "w") as f:
         json.dump(j_labels, f, indent=2)
 
+    async_mode = str2bool(request.args.get("async", "0"))
+    if async_mode:
+        # update the labeled column in annflux.csv immediately so the data
+        # endpoint reflects the new labeled state right away
+        _update_labeled_column(set(j_labels.keys()))
+        # run reclassification in background; skip if already running
+        if _reclassification_lock.locked():
+            logger.info("Reclassification already running, skipping")
+        else:
+            t = threading.Thread(
+                target=_background_reclassification,
+                args=(is_group,),
+                daemon=True,
+            )
+            t.start()
+        return {"success": True, "async": True}
+
     do_quick_reclassification(is_group)
 
     return {
@@ -634,14 +679,67 @@ def label():
     }
 
 
-def do_quick_reclassification(is_group: bool):
-    quick_reclassification(g_state, logger, "quick", is_group)
+def do_quick_reclassification(is_group: bool, csv_write_lock=None):
+    quick_reclassification(g_state, logger, "quick", is_group, csv_write_lock=csv_write_lock)
     # if g_state.train_thread is None or not g_state.train_thread.is_alive():
     #     g_state.train_thread = threading.Thread(
     #         target=quick_reclassification, args=(g_state, logger, "quick", is_group)
     #     )
     #     g_state.train_thread.start()
     #     g_state.train_thread.join()
+
+
+def _background_reclassification(is_group: bool):
+    with _reclassification_lock:
+        try:
+            do_quick_reclassification(is_group, csv_write_lock=_AnnfluxCsvFileLock(g_state.annflux_path, bump_version=True))
+        except Exception as e:
+            logger.error(f"Background reclassification failed: {e}", exc_info=True)
+
+
+def _update_labeled_column(labeled_uids: set):
+    """Synchronously flip the labeled column in annflux.csv for the given uids."""
+    with _AnnfluxCsvFileLock(g_state.annflux_path):
+        try:
+            data = pandas.read_csv(
+                g_state.annflux_path,
+                dtype={"label_predicted": str, "label_true": str, "uid": str},
+            )
+            data["labeled"] = data["uid"].apply(lambda u: int(u in labeled_uids))
+            data.to_csv(g_state.annflux_path, index=False)
+        except Exception as e:
+            logger.error(f"_update_labeled_column failed: {e}", exc_info=True)
+
+
+@app.route("/annflux_csv_version", methods=["GET"])
+def annflux_csv_version():
+    return {"version": _annflux_csv_version}
+
+
+def _visible_metadata_path() -> str:
+    return os.path.join(g_state.annflux_folder, "visible_metadata.json")
+
+
+@app.route("/metadata/visible", methods=["GET"])
+def metadata_visible_get():
+    columns = list(pandas.read_csv(g_state.annflux_path, nrows=0).columns)
+    path = _visible_metadata_path()
+    selected = json.load(open(path)) if os.path.exists(path) else []
+    return {"columns": columns, "selected": selected}
+
+
+@app.route("/metadata/visible", methods=["PUT"])
+def metadata_visible_put():
+    selected = request.get_json(force=True)
+    with open(_visible_metadata_path(), "w") as f:
+        json.dump(selected, f)
+    return {"ok": True}
+
+
+@app.route("/metadata/visible/page")
+@auth.login_required
+def metadata_visible_page():
+    return render_template("metadata_visible.html")
 
 
 @app.route("/performance")

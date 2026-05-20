@@ -79,6 +79,28 @@ limitations under the License.
     }
     .cur-label.unlabeled { color: #888; border-color: #444; font-style: italic; }
     .cur-label:not(.unlabeled):hover { opacity: 0.7; }
+    #new-data-banner {
+        display: none;
+        background: #1a3a1a; border: 1px solid #3a7a3a; color: #7fd67f;
+        padding: 6px 16px; border-radius: 5px; font-size: 0.9em;
+    }
+    #new-data-banner a { color: #7fd67f; font-weight: bold; }
+    #instruction {
+        color: #aaa; font-size: 0.82em; padding: 4px 0;
+    }
+    tr.reviewed { background: #1a2a1a; }
+    .approve-btn {
+        padding: 4px 10px; border-radius: 4px; border: 1px solid #555;
+        background: #2a2a2a; color: #ccc; cursor: pointer; white-space: nowrap;
+    }
+    .approve-btn:hover { border-color: #aaa; color: #fff; }
+    .approve-btn.approved { background: #1a3a1a; border-color: #3a7a3a; color: #7fd67f; }
+    .meta-block { margin-top: 8px; padding-top: 6px; border-top: 1px solid #333; font-size: 0.8em; }
+    .meta-kv { display: flex; gap: 6px; padding: 1px 0; }
+    .meta-key { color: #888; white-space: nowrap; }
+    .meta-val { color: #ccc; word-break: break-word; }
+    a.settings-link { color: #888; font-size: 0.8em; text-decoration: none; margin-left: auto; }
+    a.settings-link:hover { color: #ddd; }
     .add-child-btn {
         font-size: 0.7em; padding: 0 4px; margin-left: 2px; border-radius: 3px;
         border: 1px solid #666; background: #2a2a2a; color: #aaa; cursor: pointer; vertical-align: middle;
@@ -125,6 +147,7 @@ limitations under the License.
 
 <div id="toolbar">
     <h1>Simple Annotator</h1>
+    <div id="instruction">For each row: verify or edit the labels, then click <strong>Approve</strong>. Save is enabled once all rows are approved.</div>
     <input id="filter-input" type="text" placeholder="Filter by predicted label…">
     <label style="color:#aaa;font-size:0.85em">Show:
         <select id="n-select" style="background:#333;color:#ddd;border:1px solid #555;border-radius:4px;padding:3px 6px">
@@ -137,7 +160,9 @@ limitations under the License.
         </select>
     </label>
     <span id="status">Loading…</span>
+    <span id="new-data-banner">&#x27F3; New predictions available — <a href="" onclick="location.reload();return false;">reload</a></span>
     <button id="save-btn" disabled>Save</button>
+    <a class="settings-link" href="/metadata/visible/page" title="Configure visible metadata columns">⚙ Metadata columns</a>
 </div>
 
 <div id="table-wrap">
@@ -152,6 +177,7 @@ limitations under the License.
             <th>Image</th>
             <th>UID</th>
             <th>Labels</th>
+            <th></th>
         </tr>
         </thead>
         <tbody id="table-body"></tbody>
@@ -164,10 +190,19 @@ limitations under the License.
     let filteredData = [];
     let labelDefs = [];
     let pending = {};       // uid -> label string (unsaved changes)
+    let reviewed = new Set(); // uids that have been approved or edited
     let activeLabel = null; // the label selected in the label bar
+    let _pollTimer = null;  // setInterval handle for version polling
+    let visibleMeta = [];   // ordered list of column names to show as metadata
 
     let childToParent = new Map(); // label -> parent label (or null)
     let parentToChildren = new Map(); // label -> [child labels]
+
+    /* ── load visible metadata config ── */
+    async function loadVisibleMeta() {
+        const r = await $.getJSON('/metadata/visible');
+        visibleMeta = r.selected || [];
+    }
 
     /* ── load label defs ── */
     async function loadLabelDefs() {
@@ -377,6 +412,17 @@ limitations under the License.
         const toAdd = [lbl, ...anc].filter(a => !kept.includes(a));
         const result = [...kept, ...toAdd];
         pending[d.uid] = labelsToString(result);
+        reviewed.add(d.uid);
+        refreshRow(d, $tr);
+        updateSaveBtn();
+    }
+
+    /* ── approve a row as-is (stamp current labels into pending) ── */
+    function approveRow(d, $tr) {
+        if (pending[d.uid] === undefined) {
+            pending[d.uid] = labelsToString(currentLabels(d));
+        }
+        reviewed.add(d.uid);
         refreshRow(d, $tr);
         updateSaveBtn();
     }
@@ -385,6 +431,7 @@ limitations under the License.
     function removeLabel(d, lbl, $tr) {
         const lbls = currentLabels(d).filter(l => l !== lbl);
         pending[d.uid] = labelsToString(lbls);
+        reviewed.add(d.uid);
         refreshRow(d, $tr);
         updateSaveBtn();
     }
@@ -392,10 +439,12 @@ limitations under the License.
     /* ── render table ── */
     function renderTable() {
         const $tbody = $('#table-body').empty();
-        $('#status').text(`${filteredData.length} / ${allData.length} rows`);
+        const reviewedCount = filteredData.filter(d => reviewed.has(d.uid)).length;
+        $('#status').text(`${reviewedCount} / ${filteredData.length} reviewed`);
 
         $.each(filteredData, (_, d) => {
-            const $tr = $('<tr>').toggleClass('changed', pending[d.uid] !== undefined);
+            const $tr = $('<tr>').toggleClass('changed', pending[d.uid] !== undefined)
+                .toggleClass('reviewed', reviewed.has(d.uid));
 
             /* image — click opens overlay */
             $('<td>').append(
@@ -417,18 +466,70 @@ limitations under the License.
                     if (activeLabel) assignLabel(d, activeLabel, $tr);
                 });
             $tr.append($labelsCell);
+
+            /* metadata key-value pairs — appended inside the labels <td> below the inner div */
+            if (visibleMeta.length > 0) {
+                const $metaBlock = $('<div>').addClass('meta-block');
+                visibleMeta.forEach(col => {
+                    const val = d[col];
+                    if (val === undefined || val === null || val === '') return;
+                    $('<div>').addClass('meta-kv')
+                        .append($('<span>').addClass('meta-key').text(col + ':'))
+                        .append($('<span>').addClass('meta-val').text(val))
+                        .appendTo($metaBlock);
+                });
+                $labelsCell.append($metaBlock);
+            }
+
+            /* approve button */
+            const $approveCell = $('<td>').css({verticalAlign: 'top', paddingTop: '8px'});
+            $('<button>').addClass('approve-btn')
+                .text(reviewed.has(d.uid) ? '✓' : 'Approve')
+                .toggleClass('approved', reviewed.has(d.uid))
+                .on('click', () => approveRow(d, $tr))
+                .appendTo($approveCell);
+            $tr.append($approveCell);
+
             refreshRow(d, $tr);
 
             $tbody.append($tr);
         });
     }
 
+    /* ── version polling ── */
+    function startPollingForNewData() {
+        if (_pollTimer) return; // already polling
+        $.getJSON('/annflux_csv_version').done(r => {
+            const versionAtSave = r.version;
+            _pollTimer = setInterval(() => {
+                $.getJSON('/annflux_csv_version').done(r2 => {
+                    if (r2.version > versionAtSave) {
+                        clearInterval(_pollTimer);
+                        _pollTimer = null;
+                        $('#new-data-banner').show();
+                        $('#status').text('Predictions updated.');
+                    }
+                });
+            }, 3000);
+        });
+    }
+
     /* ── save ── */
     function save() {
         if (!Object.keys(pending).length) return;
+        const savedUids = new Set(Object.keys(pending));
         $('#save-btn').prop('disabled', true);
-        $.post('/label', JSON.stringify(pending))
-            .done(() => location.reload())
+        $.post('/label?async=1', JSON.stringify(pending))
+            .done(() => {
+                /* mark saved rows as labeled in the local data so they drop off */
+                allData.forEach(d => { if (savedUids.has(d.uid)) d.labeled = 1; });
+                pending = {};
+                reviewed = new Set();
+                applyFilter();
+                updateSaveBtn();
+                $('#status').text(`Saved ${savedUids.size} image(s). Background update running…`);
+                startPollingForNewData();
+            })
             .fail(() => {
                 alert('Save failed. Please try again.');
                 $('#save-btn').prop('disabled', false);
@@ -436,7 +537,10 @@ limitations under the License.
     }
 
     function updateSaveBtn() {
-        $('#save-btn').prop('disabled', !Object.keys(pending).length);
+        const allReviewed = filteredData.length > 0 && filteredData.every(d => reviewed.has(d.uid));
+        $('#save-btn').prop('disabled', !allReviewed);
+        const reviewedCount = filteredData.filter(d => reviewed.has(d.uid)).length;
+        $('#status').text(`${reviewedCount} / ${filteredData.length} reviewed`);
     }
 
     /* ── overlay ── */
@@ -455,6 +559,7 @@ limitations under the License.
 
     /* ── init ── */
     await loadLabelDefs();
+    await loadVisibleMeta();
     const raw = await loadData();
     allData = sortByFreStrat(getActive(raw));
     filteredData = sliceN(allData);

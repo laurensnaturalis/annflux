@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Visible Metadata Columns</title>
+<style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { background: #1e1e1e; color: #ddd; font-family: sans-serif; margin: 0; padding: 24px; }
+    h1 { font-size: 1.4em; margin: 0 0 6px; }
+    p.hint { color: #888; font-size: 0.85em; margin: 0 0 18px; }
+    #search { background: #2a2a2a; border: 1px solid #555; color: #ddd; border-radius: 4px;
+              padding: 6px 10px; width: 280px; margin-bottom: 14px; }
+    #col-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+    .col-chip {
+        display: flex; align-items: center; gap: 6px;
+        background: #2a2a2a; border: 1px solid #555; border-radius: 4px;
+        padding: 5px 10px; cursor: pointer; user-select: none; font-size: 0.9em;
+    }
+    .col-chip:hover { border-color: #aaa; }
+    .col-chip.selected { background: #1a3a1a; border-color: #3a7a3a; color: #7fd67f; }
+    .col-chip input[type=checkbox] { accent-color: #4caf50; cursor: pointer; }
+    #selected-list { margin-bottom: 20px; }
+    #selected-list h2 { font-size: 1em; color: #aaa; margin: 0 0 8px; }
+    #order-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+    #order-list li {
+        display: flex; align-items: center; gap: 10px;
+        background: #2a2a2a; border: 1px solid #444; border-radius: 4px; padding: 5px 10px;
+        font-size: 0.9em;
+    }
+    #order-list li .drag-handle { cursor: grab; color: #666; font-size: 1.1em; }
+    #order-list li .remove-btn { margin-left: auto; cursor: pointer; color: #888; }
+    #order-list li .remove-btn:hover { color: #f88; }
+    #save-btn {
+        background: #2a5a2a; border: 1px solid #3a7a3a; color: #7fd67f;
+        padding: 8px 22px; border-radius: 5px; cursor: pointer; font-size: 0.95em;
+    }
+    #save-btn:hover { background: #3a6a3a; }
+    #toast { display: none; color: #7fd67f; margin-left: 16px; font-size: 0.9em; }
+    a.back { color: #888; font-size: 0.85em; text-decoration: none; display: inline-block; margin-bottom: 18px; }
+    a.back:hover { color: #ddd; }
+</style>
+</head>
+<body>
+
+<a class="back" href="/simple">← Back to Simple Annotator</a>
+<h1>Visible Metadata Columns</h1>
+<p class="hint">Choose which columns from annflux.csv appear as metadata in the annotator. Drag to reorder.</p>
+
+<input id="search" type="text" placeholder="Search columns…">
+<div id="col-list"></div>
+
+<div id="selected-list">
+    <h2>Selected (drag to reorder)</h2>
+    <ul id="order-list"></ul>
+</div>
+
+<button id="save-btn">Save</button>
+<span id="toast">Saved!</span>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+    let allColumns = [];
+    let selected = [];  // ordered list of selected column names
+
+    async function load() {
+        const r = await $.getJSON('/metadata/visible');
+        allColumns = r.columns;
+        selected = r.selected.filter(c => allColumns.includes(c));
+        renderSearch('');
+        renderOrder();
+    }
+
+    function renderSearch(q) {
+        const $list = $('#col-list').empty();
+        const matches = q ? allColumns.filter(c => c.toLowerCase().includes(q)) : allColumns;
+        matches.forEach(col => {
+            const on = selected.includes(col);
+            const $chip = $('<label>').addClass('col-chip').toggleClass('selected', on);
+            $('<input>').attr({type: 'checkbox'}).prop('checked', on)
+                .on('change', function () {
+                    if (this.checked) {
+                        if (!selected.includes(col)) selected.push(col);
+                    } else {
+                        selected = selected.filter(c => c !== col);
+                    }
+                    renderSearch($('#search').val().toLowerCase().trim());
+                    renderOrder();
+                })
+                .appendTo($chip);
+            $chip.append(document.createTextNode(col));
+            $list.append($chip);
+        });
+    }
+
+    function renderOrder() {
+        const $ul = $('#order-list').empty();
+        selected.forEach((col, i) => {
+            const $li = $('<li>').attr('data-col', col);
+            $('<span>').addClass('drag-handle').text('⠿').appendTo($li);
+            $('<span>').text(col).appendTo($li);
+            $('<span>').addClass('remove-btn').text('✕').attr('title', 'Remove')
+                .on('click', () => {
+                    selected = selected.filter(c => c !== col);
+                    renderSearch($('#search').val().toLowerCase().trim());
+                    renderOrder();
+                })
+                .appendTo($li);
+            $ul.append($li);
+        });
+        makeSortable();
+    }
+
+    function makeSortable() {
+        const ul = document.getElementById('order-list');
+        let dragged = null;
+        ul.querySelectorAll('li').forEach(li => {
+            li.setAttribute('draggable', true);
+            li.addEventListener('dragstart', e => { dragged = li; li.style.opacity = '0.4'; });
+            li.addEventListener('dragend', e => { li.style.opacity = ''; dragged = null; syncOrder(); });
+            li.addEventListener('dragover', e => { e.preventDefault(); if (dragged && dragged !== li) ul.insertBefore(dragged, li); });
+        });
+    }
+
+    function syncOrder() {
+        selected = [...document.querySelectorAll('#order-list li')].map(li => li.dataset.col);
+    }
+
+    $('#search').on('input', function () { renderSearch($(this).val().toLowerCase().trim()); });
+
+    $('#save-btn').on('click', async function () {
+        syncOrder();
+        await $.ajax({ url: '/metadata/visible', method: 'PUT',
+            contentType: 'application/json', data: JSON.stringify(selected) });
+        $('#toast').show().delay(2000).fadeOut();
+    });
+
+    load();
+</script>
+</body>
+</html>
