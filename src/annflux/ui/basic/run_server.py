@@ -716,6 +716,23 @@ def annflux_csv_version():
     return {"version": _annflux_csv_version}
 
 
+@app.route("/class_examples/<label>", methods=["GET"])
+def class_examples(label: str):
+    n = int(request.args.get("n", 10))
+    data = pandas.read_csv(
+        g_state.annflux_path,
+        usecols=["uid", "label_true", "labeled"],
+        dtype={"uid": str, "label_true": str},
+    )
+    labeled = data[data["labeled"] == 1].dropna(subset=["label_true"])
+    hits = labeled[labeled["label_true"].str.contains(
+        r"(?:^|,)\s*" + label.replace("(", r"\(").replace(")", r"\)") + r"\s*(?:,|$)",
+        regex=True,
+    )]
+    uids = hits["uid"].tolist()[:n]
+    return {"uids": uids}
+
+
 def _visible_metadata_path() -> str:
     return os.path.join(g_state.annflux_folder, "visible_metadata.json")
 

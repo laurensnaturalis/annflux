@@ -101,6 +101,13 @@ limitations under the License.
     .meta-val { color: #ccc; word-break: break-word; }
     a.settings-link { color: #888; font-size: 0.8em; text-decoration: none; margin-left: auto; }
     a.settings-link:hover { color: #ddd; }
+    col.col-examples { width: 220px; }
+    .examples-cell { vertical-align: top; padding: 4px 6px; }
+    .examples-label { font-size: 0.72em; color: #888; margin-bottom: 3px; font-style: italic; }
+    .examples-strip { display: flex; flex-wrap: wrap; gap: 3px; }
+    .ex-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 3px;
+                border: 1px solid #444; cursor: pointer; }
+    .ex-thumb:hover { border-color: #aaa; }
     .add-child-btn {
         font-size: 0.7em; padding: 0 4px; margin-left: 2px; border-radius: 3px;
         border: 1px solid #666; background: #2a2a2a; color: #aaa; cursor: pointer; vertical-align: middle;
@@ -171,12 +178,14 @@ limitations under the License.
             <col class="col-img">
             <col class="col-uid">
             <col class="col-lbl">
+            <col class="col-examples">
         </colgroup>
         <thead>
         <tr>
             <th>Image</th>
             <th>UID</th>
             <th>Labels</th>
+            <th>Examples</th>
             <th></th>
         </tr>
         </thead>
@@ -194,6 +203,7 @@ limitations under the License.
     let activeLabel = null; // the label selected in the label bar
     let _pollTimer = null;  // setInterval handle for version polling
     let visibleMeta = [];   // ordered list of column names to show as metadata
+    const examplesCache = new Map(); // label -> [uid, ...]
 
     let childToParent = new Map(); // label -> parent label (or null)
     let parentToChildren = new Map(); // label -> [child labels]
@@ -254,9 +264,10 @@ limitations under the License.
     /* ── apply filter + n-limit ── */
     function applyFilter() {
         const q = $('#filter-input').val().toLowerCase().trim();
+        const unlabeled = allData.filter(d => !d.labeled || parseInt(d.labeled) === 0);
         const base = q
-            ? allData.filter(d => (d.label_predicted || '').toLowerCase().includes(q))
-            : allData;
+            ? unlabeled.filter(d => (d.label_predicted || '').toLowerCase().includes(q))
+            : unlabeled;
         filteredData = sliceN(base);
         renderTable();
     }
@@ -481,6 +492,11 @@ limitations under the License.
                 $labelsCell.append($metaBlock);
             }
 
+            /* examples cell */
+            const $exCell = $('<td>').addClass('examples-cell');
+            $tr.append($exCell);
+            loadExamplesForRow(d, $exCell);
+
             /* approve button */
             const $approveCell = $('<td>').css({verticalAlign: 'top', paddingTop: '8px'});
             $('<button>').addClass('approve-btn')
@@ -493,6 +509,35 @@ limitations under the License.
             refreshRow(d, $tr);
 
             $tbody.append($tr);
+        });
+    }
+
+    /* ── most specific label: deepest in hierarchy ── */
+    function mostSpecificLabel(d) {
+        const lbls = currentLabels(d).filter(l => !l.includes('='));  // skip undetermined
+        if (!lbls.length) return null;
+        return lbls.reduce((best, l) => ancestors(l).length > ancestors(best).length ? l : best, lbls[0]);
+    }
+
+    /* ── fetch + render example thumbnails for a row ── */
+    async function loadExamplesForRow(d, $cell) {
+        const lbl = mostSpecificLabel(d);
+        if (!lbl) { $cell.text('—'); return; }
+        $cell.text('…');
+        if (!examplesCache.has(lbl)) {
+            const r = await $.getJSON(`/class_examples/${encodeURIComponent(lbl)}`);
+            examplesCache.set(lbl, r.uids || []);
+        }
+        const uids = examplesCache.get(lbl);
+        $cell.empty();
+        if (!uids.length) { $cell.text('no examples').css('color','#666'); return; }
+        $('<div>').addClass('examples-label').text(lbl).appendTo($cell);
+        const $strip = $('<div>').addClass('examples-strip').appendTo($cell);
+        uids.forEach(uid => {
+            $('<img>').addClass('ex-thumb')
+                .attr({src: `/images/thumbnail/${uid}`, alt: uid, title: uid})
+                .on('click', () => openOverlay(uid))
+                .appendTo($strip);
         });
     }
 
