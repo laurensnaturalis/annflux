@@ -1,0 +1,377 @@
+<!--
+Copyright 2025 Naturalis Biodiversity Center
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simple Annotator</title>
+<script type="module">
+    import {asyncBufferFromUrl, parquetReadObjects} from '/static/hyparquet/index.js';
+    window.asyncBufferFromUrl = asyncBufferFromUrl;
+    window.parquetReadObjects = parquetReadObjects;
+</script>
+<script src="/static/jquery-3.7.1.min.js"></script>
+<link rel="shortcut icon" href="/static/annflux.ico">
+<link type="text/css" rel="stylesheet" href="/labels/css"/>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #1e1e1e; color: #ddd; }
+
+    #toolbar {
+        display: flex; align-items: center; gap: 12px; padding: 8px 16px;
+        background: #2a2a2a; border-bottom: 1px solid #444; position: sticky; top: 0; z-index: 10;
+    }
+    #toolbar h1 { font-size: 1.1em; font-weight: bold; color: #aad; margin-right: auto; }
+    #filter-input {
+        padding: 4px 8px; background: #333; color: #ddd; border: 1px solid #555; border-radius: 4px;
+        width: 220px;
+    }
+    #status { color: #aaa; font-size: 0.85em; min-width: 120px; }
+    #save-btn {
+        padding: 6px 18px; background: #2a6; color: #fff; border: none; border-radius: 4px;
+        cursor: pointer; font-size: 0.95em;
+    }
+    #save-btn:hover { background: #3b7; }
+    #save-btn:disabled { background: #555; cursor: default; }
+
+    #label-bar {
+        display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 16px;
+        background: #252525; border-bottom: 1px solid #3a3a3a; position: sticky; top: 49px; z-index: 9;
+    }
+    .label-btn {
+        padding: 3px 10px; border-radius: 4px; border: 2px solid #666;
+        cursor: pointer; font-size: 0.82em; background: #333; color: #ddd;
+        white-space: nowrap;
+    }
+    .label-btn:hover { opacity: 0.85; }
+    .label-btn.active-filter { outline: 2px solid white; }
+
+    #table-wrap { overflow-x: auto; padding: 0 0 40px 0; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    col.col-img  { width: 540px; }
+    col.col-uid  { width: 180px; }
+    col.col-lbl  { width: auto; }
+    th {
+        position: sticky; top: 0; background: #2a2a2a; color: #bbb;
+        font-size: 0.8em; text-align: left; padding: 6px 10px;
+        border-bottom: 1px solid #444; white-space: nowrap;
+    }
+    tr:nth-child(even) td { background: #252525; }
+    tr:nth-child(odd)  td { background: #1e1e1e; }
+    tr.changed td { background: #2a3a2a !important; }
+    td { padding: 4px 8px; vertical-align: top; }
+
+    .thumb { width: 512px; height: 512px; object-fit: contain; cursor: pointer; border-radius: 3px; display: block; }
+    .thumb:hover { opacity: 0.8; }
+
+    .pred-label {
+        font-size: 0.82em; padding: 2px 7px; border-radius: 3px;
+        border: 2px solid #666; display: inline-block;
+    }
+    .labels-cell-inner { display: flex; flex-direction: column; gap: 6px; }
+    .chips-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .cur-label {
+        font-size: 0.82em; padding: 2px 7px; border-radius: 3px;
+        border: 2px solid #666; display: inline-block;
+    }
+    .cur-label.unlabeled { color: #888; border-color: #444; font-style: italic; }
+    .cur-label:not(.unlabeled):hover { opacity: 0.7; }
+
+    .label-picker { display: flex; flex-wrap: wrap; gap: 4px; }
+    .pick-btn {
+        padding: 2px 8px; border-radius: 3px; border: 2px solid #555;
+        cursor: pointer; font-size: 0.8em; background: #333; color: #ddd;
+        white-space: nowrap;
+    }
+    .pick-btn:hover { opacity: 0.8; }
+    .pick-btn.selected { outline: 2px solid white; }
+
+    /* full-image overlay */
+    #overlay {
+        display: none; position: fixed; inset: 0; background: #000c;
+        z-index: 100; align-items: center; justify-content: center;
+    }
+    #overlay.open { display: flex; }
+    #overlay img { max-width: 90vw; max-height: 90vh; object-fit: contain; }
+    #overlay-close {
+        position: absolute; top: 16px; right: 24px; font-size: 2em;
+        color: #fff; cursor: pointer; user-select: none;
+    }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+    <span id="overlay-close">&#x2715;</span>
+    <img id="overlay-img" src="" alt="">
+</div>
+
+<div id="toolbar">
+    <h1>Simple Annotator</h1>
+    <input id="filter-input" type="text" placeholder="Filter by predicted label…">
+    <label style="color:#aaa;font-size:0.85em">Show:
+        <select id="n-select" style="background:#333;color:#ddd;border:1px solid #555;border-radius:4px;padding:3px 6px">
+            <option value="10" selected>10</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="250">250</option>
+            <option value="500">500</option>
+            <option value="0">All</option>
+        </select>
+    </label>
+    <span id="status">Loading…</span>
+    <button id="save-btn" disabled>Save</button>
+</div>
+
+<div id="label-bar"></div>
+
+<div id="table-wrap">
+    <table id="main-table">
+        <colgroup>
+            <col class="col-img">
+            <col class="col-uid">
+            <col class="col-lbl">
+        </colgroup>
+        <thead>
+        <tr>
+            <th>Image</th>
+            <th>UID</th>
+            <th>Labels</th>
+        </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+    </table>
+</div>
+
+<script type="module">
+    /* ── state ── */
+    let allData = [];
+    let filteredData = [];
+    let labelDefs = [];
+    let pending = {};       // uid -> label string (unsaved changes)
+    let activeLabel = null; // the label selected in the label bar
+
+    /* ── load label defs ── */
+    async function loadLabelDefs() {
+        const j = await $.getJSON('/label_defs');
+        labelDefs = (j.labels || []).map(l => l[0]);
+    }
+
+    /* ── load parquet data ── */
+    async function loadData() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const filter_query = urlParams.get('filter_query');
+        const url = filter_query ? `/data?filter_query=${encodeURIComponent(filter_query)}` : '/data';
+        const file = await window.asyncBufferFromUrl({url});
+        return await window.parquetReadObjects({file});
+    }
+
+    /* ── filter to active set (set == null / "active"), unlabeled only ── */
+    function getActive(data) {
+        const active = data.filter(d => d.set == null || d.set === '' || d.set === 'active');
+        const pool = active.length > 0 ? active : data;
+        return pool.filter(d => !d.labeled || parseInt(d.labeled) === 0);
+    }
+
+    /* ── sort by fre_strat ascending (lower = higher priority); NaN/missing last ── */
+    function sortByFreStrat(data) {
+        return [...data].sort((a, b) => {
+            const fa = parseFloat(a.fre_strat), fb = parseFloat(b.fre_strat);
+            const na = isNaN(fa), nb = isNaN(fb);
+            if (na && nb) return 0; if (na) return 1; if (nb) return -1;
+            return fa - fb;
+        });
+    }
+
+    /* ── slice to the configured n ── */
+    function sliceN(data) {
+        const n = parseInt($('#n-select').val());
+        return n > 0 ? data.slice(0, n) : data;
+    }
+
+    /* ── render label bar ── */
+    function renderLabelBar() {
+        const $bar = $('#label-bar').empty();
+        $.each(labelDefs, (_, lbl) => {
+            $('<button>').addClass('label-btn').text(lbl).attr('data-label', lbl)
+                .on('click', () => selectActiveLabel(lbl))
+                .appendTo($bar);
+        });
+    }
+
+    /* ── select / deselect active label ── */
+    function selectActiveLabel(lbl) {
+        activeLabel = (activeLabel === lbl) ? null : lbl;
+        $('.label-btn').each(function () {
+            $(this).toggleClass('active-filter', $(this).data('label') === activeLabel);
+        });
+    }
+
+    /* ── apply filter + n-limit ── */
+    function applyFilter() {
+        const q = $('#filter-input').val().toLowerCase().trim();
+        const base = q
+            ? allData.filter(d => (d.label_predicted || '').toLowerCase().includes(q))
+            : allData;
+        filteredData = sliceN(base);
+        renderTable();
+    }
+
+    /* ── current label list for a row (array of non-empty strings) ── */
+    function currentLabels(d) {
+        let raw;
+        if (pending[d.uid] !== undefined) {
+            raw = pending[d.uid];
+        } else {
+            raw = d.label_predicted || '';
+        }
+        return raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
+    }
+
+    /* ── serialize label list to string ── */
+    function labelsToString(arr) {
+        return arr.join(',');
+    }
+
+    /* ── rebuild the labels cell for one row ── */
+    function refreshRow(d, $tr) {
+        $tr.toggleClass('changed', pending[d.uid] !== undefined);
+        const $cell = $tr.find('.labels-cell-inner').empty();
+        const lbls = currentLabels(d);
+
+        /* current label chips */
+        const $chips = $('<div>').addClass('chips-row');
+        if (lbls.length === 0) {
+            $chips.append($('<span>').addClass('cur-label unlabeled').text('unlabeled'));
+        } else {
+            $.each(lbls, (_, lbl) => {
+                $('<span>').addClass(`cur-label label_${lbl.replace(/ /g, '_')}`)
+                    .text(lbl + ' ✕')
+                    .css('cursor', 'pointer')
+                    .attr('title', 'Click to remove')
+                    .on('click', (e) => { e.stopPropagation(); removeLabel(d, lbl, $tr); })
+                    .appendTo($chips);
+            });
+        }
+        $cell.append($chips);
+
+        /* per-row label picker */
+        const $picker = $('<div>').addClass('label-picker');
+        $.each(labelDefs, (_, lbl) => {
+            $('<button>').addClass('pick-btn')
+                .toggleClass('selected', lbls.includes(lbl))
+                .text(lbl)
+                .on('click', (e) => { e.stopPropagation(); assignLabel(d, lbl, $tr); })
+                .appendTo($picker);
+        });
+        $cell.append($picker);
+    }
+
+    /* ── add a label to a row ── */
+    function assignLabel(d, lbl, $tr) {
+        const lbls = currentLabels(d);
+        if (!lbls.includes(lbl)) {
+            lbls.push(lbl);
+            pending[d.uid] = labelsToString(lbls);
+        }
+        refreshRow(d, $tr);
+        updateSaveBtn();
+    }
+
+    /* ── remove a label from a row ── */
+    function removeLabel(d, lbl, $tr) {
+        const lbls = currentLabels(d).filter(l => l !== lbl);
+        pending[d.uid] = labelsToString(lbls);
+        refreshRow(d, $tr);
+        updateSaveBtn();
+    }
+
+    /* ── render table ── */
+    function renderTable() {
+        const $tbody = $('#table-body').empty();
+        $('#status').text(`${filteredData.length} / ${allData.length} rows`);
+
+        $.each(filteredData, (_, d) => {
+            const $tr = $('<tr>').toggleClass('changed', pending[d.uid] !== undefined);
+
+            /* image — click opens overlay */
+            $('<td>').append(
+                $('<img>').addClass('thumb')
+                    .attr({src: `/images/thumbnail/${d.uid}`, alt: d.uid})
+                    .on('click', () => openOverlay(d.uid))
+            ).appendTo($tr);
+
+            /* uid */
+            $('<td>').css({fontSize: '0.75em', color: '#999'}).text(d.uid).appendTo($tr);
+
+            /* merged labels cell — click on cell assigns active label */
+            const $labelsInner = $('<div>').addClass('labels-cell-inner');
+            const $labelsCell = $('<td>')
+                .css('cursor', 'pointer')
+                .append($labelsInner)
+                .on('click', function (e) {
+                    if ($(e.target).hasClass('cur-label') && !$(e.target).hasClass('unlabeled')) return;
+                    if (activeLabel) assignLabel(d, activeLabel, $tr);
+                });
+            $tr.append($labelsCell);
+            refreshRow(d, $tr);
+
+            $tbody.append($tr);
+        });
+    }
+
+    /* ── save ── */
+    function save() {
+        if (!Object.keys(pending).length) return;
+        $('#save-btn').prop('disabled', true);
+        $.post('/label', JSON.stringify(pending))
+            .done(() => location.reload())
+            .fail(() => {
+                alert('Save failed. Please try again.');
+                $('#save-btn').prop('disabled', false);
+            });
+    }
+
+    function updateSaveBtn() {
+        $('#save-btn').prop('disabled', !Object.keys(pending).length);
+    }
+
+    /* ── overlay ── */
+    function openOverlay(uid) {
+        $('#overlay-img').attr('src', `/images/full/${uid}`);
+        $('#overlay').addClass('open');
+    }
+    $('#overlay-close, #overlay').on('click', function (e) {
+        if (e.target === this) $('#overlay').removeClass('open');
+    });
+
+    /* ── wire up toolbar ── */
+    $('#filter-input').on('input', applyFilter);
+    $('#n-select').on('change', applyFilter);
+    $('#save-btn').on('click', save);
+
+    /* ── init ── */
+    await loadLabelDefs();
+    renderLabelBar();
+    const raw = await loadData();
+    allData = sortByFreStrat(getActive(raw));
+    filteredData = sliceN(allData);
+    $('#status').text(`${filteredData.length} / ${allData.length} rows`);
+    renderTable();
+</script>
+</body>
+</html>
