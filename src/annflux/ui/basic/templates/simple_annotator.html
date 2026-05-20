@@ -79,6 +79,15 @@ limitations under the License.
     }
     .cur-label.unlabeled { color: #888; border-color: #444; font-style: italic; }
     .cur-label:not(.unlabeled):hover { opacity: 0.7; }
+    .add-child-btn {
+        font-size: 0.7em; padding: 0 4px; margin-left: 2px; border-radius: 3px;
+        border: 1px solid #666; background: #2a2a2a; color: #aaa; cursor: pointer; vertical-align: middle;
+    }
+    .add-child-btn:hover { color: #fff; border-color: #aaa; }
+    .new-child-input {
+        font-size: 0.8em; padding: 2px 5px; border-radius: 3px;
+        border: 1px solid #888; background: #1e1e1e; color: #ddd; width: 160px;
+    }
 
     .label-picker { display: flex; flex-wrap: wrap; gap: 4px; }
     .label-search {
@@ -246,12 +255,45 @@ limitations under the License.
         } else {
             const sorted = [...lbls].sort((a, b) => ancestors(a).length - ancestors(b).length);
             $.each(sorted, (_, lbl) => {
-                $('<span>').addClass(`cur-label label_${lbl.replace(/ /g, '_')}`)
-                    .text(lbl + ' ✕')
-                    .css('cursor', 'pointer')
-                    .attr('title', 'Click to remove')
+                const $chip = $('<span>').addClass(`cur-label label_${lbl.replace(/ /g, '_')}`);
+
+                $('<span>').text(lbl + ' ✕').css('cursor','pointer').attr('title','Click to remove')
                     .on('click', (e) => { e.stopPropagation(); removeLabel(d, lbl, $tr); })
-                    .appendTo($chips);
+                    .appendTo($chip);
+
+                /* + button to add a child label */
+                $('<button>').addClass('add-child-btn').text('+').attr('title', `Add child of ${lbl}`)
+                    .on('click', (e) => {
+                        e.stopPropagation();
+                        const $input = $('<input>').addClass('new-child-input')
+                            .attr({type: 'text', placeholder: `child of ${lbl}…`})
+                            .on('keydown', async function (ev) {
+                                if (ev.key === 'Enter') {
+                                    const name = $(this).val().trim();
+                                    if (!name) return;
+                                    /* register in label_defs */
+                                    await $.ajax({url: '/label_defs', method: 'PUT',
+                                        contentType: 'application/json',
+                                        data: JSON.stringify([name, lbl])});
+                                    /* update local maps */
+                                    if (!labelDefs.includes(name)) {
+                                        labelDefs.push(name);
+                                        childToParent.set(name, lbl);
+                                        if (!parentToChildren.has(lbl)) parentToChildren.set(lbl, []);
+                                        parentToChildren.get(lbl).push(name);
+                                    }
+                                    $(this).remove();
+                                    assignLabel(d, name, $tr);
+                                } else if (ev.key === 'Escape') {
+                                    $(this).remove();
+                                }
+                            });
+                        $chip.after($input);
+                        $input.trigger('focus');
+                    })
+                    .appendTo($chip);
+
+                $chip.appendTo($chips);
             });
         }
         $cell.append($chips);
