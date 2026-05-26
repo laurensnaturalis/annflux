@@ -107,21 +107,26 @@ def compute_near_labeled(
     """
     Compute points that are near labeled points
     """
-    set_labeled_indices = set(labeled_indices)
-    near_labeled_indices = []
-    num_total = len(all_nn_indices)
-    indices_todo = set(list(range(num_total))) - set_labeled_indices
     start_time = time.time()
-    for index in tqdm(
-        indices_todo, total=len(indices_todo), desc="computing near labeled"
-    ):
-        if set_labeled_indices.intersection(set(all_nn_indices[index])) == set():
-            pass
-        else:
-            near_labeled_indices.append(index)
+    labeled_arr = np.sort(np.asarray(labeled_indices))
+    num_total = len(all_nn_indices)
+
+    # mask of rows that are themselves labeled
+    is_labeled = np.zeros(num_total, dtype=bool)
+    is_labeled[labeled_arr] = True
+
+    # O(N*k) boolean lookup: build a boolean array indexed by node id
+    max_idx = int(all_nn_indices.max())
+    labeled_lookup = np.zeros(max_idx + 1, dtype=bool)
+    labeled_lookup[labeled_arr] = True
+    has_labeled_neighbor = labeled_lookup[all_nn_indices].any(axis=1)
+
+    near_labeled_mask = (~is_labeled) & has_labeled_neighbor
+    near_labeled_indices = np.where(near_labeled_mask)[0].tolist()
+
     logger.info(f"compute_near_labeled took={time.time() - start_time}")
 
     perc_near_labeled = (
-        len(near_labeled_indices) + len(set_labeled_indices)
+        len(near_labeled_indices) + len(labeled_indices)
     ) / num_total
     return near_labeled_indices, perc_near_labeled
