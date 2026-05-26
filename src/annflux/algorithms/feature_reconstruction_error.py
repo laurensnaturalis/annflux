@@ -14,7 +14,6 @@
 # limitations under the License.
 import line_profiler
 from pandas import DataFrame
-from pandas.core.api import DataFrame
 import logging
 import os
 import time
@@ -26,7 +25,6 @@ import numpy as np
 import pandas
 from numpy._typing import NDArray
 from sklearn.decomposition import PCA
-from tqdm import tqdm
 
 from annflux.tools.data import canon_
 
@@ -110,8 +108,7 @@ def compute_fre(
     # compute FRE values
     time_start = time.time()
     column_name = "fre"
-    data[column_name] = None
-    update_for_key = []
+    fre_arr = np.full(len(data), np.nan)
     for label_predicted_ in data.label_predicted.unique():
         if pandas.isna(label_predicted_):
             continue
@@ -125,13 +122,9 @@ def compute_fre(
                 pca.inverse_transform(pca.transform(features_)) - features_, axis=1
             )
             logger.debug(f"{label_predicted_=}, {fre.min()=}, {fre.max()=}")
-            # data.loc[indices_, column_name] = fre
-            for index_, fre_val in zip(indices_, fre):
-                update_for_key.append((index_, fre_val))
+            fre_arr[indices_] = fre
 
-
-    # update data frame
-    update_column_fast(column_name, data, update_for_key)
+    data[column_name] = fre_arr
 
     logger.info(f"pca application took={time.time() - time_start:.2f}")
     data[column_name] /= data[column_name].max()
@@ -151,30 +144,44 @@ def stratify_by_label(data: DataFrame, labeled_indices: list[int]):
     count_per_label = Counter(
         data[~pandas.isna(data.label_true)]["label_true"].values.tolist()
     ).most_common()  # TODO: assumes label_true is canonized
-    label_rare_to_common = list(reversed([t_[0] for t_ in count_per_label]))
-    low_to_high_fre_indices = data.sort_values(by="fre", ascending=True).index
-    # label aggregate to FRE sorted index
-    agg_to_indices_unlabeled: dict[str, list[int]] = defaultdict(lambda: [])
-    label_predicted = [canon_(x_) for x_ in data["label_predicted"].values]
-    labeled_indices_set = set(labeled_indices)
-    for index_ in low_to_high_fre_indices:
-        if index_ not in labeled_indices_set and label_predicted[index_] is not None:
-            agg_to_indices_unlabeled[label_predicted[index_]].append(index_)
-    #
-    if len(agg_to_indices_unlabeled) > 0:
-        indices_for_fre_strat: list[int] = []
-        for block in range(max([len(list_) for list_ in agg_to_indices_unlabeled.values()])):
-            # pick the lowest FRE value first
-            for label in label_rare_to_common:
-                if len(agg_to_indices_unlabeled[label]) > 0:
-                    indices_for_fre_strat.append(agg_to_indices_unlabeled[label].pop(0))
+    label_rare_to_common = [t_[0] for t_ in reversed(count_per_label)]
 
-        update_for_key = []
-        for i, index_ in enumerate(indices_for_fre_strat):
-            update_for_key.append((index_, i))
-        data["fre_strat"] = len(indices_for_fre_strat) + 1
-        update_column_fast("fre_strat", data, update_for_key)
-        #
+    labeled_indices_set = set(labeled_indices)
+    label_predicted_arr = np.array([canon_(x_) for x_ in data["label_predicted"].values], dtype=object)
+
+    # unlabeled mask
+    unlabeled_mask = np.array(
+        [i not in labeled_indices_set for i in range(len(data))], dtype=bool
+    )
+    has_label = label_predicted_arr != None  # noqa: E711
+    candidate_mask = unlabeled_mask & has_label
+
+    # sort candidates by fre ascending
+    fre_vals = data["fre"].values.astype(float)
+    candidate_indices = np.where(candidate_mask)[0]
+    candidate_indices = candidate_indices[np.argsort(fre_vals[candidate_indices])]
+
+    # group candidates by predicted label (already fre-sorted within each group)
+    agg_to_indices_unlabeled: dict[str, list[int]] = defaultdict(list)
+    for idx in candidate_indices:
+        agg_to_indices_unlabeled[label_predicted_arr[idx]].append(int(idx))
+
+    if len(agg_to_indices_unlabeled) > 0:
+        # round-robin interleave using numpy: build position array directly
+        max_len = max(len(v) for v in agg_to_indices_unlabeled.values())
+        # pad each label's list to max_len with -1, stack, then read column-major
+        label_order = [lbl_ for lbl_ in label_rare_to_common if lbl_ in agg_to_indices_unlabeled]
+        padded = np.full((len(label_order), max_len), -1, dtype=np.intp)
+        for row, lbl in enumerate(label_order):
+            lst = agg_to_indices_unlabeled[lbl]
+            padded[row, :len(lst)] = lst
+        # column-major read gives the round-robin order; filter -1 sentinels
+        interleaved = padded.T.ravel()
+        indices_for_fre_strat = interleaved[interleaved >= 0]
+
+        fre_strat_arr = np.full(len(data), len(indices_for_fre_strat) + 1, dtype=np.intp)
+        fre_strat_arr[indices_for_fre_strat] = np.arange(len(indices_for_fre_strat))
+        data["fre_strat"] = fre_strat_arr
     logger.info(f"[TIMING] FRE stratify by label took {time.time() - time_start} s")
 
 
