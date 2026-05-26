@@ -110,12 +110,12 @@ def compute_fre(
     column_name = "fre"
     fre_arr = np.full(len(data), np.nan)
 
-    for label_predicted_ in data.label_predicted.unique():
-        if pandas.isna(label_predicted_):
-            continue
-        if label_predicted_ not in cache:
-            continue
-        indices_ = np.where(data.label_predicted == label_predicted_)[0]
+    label_to_indices = {
+        lbl: grp.index.values
+        for lbl, grp in data[data.label_predicted.notna()].groupby("label_predicted", sort=False)
+        if lbl in cache
+    }
+    for label_predicted_, indices_ in label_to_indices.items():
         pca_: PCA = cache[label_predicted_]
         feat_ = features[indices_]
         fre_arr[indices_] = np.linalg.norm(

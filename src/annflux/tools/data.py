@@ -307,9 +307,13 @@ def color_and_label(
         data["label_true"].values,
         data["label_predicted"].values,
     )
-    data["color_class"] = pandas.Series(label_for_color, index=data.index).map(
-        multilabel_to_color_func
+    label_for_color_s = pandas.Series(label_for_color, index=data.index)
+    na_mask = label_for_color_s.isna() | (label_for_color_s == "n/a")
+    canon_series = label_for_color_s.where(na_mask).fillna("").copy()
+    canon_series[~na_mask] = label_for_color_s[~na_mask].map(
+        lambda x_: canon_(x_, remove_unknown=True)
     )
+    data["color_class"] = canon_series.map(multilabel_to_color).fillna("#AAAAAA")
     logger.info(f"color_class took={time.time() - start_time}")
     #
     if (
@@ -332,13 +336,19 @@ def color_and_label(
             & lt.notna()
         )
 
-        scores = pandas.array([0.0] * len(data_to_update), dtype="float64")
+        lp_arr = lp.values
+        sp_arr = sp.values
+        lpred_arr = lpred.values
+        spred_arr = spred.values
+        lt_arr = lt.values
+        scores = np.zeros(len(data_to_update), dtype=np.float64)
         if candidate_mask.any():
-            scores[candidate_mask.values] = [
+            cand_indices = np.where(candidate_mask.values)[0]
+            scores[cand_indices] = [
                 compute_incorrect_score(
-                    lp.iloc[i], lt.iloc[i], sp.iloc[i], lpred.iloc[i], spred.iloc[i]
+                    lp_arr[i], lt_arr[i], sp_arr[i], lpred_arr[i], spred_arr[i]
                 )
-                for i in np.where(candidate_mask.values)[0]
+                for i in cand_indices
             ]
         data_to_update["incorrect_score"] = scores
         data_to_update.incorrect_score = (
