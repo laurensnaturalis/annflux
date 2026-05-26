@@ -109,20 +109,18 @@ def compute_fre(
     time_start = time.time()
     column_name = "fre"
     fre_arr = np.full(len(data), np.nan)
+
     for label_predicted_ in data.label_predicted.unique():
         if pandas.isna(label_predicted_):
             continue
+        if label_predicted_ not in cache:
+            continue
         indices_ = np.where(data.label_predicted == label_predicted_)[0]
-
-        features_ = features[indices_]
-
-        if label_predicted_ in cache:
-            pca: PCA = cache[label_predicted_]
-            fre = np.linalg.norm(
-                pca.inverse_transform(pca.transform(features_)) - features_, axis=1
-            )
-            logger.debug(f"{label_predicted_=}, {fre.min()=}, {fre.max()=}")
-            fre_arr[indices_] = fre
+        pca_: PCA = cache[label_predicted_]
+        feat_ = features[indices_]
+        fre_arr[indices_] = np.linalg.norm(
+            pca_.inverse_transform(pca_.transform(feat_)) - feat_, axis=1
+        )
 
     data[column_name] = fre_arr
 

@@ -193,29 +193,31 @@ def color_and_label(
         cluster_to_color = {
             k: rgb2hex(cmap(float(k / num_clusters))) for k in range(num_clusters + 1)
         }
-        data_to_update["dp_cluster_color"] = data_to_update.apply(
-            lambda x_: cluster_to_color[int(x_["dp_cluster"])]
-            if not pandas.isna(x_["dp_cluster"])
-            else "#800080",
-            axis=1,
+        dp_vals = data_to_update["dp_cluster"].values
+        dp_na = pandas.isna(dp_vals)
+        dp_color_arr = np.where(
+            dp_na,
+            "#800080",
+            [cluster_to_color[int(v)] if not n else "#800080"
+             for v, n in zip(dp_vals, dp_na)],
         )
+        data_to_update["dp_cluster_color"] = dp_color_arr
         logger.info(f"coloring dp_cluster took={time.time() - start_time}")
     #
     if "fre" in data_to_update.columns:
-        q5, q95 = np.percentile(data_to_update.fre, [1, 99])
+        q5, q95 = np.nanpercentile(data_to_update.fre, [1, 99])
         logger.info(f"fre={q5, q95}")
-        if q5 != q95:
-            data_to_update["fre_for_color"] = data_to_update.fre.apply(
-                lambda x_: (np.clip(x_, q5, q95) - q5) / (q95 - q5)
+        if np.isfinite(q5) and np.isfinite(q95) and q5 != q95:
+            fre_vals = data_to_update["fre"].values.astype(float)
+            fre_na = np.isnan(fre_vals)
+            fre_norm = np.where(fre_na, 0.0, (np.clip(fre_vals, q5, q95) - q5) / (q95 - q5))
+            cluster_to_color = [rgb2hex(cmap(k / 100)) for k in range(101)]
+            color_fre_arr = np.where(
+                fre_na,
+                "",
+                [cluster_to_color[int(v * 100)] for v in fre_norm],
             )
-            cluster_to_color = {k: rgb2hex(cmap(k / 100)) for k in range(101)}
-            data_to_update["color_fre"] = data_to_update.apply(
-                lambda x_: cluster_to_color[int(x_.fre_for_color * 100)]
-                if not pandas.isna(x_.fre_for_color)
-                else "",
-                axis=1,
-            )
-            del data_to_update["fre_for_color"]
+            data_to_update["color_fre"] = color_fre_arr
         logger.info(f"fre_for_color took={time.time() - start_time}")
     #
     label_to_float = dict(
