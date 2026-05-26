@@ -22,7 +22,7 @@ from faiss import pairwise_distances
 from numpy._typing import NDArray
 from tqdm import tqdm
 
-logger = logging.getLogger("annflux_server")
+logger = logging.getLogger("annflux_training")
 
 
 def diversify(

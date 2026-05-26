@@ -1,0 +1,7 @@
+label,precision,recall,support,num_predicted_certain,num_predicted_uncertain,num_labeled,num_unlabeled
+Own,0.9537037037037037,1.0,103,14158,2890,883,16185
+No activity,1.0,0.9351851851851852,108,16015,8473,1086,23502
+Animal,0.0,0.0,1,3,13,17,0
+Car,0.9537037037037037,1.0,103,14159,2889,883,16185
+Activity,0.944,1.0,118,14500,2979,1019,16475
+Human,0.84,1.0,21,460,55,221,294

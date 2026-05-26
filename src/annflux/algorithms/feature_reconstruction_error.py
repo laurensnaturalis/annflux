@@ -30,7 +30,7 @@ from tqdm import tqdm
 
 from annflux.tools.data import canon_
 
-logger = logging.getLogger("annflux_server")
+logger = logging.getLogger("annflux_training")
 agg_to_pca = {}  # TODO: reset when features are updated
 
 
@@ -176,6 +176,100 @@ def stratify_by_label(data: DataFrame, labeled_indices: list[int]):
         update_column_fast("fre_strat", data, update_for_key)
         #
     logger.info(f"[TIMING] FRE stratify by label took {time.time() - time_start} s")
+
+
+def compute_nn_underrepresented(
+    data: DataFrame,
+    features: NDArray,
+    labeled_indices: List[int],
+    all_indices: NDArray,
+    k_neighbors: int = 10,
+) -> None:
+    """Compute nn_underrepresented AL score.
+
+    For each labeled class (leaf label in label_true), find up to k_neighbors
+    unlabeled nearest neighbors in feature space. Assign a score so that
+    neighbors of under-represented classes come first (lowest score = highest
+    priority). Classes with fewer labeled examples are considered more
+    under-represented.
+
+    Writes column ``nn_underrepresented`` into *data* in-place.
+    """
+    t0 = time.time()
+
+    labeled_set = set(labeled_indices)
+
+    # --- count labeled examples per leaf class ----------------------------
+    labeled_data = data.iloc[sorted(labeled_set)]
+    label_true_col = labeled_data["label_true"].dropna()
+    label_count: Counter = Counter()
+    label_to_labeled_indices: dict[str, list[int]] = defaultdict(list)
+    for row_idx, lt in zip(label_true_col.index, label_true_col.values):
+        lt_c = canon_(lt)
+        if lt_c is None:
+            continue
+        # take the most specific (longest) label in the comma-separated list
+        parts = [p.strip() for p in lt_c.split(",") if p.strip()]
+        if not parts:
+            continue
+        leaf = max(parts, key=lambda p: len(p))  # longest string ≈ most specific
+        label_count[leaf] += 1
+        label_to_labeled_indices[leaf].append(row_idx)
+
+    logger.info(f"[TIMING] nn_underrepresented: label counting took {time.time() - t0:.3f} s, {len(label_count)} classes")
+
+    if not label_count:
+        data["nn_underrepresented"] = np.nan
+        return
+
+    # sort classes: rarest first
+    classes_rarest_first = [lbl for lbl, _ in sorted(label_count.items(), key=lambda kv: kv[1])]
+
+    t1 = time.time()
+    # --- for each class, find k unlabeled nearest neighbors ---------------
+    # all_indices shape: (N, K_total); row i = k nearest neighbor indices of sample i
+    unlabeled_array = np.array(sorted(set(range(len(data))) - labeled_set))
+    unlabeled_set = set(unlabeled_array.tolist())
+
+    # class -> ordered list of unlabeled neighbor indices (by distance rank)
+    class_to_neighbors: dict[str, list[int]] = {}
+    for lbl, lbl_indices in label_to_labeled_indices.items():
+        seen: dict[int, int] = {}  # neighbor_idx -> min rank
+        for src_idx in lbl_indices:
+            for rank, nb_idx in enumerate(all_indices[src_idx]):
+                nb_idx = int(nb_idx)
+                if nb_idx not in unlabeled_set:
+                    continue
+                if nb_idx not in seen or rank < seen[nb_idx]:
+                    seen[nb_idx] = rank
+        # sort by best (lowest) rank, take top-k
+        ordered = sorted(seen.items(), key=lambda kv: kv[1])[:k_neighbors]
+        class_to_neighbors[lbl] = [idx for idx, _ in ordered]
+
+    logger.info(f"[TIMING] nn_underrepresented: neighbor lookup took {time.time() - t1:.3f} s")
+
+    t2 = time.time()
+    # --- assign scores: interleave by class, rarest first -----------------
+    # score = position in the final interleaved list
+    assigned: dict[int, int] = {}  # data row index -> score
+    position = 0
+    queues = {lbl: list(class_to_neighbors.get(lbl, [])) for lbl in classes_rarest_first}
+    while any(queues.values()):
+        for lbl in classes_rarest_first:
+            if queues[lbl]:
+                nb_idx = queues[lbl].pop(0)
+                if nb_idx not in assigned:
+                    assigned[nb_idx] = position
+                    position += 1
+
+    default_score = position  # items not covered get a high score
+    data["nn_underrepresented"] = default_score
+    update_column_fast("nn_underrepresented", data, list(assigned.items()))
+
+    logger.info(
+        f"[TIMING] nn_underrepresented: score assignment took {time.time() - t2:.3f} s, "
+        f"{len(assigned)} unlabeled items scored, total {time.time() - t0:.3f} s"
+    )
 
 
 def update_column_fast(column_name: str, data: DataFrame, update_for_key: list[Any]):

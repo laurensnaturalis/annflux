@@ -156,6 +156,12 @@ limitations under the License.
     <h1>Simple Annotator</h1>
     <div id="instruction">For each row: verify or edit the labels, then click <strong>Approve</strong>. Save is enabled once all rows are approved.</div>
     <input id="filter-input" type="text" placeholder="Filter by predicted label…">
+    <label style="color:#aaa;font-size:0.85em">Sort:
+        <select id="sort-select" style="background:#333;color:#ddd;border:1px solid #555;border-radius:4px;padding:3px 6px">
+            <option value="fre_strat" selected>Deviating cases</option>
+            <option value="nn_underrepresented">Rare classes</option>
+        </select>
+    </label>
     <label style="color:#aaa;font-size:0.85em">Show:
         <select id="n-select" style="background:#333;color:#ddd;border:1px solid #555;border-radius:4px;padding:3px 6px">
             <option value="10" selected>10</option>
@@ -245,10 +251,11 @@ limitations under the License.
         return pool.filter(d => !d.labeled || parseInt(d.labeled) === 0);
     }
 
-    /* ── sort by fre_strat ascending (lower = higher priority); NaN/missing last ── */
+    /* ── sort by chosen column ascending (lower = higher priority); NaN/missing last ── */
     function sortByFreStrat(data) {
+        const col = $('#sort-select').val() || 'fre_strat';
         return [...data].sort((a, b) => {
-            const fa = parseFloat(a.fre_strat), fb = parseFloat(b.fre_strat);
+            const fa = parseFloat(a[col]), fb = parseFloat(b[col]);
             const na = isNaN(fa), nb = isNaN(fb);
             if (na && nb) return 0; if (na) return 1; if (nb) return -1;
             return fa - fb;
@@ -600,6 +607,13 @@ limitations under the License.
     /* ── wire up toolbar ── */
     $('#filter-input').on('input', applyFilter);
     $('#n-select').on('change', applyFilter);
+    $('#sort-select').on('change', () => {
+        allData = sortByFreStrat(allData);
+        reviewed.clear();
+        pending = {};
+        applyFilter();
+        updateSaveBtn();
+    });
     $('#save-btn').on('click', save);
 
     /* ── init ── */

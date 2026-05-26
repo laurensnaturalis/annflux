@@ -32,7 +32,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 
 from annflux.tools.core import AnnFluxState
 
-logger = logging.getLogger("annflux_server")
+logger = logging.getLogger("annflux_training")
 
 
 def linear_retraining(state: AnnFluxState, status_callback):

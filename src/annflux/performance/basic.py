@@ -29,7 +29,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 
 MultilabelPrediction = List[Tuple[str] | List[str]]
 
-logger = logging.getLogger("annflux_server")
+logger = logging.getLogger("annflux_training")
 
 
 def compute_performance(
@@ -69,35 +69,27 @@ def compute_performance(
         for label_predicted in predicted_:
             predicted_matrix[i_, label_to_index[label_predicted]] = 1
 
-    for label_ in labels:
-        logger.debug(f"{label_=}")
-        per_image_true = true_matrix[:, label_to_index[label_]]
-        per_image_predicted = predicted_matrix[:, label_to_index[label_]]
-
-        precision, recall, f_score, support = precision_recall_fscore_support(
-            per_image_true, per_image_predicted, zero_division=0.0
-        )
-        # if sum(per_image_true) > 0:
-        #     print(label_, per_image_true, per_image_predicted, precision, recall, f_score, support)
-        if len(precision) > 0 and sum(per_image_true) > 0:
-            index_ = 1 if len(precision) > 1 else 0
+    precisions, recalls, f_scores, supports = precision_recall_fscore_support(
+        true_matrix, predicted_matrix, average=None, zero_division=0.0
+    )
+    for i, label_ in enumerate(labels):
+        if supports[i] > 0:
             logger.debug(
-                f"{label_} precision={precision[index_]:.2f} recall={recall[index_]:.2f} {support[index_]}"
+                f"{label_} precision={precisions[i]:.2f} recall={recalls[i]:.2f} {supports[i]}"
             )
             detailed_performance_table.append(
-                (label_, precision[index_], recall[index_], support[index_])
+                (label_, precisions[i], recalls[i], int(supports[i]))
             )
     out_table = pandas.DataFrame(
         data=detailed_performance_table,
         columns=("label", "precision", "recall", "support"),  # ty: ignore
     )
-    print(f"1/2  took {time.time() - time_start} s")
+    logger.info(f"[TIMING] compute_performance 1/2 took {time.time() - time_start:.3f} s")
     time_start = time.time()
 
     # compute how many are certain according to a threshold
     num_certain = defaultdict(lambda: 0)
     num_uncertain = defaultdict(lambda: 0)
-    num_labeled = defaultdict(lambda: 0)
     num_unlabeled_for_label = defaultdict(lambda: 0)
     data.scores_predicted = data.scores_predicted.astype(str)
     data_predicted = data[~pandas.isna(data.label_predicted) & (~pandas.isna(data.scores_predicted))]
@@ -109,7 +101,7 @@ def compute_performance(
     for label_predicted in data["label_predicted"].unique():
         predicted_label_map[label_predicted] = label_predicted.split(",") if label_predicted is not None else []
     #
-    print(f"{len(data_predicted)=}")
+    logger.info(f"{len(data_predicted)=}")
     list_label_true = data_predicted["label_true"]
     list_label_predicted = data_predicted["label_predicted"]
     list_num_labeled_nn = data_predicted["num_labeled_nn"]
@@ -132,20 +124,19 @@ def compute_performance(
             num_unlabeled_for_label[label_] += len(true_labels) == 0
 
         #
-    print(f"5/8  took {time.time() - time_start} s, {len(data)=}")
+    logger.info(f"[TIMING] compute_performance 5/8 took {time.time() - time_start:.3f} s, {len(data)=}")
     time_start = time.time()
     data_true = data[~pandas.isna(data.label_true)]
-    print(f"{len(data_true)=}")
-    for _, row in data_true.iterrows():
-        true_labels = (
-            row.label_true.split(",")
-            if not pandas.isna(row.label_true) and row.label_true is not None
-            else []
-        )
-
-        for label_ in true_labels:
-            num_labeled[label_] += 1
-    print(f"3/4  took {time.time() - time_start} s, {len(data)=}")
+    logger.info(f"{len(data_true)=}")
+    num_labeled = (
+        data_true["label_true"]
+        .str.split(",")
+        .explode()
+        .str.strip()
+        .value_counts()
+        .to_dict()
+    )
+    logger.info(f"[TIMING] compute_performance 3/4 took {time.time() - time_start:.3f} s, {len(data)=}")
     time_start = time.time()
     out_table["num_predicted_certain"] = [
         num_certain.get(x_, 0) for x_ in out_table.label
@@ -159,7 +150,7 @@ def compute_performance(
     ]
     if detailed_performance_path is not None:
         out_table.to_csv(detailed_performance_path, index=False)
-    print(f"compute_performance took {time.time() - time_start} s")
+    logger.info(f"[TIMING] compute_performance final took {time.time() - time_start:.3f} s")
 
 
 def write_performance(performance_graph_path, acc_test, num_train_val, num_test):

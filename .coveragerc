@@ -1,0 +1,28 @@
+[coverage:run]
+source = src/annflux
+omit = 
+    */tests/*
+    */test_*
+    */__pycache__/*
+    */.*
+    setup.py
+    */venv/*
+    */env/*
+
+[coverage:report]
+exclude_lines = 
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+    except ImportError:
+    except RuntimeError:
+
+[coverage:html]
+directory = htmlcov

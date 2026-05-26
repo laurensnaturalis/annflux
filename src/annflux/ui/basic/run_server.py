@@ -91,6 +91,7 @@ label_provider_path: str
 g_state: AnnFluxState
 g_layout: str = "label"
 logger: logging.Logger | None = None
+training_logger: logging.Logger | None = None
 
 
 class NoStatus(logging.Filter):
@@ -112,7 +113,7 @@ def _init():
         failed_images_path, \
         thumb_path_
 
-    global logger
+    global logger, training_logger
     project_root = os.getenv("PROJECT_ROOT", None)
     if project_root is None:
         raise RuntimeError("You should set PROJECT_ROOT environment variable")
@@ -142,14 +143,26 @@ def _init():
         g_state.project_folder, "annflux", "performance.json"
     )
 
-    print(os.getenv("LOGGING_LEVEL", "INFO"))
     log_level: int = logging.getLevelName(os.getenv("LOGGING_LEVEL", "INFO"))
-    log_path = os.path.join(g_state.annflux_folder, "annflux.log")
-    os.makedirs(g_state.annflux_folder, exist_ok=True)
+    logs_dir = os.path.join(g_state.annflux_folder, "logs")
+    _existing_logs = [f for f in os.listdir(logs_dir) if f.endswith(".log")]
+    if _existing_logs:
+        import shutil as _shutil
+        from datetime import datetime as _dt
+        _backup_dir = os.path.join(logs_dir, _dt.now().strftime("%Y%m%d_%H%M%S"))
+        os.makedirs(_backup_dir, exist_ok=True)
+        for _f in _existing_logs:
+            _shutil.move(os.path.join(logs_dir, _f), os.path.join(_backup_dir, _f))
+    log_path = os.path.join(logs_dir, "annflux.log")
     logger = get_logger(log_path, level=log_level, name="annflux_server")
+    training_log_path = os.path.join(logs_dir, "training.log")
+    training_logger = get_logger(training_log_path, level=log_level, name="annflux_training")
     logging.getLogger("werkzeug").addFilter(NoStatus())
     logger.warning(
         f"Logging to {log_path} with level {logging.getLevelName(log_level)}"
+    )
+    training_logger.warning(
+        f"Training logging to {training_log_path} with level {logging.getLevelName(log_level)}"
     )
 
     g_layout = "label"
@@ -680,7 +693,7 @@ def label():
 
 
 def do_quick_reclassification(is_group: bool, csv_write_lock=None):
-    quick_reclassification(g_state, logger, "quick", is_group, csv_write_lock=csv_write_lock)
+    quick_reclassification(g_state, training_logger, "quick", is_group, csv_write_lock=csv_write_lock)
     # if g_state.train_thread is None or not g_state.train_thread.is_alive():
     #     g_state.train_thread = threading.Thread(
     #         target=quick_reclassification, args=(g_state, logger, "quick", is_group)
@@ -851,7 +864,7 @@ def detailed_performance():
 
 def retrain_job(state: AnnFluxState):
     state.g_quick_status = "training"
-    load_data(state, logger, no_linear_features=True)
+    load_data(state, training_logger, no_linear_features=True)
     weights_path = linear_retraining(state, StatusUpdate(state))
     # shutil.copy(
     #     weights_path,
@@ -866,7 +879,7 @@ def retrain_job(state: AnnFluxState):
         repo,
         message=f"linear features from label state={len(state.labeled_indices)}",
     )
-    logger.info(
+    training_logger.info(
         f"Stored Resultset for linear trained features in {repo.get(label=Resultset).first()}"
     )
     #
@@ -887,9 +900,9 @@ def retrain_job(state: AnnFluxState):
     peak_merge(state.project_folder)
     state.g_quick_status = "quicker classification"
     #
-    quick_reclassification(state, logger)
+    quick_reclassification(state, training_logger)
 
-    logger.info(f"retrain_job: done - {state.trained_for_version}")
+    training_logger.info(f"retrain_job: done - {state.trained_for_version}")
     state.trained_for_version = len(state.labeled_indices)  # TODO: replace by hash?
 
 
@@ -898,7 +911,7 @@ def group_train_job(state: AnnFluxState):
     source = AnnfluxSource(state.project_folder)
 
     if state.features is None or state.labeled_indices is None:
-        load_data(state, logger)
+        load_data(state, training_logger)
 
     create_group_flux_data(source)
 
@@ -934,7 +947,7 @@ def group_train_job(state: AnnFluxState):
     )
     state.g_quick_status = "group embedding"
     group_embedding(g_state.project_folder)
-    logger.info(f"group_train_job: done - {state.trained_for_version}")
+    training_logger.info(f"group_train_job: done - {state.trained_for_version}")
     state.trained_for_version = len(state.labeled_indices)  # TODO(crit): for group
 
 
@@ -949,7 +962,7 @@ def status():
         if g_state.train_thread is None or not g_state.train_thread.is_alive():
             if g_state.labeled_indices is not None:
                 if g_state.trained_for_version != len(g_state.labeled_indices):
-                    logger.info(
+                    training_logger.info(
                         f"Training from status: {g_state.trained_for_version=}"
                         f", {len(g_state.labeled_indices)=}, {label_update['idleTime']}"
                     )
@@ -977,7 +990,7 @@ def status():
                     len(g_state.features),
                     len(g_state.labeled_indices),
                 ),
-                logger,
+                training_logger,
             )
         except ValueError:
             estimated_duration_s = 0
