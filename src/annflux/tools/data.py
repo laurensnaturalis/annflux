@@ -300,11 +300,13 @@ def color_and_label(
             else "#AAAAAA"
         )
 
-    data["color_class"] = data.apply(
-        lambda x_: multilabel_to_color_func(
-            x_.label_predicted if not x_.labeled else x_.label_true
-        ),
-        axis=1,
+    label_for_color = np.where(
+        data["labeled"].values.astype(bool),
+        data["label_true"].values,
+        data["label_predicted"].values,
+    )
+    data["color_class"] = pandas.Series(label_for_color, index=data.index).map(
+        multilabel_to_color_func
     )
     logger.info(f"color_class took={time.time() - start_time}")
     #
@@ -312,48 +314,31 @@ def color_and_label(
         "label_possible" in data_to_update.columns
         and "score_possible" in data_to_update.columns
     ):
-        data_to_update["incorrect_score"] = 0.0
-        # TODO: use vector update
-        for r, row in data_to_update.iterrows():
-            label_possible = (
-                str(row.label_possible) if not pandas.isna(row.label_possible) else ""
-            )
-            score_possible = (
-                str(row.score_possible) if not pandas.isna(row.label_possible) else ""
-            )
-            label_predicted = (
-                str(row.label_predicted) if not pandas.isna(row.label_predicted) else ""
-            )
-            scores_predicted = (
-                str(row.scores_predicted)
-                if not pandas.isna(row.scores_predicted)
-                else ""
-            )
-            label_true = row.label_true
-            if row.uid == "GBIF_2837755165_0":
-                print(
-                    "incorrect_score",
-                    label_possible,
-                    score_possible,
-                    label_predicted,
-                    scores_predicted,
-                    label_true,
+        lp = data_to_update["label_possible"].fillna("")
+        sp = data_to_update["score_possible"].where(
+            ~pandas.isna(data_to_update["label_possible"]), other=""
+        ).fillna("")
+        lpred = data_to_update["label_predicted"].fillna("")
+        spred = data_to_update["scores_predicted"].fillna("")
+        lt = data_to_update["label_true"]
+        labeled = data_to_update["labeled"]
+
+        candidate_mask = (
+            labeled.astype(bool)
+            & ((lp.str.len() > 0) | (lpred.str.len() > 0))
+            & ((sp.str.len() > 0) | (spred.str.len() > 0))
+            & lt.notna()
+        )
+
+        scores = pandas.array([0.0] * len(data_to_update), dtype="float64")
+        if candidate_mask.any():
+            scores[candidate_mask.values] = [
+                compute_incorrect_score(
+                    lp.iloc[i], lt.iloc[i], sp.iloc[i], lpred.iloc[i], spred.iloc[i]
                 )
-            if (
-                row.labeled == 0
-                or (len(label_possible) == 0 and len(label_predicted) == 0)
-                or (len(score_possible) == 0 and len(scores_predicted) == 0)
-                or label_true is None
-            ):
-                continue
-            score = compute_incorrect_score(
-                label_possible,
-                label_true,
-                score_possible,
-                label_predicted,
-                scores_predicted,
-            )
-            data_to_update.at[r, "incorrect_score"] = score
+                for i in np.where(candidate_mask.values)[0]
+            ]
+        data_to_update["incorrect_score"] = scores
         data_to_update.incorrect_score = (
             data_to_update.incorrect_score.max() - data_to_update.incorrect_score
         )
