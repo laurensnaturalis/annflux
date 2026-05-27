@@ -208,6 +208,7 @@ limitations under the License.
         <select id="sort-select" style="background:#333;color:#ddd;border:1px solid #555;border-radius:4px;padding:3px 6px">
             <option value="fre_strat" selected>Deviating cases</option>
             <option value="nn_underrepresented">Rare classes</option>
+            <option value="most_certain">Most certain</option>
         </select>
     </label>
     <label style="color:#aaa;font-size:0.85em">Show:
@@ -312,9 +313,19 @@ limitations under the License.
         return pool.filter(d => !d.labeled || parseInt(d.labeled) === 0);
     }
 
-    /* ── sort by chosen column ascending (lower = higher priority); NaN/missing last ── */
+    /* ── sort by chosen column; NaN/missing last ── */
     function sortByFreStrat(data) {
         const col = $('#sort-select').val() || 'fre_strat';
+        // Most certain: sort by score_predicted descending (highest confidence first)
+        if (col === 'most_certain') {
+            return [...data].sort((a, b) => {
+                const fa = parseFloat(a.score_predicted), fb = parseFloat(b.score_predicted);
+                const na = isNaN(fa), nb = isNaN(fb);
+                if (na && nb) return 0; if (na) return 1; if (nb) return -1;
+                return fb - fa; // descending
+            });
+        }
+        // Default: ascending sort by column
         return [...data].sort((a, b) => {
             const fa = parseFloat(a[col]), fb = parseFloat(b[col]);
             const na = isNaN(fa), nb = isNaN(fb);
