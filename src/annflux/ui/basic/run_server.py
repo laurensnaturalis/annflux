@@ -320,6 +320,16 @@ def data_get():
         g_state.project_folder, "annflux", f"annflux_{hash_}.parquet"
     )
 
+    # Clean up old parquet files before creating new one
+    annflux_dir = os.path.join(g_state.project_folder, "annflux")
+    for fname in os.listdir(annflux_dir):
+        if fname.endswith(".parquet") and fname.startswith("annflux_"):
+            old_path = os.path.join(annflux_dir, fname)
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass  # Ignore if file is in use or permission issues
+
     if not os.path.exists(annflux_pq_cache_path):
         if filter_query is not None:
             try:
