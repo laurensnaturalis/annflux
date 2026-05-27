@@ -94,6 +94,31 @@ logger: logging.Logger | None = None
 training_logger: logging.Logger | None = None
 
 
+def write_json_atomic(path: str, data: dict, indent: int = 2) -> None:
+    """Write JSON file atomically using temp file + rename.
+    
+    This ensures the file is never in a partially written state,
+    preventing corruption if the process crashes during write.
+    """
+    # Write to temp file in same directory for atomic rename
+    dir_name = os.path.dirname(path) or "."
+    fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(data, f, indent=indent)
+            f.flush()
+            os.fsync(fd)
+        # Atomic rename (POSIX guarantees this is atomic)
+        os.rename(tmp_path, path)
+    except Exception:
+        # Clean up temp file on failure
+        try:
+            os.unlink(tmp_path)
+        except FileNotFoundError:
+            pass
+        raise
+
+
 class NoStatus(logging.Filter):
     def filter(self, record):
         return "POST /status" not in record.getMessage()
@@ -615,7 +640,7 @@ def label_defs_add():
                     annotation += f",{new_label}=?"
                     annotations[image_id] = annotation
                     modified_uids.append(image_id)
-            json.dump(annotations, open(g_state.labels_path, "w"), indent=2)
+            write_json_atomic(g_state.labels_path, annotations)
             # remove uids from doublecheck list so that they appear for the viewer to check
             remove_uids_from_double_check(modified_uids, g_state.doublecheck_path)
             # exclusive_under_parent
@@ -667,8 +692,7 @@ def label():
     #
     # TODO: check that not incidentally undetermined labels are removed
     j_labels.update({k: v for k, v in label_update.items() if v != "n/a" and v != ""})
-    with open(g_state.labels_path, "w") as f:
-        json.dump(j_labels, f, indent=2)
+    write_json_atomic(g_state.labels_path, j_labels)
 
     async_mode = str2bool(request.args.get("async", "0"))
     if async_mode:
