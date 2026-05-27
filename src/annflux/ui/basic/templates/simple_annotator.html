@@ -259,7 +259,8 @@ limitations under the License.
     /* ── state ── */
     let allData = [];       // filtered to unlabeled only (for display)
     let fullData = [];      // complete dataset (for progress bar)
-    let filteredData = [];
+    let filteredData = [];  // display data (unlabeled only, search filtered)
+    let filteredDataAll = []; // all data (labeled + unlabeled, search filtered, for progress bar)
     let labelDefs = [];
     let pending = {};       // uid -> label string (unsaved changes)
     let pendingCertainty = {}; // uid -> certainty value
@@ -268,6 +269,8 @@ limitations under the License.
     let _pollTimer = null;  // setInterval handle for version polling
     let visibleMeta = [];   // ordered list of column names to show as metadata
     const examplesCache = new Map(); // label -> [uid, ...]
+    let filterDebounceTimer = null; // debounce timer for filter input
+    let isTyping = false;   // flag to prevent image loading while typing
 
     let childToParent = new Map(); // label -> parent label (or null)
     let parentToChildren = new Map(); // label -> [child labels]
@@ -329,12 +332,19 @@ limitations under the License.
     /* ── apply filter + n-limit ── */
     function applyFilter() {
         const q = $('#filter-input').val().toLowerCase().trim();
+        // For display: unlabeled only
         const unlabeled = allData.filter(d => !d.labeled || parseInt(d.labeled) === 0);
         const base = q
             ? unlabeled.filter(d => (d.label_predicted || '').toLowerCase().includes(q))
             : unlabeled;
         filteredData = sliceN(base);
+        // For progress bar: all items (labeled + unlabeled) matching search
+        const baseAll = q
+            ? fullData.filter(d => (d.label_predicted || '').toLowerCase().includes(q))
+            : fullData;
+        filteredDataAll = baseAll;
         renderTable();
+        updateProgressBar();
     }
 
     /* ── current label list for a row (array of non-empty strings) ── */
@@ -537,12 +547,18 @@ limitations under the License.
             const $tr = $('<tr>').toggleClass('changed', pending[d.uid] !== undefined)
                 .toggleClass('reviewed', reviewed.has(d.uid));
 
-            /* image — click opens overlay */
-            $('<td>').append(
+            /* image — click opens overlay (skip loading while typing) */
+            const $imgCell = $('<td>').appendTo($tr);
+            if (!isTyping) {
                 $('<img>').addClass('thumb')
                     .attr({src: `/images/thumbnail/${d.uid}`, alt: d.uid})
                     .on('click', () => openOverlay(d.uid))
-            ).appendTo($tr);
+                    .appendTo($imgCell);
+            } else {
+                $('<div>').addClass('thumb-placeholder')
+                    .css({width: '60px', height: '60px', background: '#333', borderRadius: '4px', display: 'inline-block'})
+                    .appendTo($imgCell);
+            }
 
             /* uid */
             $('<td>').css({fontSize: '0.75em', color: '#999'}).text(d.uid).appendTo($tr);
@@ -626,12 +642,21 @@ limitations under the License.
         function appendStrip($container, label, uids) {
             $('<div>').addClass('examples-label').text(label).appendTo($container);
             const $strip = $('<div>').addClass('examples-strip').appendTo($container);
-            uids.forEach(uid => {
-                $('<img>').addClass('ex-thumb')
-                    .attr({src: `/images/thumbnail/${uid}`, alt: uid, title: uid})
-                    .on('click', () => openOverlay(uid))
-                    .appendTo($strip);
-            });
+            if (!isTyping) {
+                uids.forEach(uid => {
+                    $('<img>').addClass('ex-thumb')
+                        .attr({src: `/images/thumbnail/${uid}`, alt: uid, title: uid})
+                        .on('click', () => openOverlay(uid))
+                        .appendTo($strip);
+                });
+            } else {
+                // Show placeholder squares while typing
+                uids.forEach(() => {
+                    $('<div>').addClass('ex-thumb-placeholder')
+                        .css({width: '60px', height: '60px', background: '#333', borderRadius: '4px', display: 'inline-block', marginRight: '4px'})
+                        .appendTo($strip);
+                });
+            }
         }
 
         /* try exact multi-label match first */
@@ -719,35 +744,32 @@ limitations under the License.
         $('#status').text(`${reviewedCount} / ${filteredData.length} reviewed`);
     }
 
-    /* ── update progress bar from /status endpoint ── */
-    async function updateProgressBar() {
-        try {
-            const data = await $.post('/status', JSON.stringify({idleTime: 0}));
-            const total = parseInt(data.num_total) || 0;
-            const labeled = parseInt(data.num_labeled) || 0;
-            if (total === 0) return;
-            // perc_likely_certain = certain / (certain + uncertain) for all predictions
-            // perc_likely_certain_unlabeled = certain / (certain + uncertain) for unlabeled only
-            // We need to derive the three bar segments:
-            // 1. labeled% = labeled / total
-            // 2. certain unlabeled% = (total - labeled) * perc_likely_certain_unlabeled / total
-            // 3. uncertain unlabeled% = remaining
-            const pctLabeled = (labeled / total * 100);
-            const unlabeled = total - labeled;
-            const percCertainUnlabeled = parseFloat(data.perc_likely_certain_unlabeled) || 0;
-            const pctCertain = (unlabeled * percCertainUnlabeled / total * 100);
-            const pctUncertain = Math.max(0, 100 - pctLabeled - pctCertain);
-            $('.bar-labeled').css('width', `${pctLabeled.toFixed(1)}%`);
-            $('.bar-certain').css('width', `${pctCertain.toFixed(1)}%`);
-            $('.bar-uncertain').css('width', `${pctUncertain.toFixed(1)}%`);
-            const certainCount = Math.round(unlabeled * percCertainUnlabeled);
-            const uncertainCount = unlabeled - certainCount;
-            const tooltip = `Labeled: ${pctLabeled.toFixed(1)}% (${labeled}) | Likely certain: ${pctCertain.toFixed(1)}% (${certainCount}) | Uncertain: ${pctUncertain.toFixed(1)}% (${uncertainCount})`;
+    /* ── update progress bar from current filtered view ── */
+    function updateProgressBar() {
+        // Compute percentages from filteredDataAll (includes both labeled and unlabeled, respects search query)
+        const total = filteredDataAll.length;
+        if (total === 0) {
+            $('.bar-labeled').css('width', '0%');
+            $('.bar-certain').css('width', '0%');
+            $('.bar-uncertain').css('width', '0%');
+            const tooltip = 'No items match current filter';
             $('#progress-bar').attr('title', tooltip);
             $('#progress-tooltip').text(tooltip);
-        } catch (e) {
-            console.error('Failed to update progress bar:', e);
+            return;
         }
+        const labeled = filteredDataAll.filter(d => d.labeled && parseInt(d.labeled) === 1).length;
+        const unlabeled = total - labeled;
+        const certainUnlabeled = filteredDataAll.filter(d => (!d.labeled || parseInt(d.labeled) === 0) && parseFloat(d.score_predicted) > 0.90).length;
+        const uncertainUnlabeled = unlabeled - certainUnlabeled;
+        const pctLabeled = (labeled / total * 100).toFixed(1);
+        const pctCertain = (certainUnlabeled / total * 100).toFixed(1);
+        const pctUncertain = (uncertainUnlabeled / total * 100).toFixed(1);
+        $('.bar-labeled').css('width', `${pctLabeled}%`);
+        $('.bar-certain').css('width', `${pctCertain}%`);
+        $('.bar-uncertain').css('width', `${pctUncertain}%`);
+        const tooltip = `Labeled: ${pctLabeled}% (${labeled}) | Likely certain: ${pctCertain}% (${certainUnlabeled}) | Uncertain: ${pctUncertain}% (${uncertainUnlabeled}) — of ${total} filtered items`;
+        $('#progress-bar').attr('title', tooltip);
+        $('#progress-tooltip').text(tooltip);
     }
     $('#progress-bar').on('mouseenter', () => $('#progress-tooltip').show());
     $('#progress-bar').on('mouseleave', () => $('#progress-tooltip').hide());
@@ -762,7 +784,14 @@ limitations under the License.
     });
 
     /* ── wire up toolbar ── */
-    $('#filter-input').on('input', applyFilter);
+    $('#filter-input').on('input', () => {
+        isTyping = true;
+        clearTimeout(filterDebounceTimer);
+        filterDebounceTimer = setTimeout(() => {
+            isTyping = false;
+            applyFilter();
+        }, 300); // 300ms debounce
+    });
     $('#n-select').on('change', applyFilter);
     $('#sort-select').on('change', () => {
         allData = sortByFreStrat(allData);
@@ -780,10 +809,9 @@ limitations under the License.
     const raw = await loadData();
     fullData = raw;
     allData = sortByFreStrat(getActive(raw));
-    filteredData = sliceN(allData);
+    applyFilter(); // sets both filteredData and filteredDataAll
     $('#status').text(`${filteredData.length} / ${allData.length} rows`);
     renderTable();
-    updateProgressBar();
 </script>
 </body>
 </html>
