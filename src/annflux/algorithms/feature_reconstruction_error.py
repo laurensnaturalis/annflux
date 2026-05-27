@@ -43,7 +43,8 @@ def _fit_pca_for_label(
     Helper function to fit PCA for a single label (for parallelization)
     """
     if new_labeled_indices is not None:
-        if len(set(new_labeled_indices).intersection(set(indices_))) == 0:
+        new_set = frozenset(new_labeled_indices)
+        if new_set.isdisjoint(indices_):
             logger.debug(f"PCA: Skipping {agg} because not in new labeled images")
             return None
     feat_ = features[sorted(indices_)]
@@ -69,20 +70,15 @@ def compute_fre(
     :param pca_cache: Optional dict to cache PCA models per label. If None, uses global module cache.
     """
     time_start = time.time()
-    label_agg_array = np.array(
-        [
-            (annotations.get(uid) if annotations.get(uid) else None)
-            if uid not in test_uids
-            else None
-            for i, uid in enumerate(data.uid.values)
-        ]
-    )
-    # TODO: check if everything is canonized
+    test_uids_set = set(test_uids)
+    uid_to_label = {uid: lbl for uid, lbl in annotations.items() if lbl and uid not in test_uids_set}
     # - map from label complex to data indices
     agg_to_indices: dict[str, list[int]] = defaultdict(lambda: [])
+    uid_vals = data.uid.values
     for index_ in labeled_indices:
-        if label_agg_array[index_] is not None:
-            agg_to_indices[canon_(label_agg_array[index_])].append(index_)
+        lbl = uid_to_label.get(uid_vals[index_])
+        if lbl is not None:
+            agg_to_indices[canon_(lbl)].append(index_)
     logger.info(f"[TIMING] PCA data preparation took {time.time() - time_start} s")
     # Use provided cache or fall back to global
     cache = pca_cache if pca_cache is not None else agg_to_pca

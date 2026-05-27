@@ -307,13 +307,9 @@ def color_and_label(
         data["label_true"].values,
         data["label_predicted"].values,
     )
-    label_for_color_s = pandas.Series(label_for_color, index=data.index)
-    na_mask = label_for_color_s.isna() | (label_for_color_s == "n/a")
-    canon_series = label_for_color_s.where(na_mask).fillna("").copy()
-    canon_series[~na_mask] = label_for_color_s[~na_mask].map(
-        lambda x_: canon_(x_, remove_unknown=True)
+    data["color_class"] = pandas.Series(label_for_color, index=data.index).map(
+        multilabel_to_color_func
     )
-    data["color_class"] = canon_series.map(multilabel_to_color).fillna("#AAAAAA")
     logger.info(f"color_class took={time.time() - start_time}")
     #
     if (

@@ -3,3 +3,17 @@ build/*
 *.egg-info
 *.whl
 *.log
+*.prof
+uv.lock
+tmp.*
+tmp/
+tmp.weights.h5
+src/annflux/ui/basic/prof/
+src/annflux/ui/basic/*_bak.py
+src/annflux/ui/basic/*_original.py
+src/test_al_strategies.csv
+src/tmp.csv
+src/tmp.json
+test_al_strategies.csv
+tmp.csv
+tmp.json

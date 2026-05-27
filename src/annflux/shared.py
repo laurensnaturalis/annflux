@@ -104,6 +104,10 @@ class AnnfluxSource(object):
         return os.path.join(self.working_folder, "labels.json") # ty: ignore
 
     @property
+    def certainty_path(self):
+        return os.path.join(self.working_folder, "certainty.json") # ty: ignore
+
+    @property
     def label_definitions_path(self):
         return os.path.join(self.working_folder, "label_defs.json") # ty: ignore
 

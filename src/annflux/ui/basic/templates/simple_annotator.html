@@ -185,6 +185,7 @@ limitations under the License.
             <col class="col-uid">
             <col class="col-lbl">
             <col class="col-examples">
+            <col style="width:180px">
         </colgroup>
         <thead>
         <tr>
@@ -192,6 +193,7 @@ limitations under the License.
             <th>UID</th>
             <th>Labels</th>
             <th>Examples</th>
+            <th>Certainty</th>
             <th></th>
         </tr>
         </thead>
@@ -205,6 +207,7 @@ limitations under the License.
     let filteredData = [];
     let labelDefs = [];
     let pending = {};       // uid -> label string (unsaved changes)
+    let pendingCertainty = {}; // uid -> certainty value
     let reviewed = new Set(); // uids that have been approved or edited
     let activeLabel = null; // the label selected in the label bar
     let _pollTimer = null;  // setInterval handle for version polling
@@ -301,6 +304,17 @@ limitations under the License.
         const $cell = $tr.find('.labels-cell-inner').empty();
         const lbls = currentLabels(d);
 
+        /* build label->score map from scores_predicted (only valid when labels unmodified) */
+        const scoreMap = {};
+        if (pending[d.uid] === undefined && d.scores_predicted && d.label_predicted) {
+            const predLbls = d.label_predicted.toString().split(',');
+            const predScores = d.scores_predicted.toString().split(',');
+            predLbls.forEach((lbl, i) => {
+                const s = parseFloat(predScores[i]);
+                if (!isNaN(s)) scoreMap[lbl.trim()] = s;
+            });
+        }
+
         /* current label chips */
         const $chips = $('<div>').addClass('chips-row');
         if (lbls.length === 0) {
@@ -309,8 +323,9 @@ limitations under the License.
             const sorted = [...lbls].sort((a, b) => ancestors(a).length - ancestors(b).length);
             $.each(sorted, (_, lbl) => {
                 const $chip = $('<span>').addClass(`cur-label label_${lbl.replace(/ /g, '_')}`);
+                const scoreStr = scoreMap[lbl] !== undefined ? ` ${Math.round(scoreMap[lbl] * 100)}%` : '';
 
-                $('<span>').text(lbl + ' ✕').css('cursor','pointer').attr('title','Click to remove')
+                $('<span>').text(lbl + scoreStr + ' ✕').css('cursor','pointer').attr('title','Click to remove')
                     .on('click', (e) => { e.stopPropagation(); removeLabel(d, lbl, $tr); })
                     .appendTo($chip);
 
@@ -363,15 +378,15 @@ limitations under the License.
             const matches = q
                 ? labelDefs.filter(l => l.toLowerCase().includes(q))
                 : labelDefs;
-            matches.slice(0, 50).forEach(lbl => {
+            matches.slice(0, 10).forEach(lbl => {
                 $('<button>').addClass('pick-btn')
                     .toggleClass('selected', currentLabels(d).includes(lbl))
                     .text(lbl)
                     .on('click', (e) => { e.stopPropagation(); assignLabel(d, lbl, $tr); renderPicker($search.val().toLowerCase().trim()); })
                     .appendTo($picker);
             });
-            if (matches.length > 50) {
-                $picker.append($('<span>').css({fontSize:'0.75em', color:'#888'}).text(`…${matches.length - 50} more, refine search`));
+            if (matches.length > 10) {
+                $picker.append($('<span>').css({fontSize:'0.75em', color:'#888'}).text(`…${matches.length - 10} more, refine search`));
             }
         }
 
@@ -440,6 +455,9 @@ limitations under the License.
         if (pending[d.uid] === undefined) {
             pending[d.uid] = labelsToString(currentLabels(d));
         }
+        if (pendingCertainty[d.uid] === undefined) {
+            pendingCertainty[d.uid] = d.certainty || 'certain';
+        }
         reviewed.add(d.uid);
         refreshRow(d, $tr);
         updateSaveBtn();
@@ -504,6 +522,24 @@ limitations under the License.
             $tr.append($exCell);
             loadExamplesForRow(d, $exCell);
 
+            /* certainty dropdown */
+            const $certCell = $('<td>').css({verticalAlign: 'top', paddingTop: '8px'});
+            const curCertainty = pendingCertainty[d.uid] || d.certainty || 'certain';
+            const $certSelect = $('<select>')
+                .css({background:'#333', color:'#ddd', border:'1px solid #555', borderRadius:'4px', padding:'3px 6px', fontSize:'0.85em'})
+                .append($('<option>').val('certain').text('Certain'))
+                .append($('<option>').val('i_dont_know_the_species').text("I don't know the species"))
+                .append($('<option>').val('the_species_cannot_be_known').text('Species cannot be known'))
+                .val(curCertainty)
+                .on('change', function () {
+                    pendingCertainty[d.uid] = $(this).val();
+                    reviewed.add(d.uid);
+                    $tr.toggleClass('changed', true);
+                    updateSaveBtn();
+                });
+            $certCell.append($certSelect);
+            $tr.append($certCell);
+
             /* approve button */
             const $approveCell = $('<td>').css({verticalAlign: 'top', paddingTop: '8px'});
             $('<button>').addClass('approve-btn')
@@ -528,24 +564,48 @@ limitations under the License.
 
     /* ── fetch + render example thumbnails for a row ── */
     async function loadExamplesForRow(d, $cell) {
-        const lbl = mostSpecificLabel(d);
-        if (!lbl) { $cell.text('—'); return; }
+        const lbls = currentLabels(d).filter(lbl => !lbl.includes('='));
+        if (!lbls.length) { $cell.text('—'); return; }
         $cell.text('…');
-        if (!examplesCache.has(lbl)) {
-            const r = await $.getJSON(`/class_examples/${encodeURIComponent(lbl)}`);
-            examplesCache.set(lbl, r.uids || []);
+
+        function appendStrip($container, label, uids) {
+            $('<div>').addClass('examples-label').text(label).appendTo($container);
+            const $strip = $('<div>').addClass('examples-strip').appendTo($container);
+            uids.forEach(uid => {
+                $('<img>').addClass('ex-thumb')
+                    .attr({src: `/images/thumbnail/${uid}`, alt: uid, title: uid})
+                    .on('click', () => openOverlay(uid))
+                    .appendTo($strip);
+            });
         }
-        const uids = examplesCache.get(lbl);
+
+        /* try exact multi-label match first */
+        const cacheKey = lbls.slice().sort().join(',');
+        if (!examplesCache.has(cacheKey)) {
+            const r = await $.getJSON(`/multilabel_examples?labels=${encodeURIComponent(cacheKey)}&n=10`);
+            examplesCache.set(cacheKey, r.uids || []);
+        }
+        const exactUids = examplesCache.get(cacheKey);
         $cell.empty();
-        if (!uids.length) { $cell.text('no examples').css('color','#666'); return; }
-        $('<div>').addClass('examples-label').text(lbl).appendTo($cell);
-        const $strip = $('<div>').addClass('examples-strip').appendTo($cell);
-        uids.forEach(uid => {
-            $('<img>').addClass('ex-thumb')
-                .attr({src: `/images/thumbnail/${uid}`, alt: uid, title: uid})
-                .on('click', () => openOverlay(uid))
-                .appendTo($strip);
-        });
+        if (exactUids.length) {
+            appendStrip($cell, lbls.join(', '), exactUids);
+            return;
+        }
+
+        /* fallback: per-label examples */
+        const sorted = [...lbls].sort((a, b) => ancestors(b).length - ancestors(a).length);
+        let any = false;
+        for (const lbl of sorted) {
+            if (!examplesCache.has(lbl)) {
+                const r = await $.getJSON(`/class_examples/${encodeURIComponent(lbl)}?n=10`);
+                examplesCache.set(lbl, r.uids || []);
+            }
+            const uids = examplesCache.get(lbl);
+            if (!uids.length) continue;
+            appendStrip($cell, lbl, uids);
+            any = true;
+        }
+        if (!any) $cell.text('no examples').css('color','#666');
     }
 
     /* ── version polling ── */
@@ -568,14 +628,21 @@ limitations under the License.
 
     /* ── save ── */
     function save() {
-        if (!Object.keys(pending).length) return;
-        const savedUids = new Set(Object.keys(pending));
+        const hasCertainty = Object.keys(pendingCertainty).length > 0;
+        if (!Object.keys(pending).length && !hasCertainty) return;
+        const savedUids = new Set([...Object.keys(pending), ...Object.keys(pendingCertainty)]);
         $('#save-btn').prop('disabled', true);
-        $.post('/label?async=1', JSON.stringify(pending))
+        const labelSave = Object.keys(pending).length
+            ? $.post('/label?async=1', JSON.stringify(pending))
+            : $.Deferred().resolve();
+        const certSave = hasCertainty
+            ? $.post('/certainty', JSON.stringify(pendingCertainty))
+            : $.Deferred().resolve();
+        $.when(labelSave, certSave)
             .done(() => {
-                /* mark saved rows as labeled in the local data so they drop off */
                 allData.forEach(d => { if (savedUids.has(d.uid)) d.labeled = 1; });
                 pending = {};
+                pendingCertainty = {};
                 reviewed = new Set();
                 applyFilter();
                 updateSaveBtn();
@@ -589,7 +656,7 @@ limitations under the License.
     }
 
     function updateSaveBtn() {
-        const allReviewed = filteredData.length > 0 && filteredData.every(d => reviewed.has(d.uid));
+        const allReviewed = filteredData.length > 0 && filteredData.every(d => reviewed.has(d.uid) || (pending[d.uid] === undefined && pendingCertainty[d.uid] === undefined));
         $('#save-btn').prop('disabled', !allReviewed);
         const reviewedCount = filteredData.filter(d => reviewed.has(d.uid)).length;
         $('#status').text(`${reviewedCount} / ${filteredData.length} reviewed`);
@@ -611,6 +678,7 @@ limitations under the License.
         allData = sortByFreStrat(allData);
         reviewed.clear();
         pending = {};
+        pendingCertainty = {};
         applyFilter();
         updateSaveBtn();
     });

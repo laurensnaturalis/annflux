@@ -13,7 +13,9 @@ def _make_data(n=10):
         "label_predicted", "score_predicted", "scores_predicted",
         "label_possible", "score_possible", "num_labeled_nn", "min_distance",
     ]
-    return pandas.DataFrame({c: [None] * n for c in cols})
+    df = pandas.DataFrame({c: [None] * n for c in cols})
+    df["uid"] = [f"uid_{i}" for i in range(n)]
+    return df
 
 
 def _run_both(indices, distances, train_labels, skip_first=False, knn_rank_exponent=6):

@@ -136,6 +136,7 @@ def _init():
         g_state.project_folder, "annflux", "label_provider.csv"
     )
     g_state.labels_path = os.path.join(g_state.project_folder, "annflux", "labels.json")
+    g_state.certainty_path = os.path.join(g_state.project_folder, "annflux", "certainty.json")
     label_definitions_path = os.path.join(
         g_state.project_folder, "annflux", "label_defs.json"
     )
@@ -145,6 +146,7 @@ def _init():
 
     log_level: int = logging.getLevelName(os.getenv("LOGGING_LEVEL", "INFO"))
     logs_dir = os.path.join(g_state.annflux_folder, "logs")
+    os.makedirs(logs_dir, exist_ok=True)
     _existing_logs = [f for f in os.listdir(logs_dir) if f.endswith(".log")]
     if _existing_logs:
         import shutil as _shutil
@@ -727,6 +729,47 @@ def _update_labeled_column(labeled_uids: set):
 @app.route("/annflux_csv_version", methods=["GET"])
 def annflux_csv_version():
     return {"version": _annflux_csv_version}
+
+
+CERTAINTY_VALUES = {"certain", "i_dont_know_the_species", "the_species_cannot_be_known"}
+
+
+@app.route("/certainty", methods=["POST"])
+def certainty():
+    updates = request.get_json(force=True)  # {uid: certainty_value, ...}
+    invalid = [v for v in updates.values() if v not in CERTAINTY_VALUES]
+    if invalid:
+        return {"error": f"Invalid certainty values: {invalid}"}, 400
+    try:
+        if os.path.exists(g_state.certainty_path):
+            with open(g_state.certainty_path) as f:
+                certainty_map = json.load(f)
+        else:
+            certainty_map = {}
+        certainty_map.update(updates)
+        with open(g_state.certainty_path, "w") as f:
+            json.dump(certainty_map, f, indent=2)
+    except Exception as exc:
+        logger.error(f"certainty update failed: {exc}", exc_info=True)
+        return {"error": str(exc)}, 500
+    return {"success": True}
+
+
+@app.route("/multilabel_examples", methods=["GET"])
+def multilabel_examples():
+    labels_param = request.args.get("labels", "")
+    n = int(request.args.get("n", 10))
+    target_set = frozenset(l.strip() for l in labels_param.split(",") if l.strip())
+    data = pandas.read_csv(
+        g_state.annflux_path,
+        usecols=["uid", "label_true", "labeled"],
+        dtype={"uid": str, "label_true": str},
+    )
+    labeled = data[data["labeled"] == 1].dropna(subset=["label_true"])
+    def matches(lt):
+        return frozenset(l.strip() for l in lt.split(",") if l.strip()) == target_set
+    hits = labeled[labeled["label_true"].apply(matches)]
+    return {"uids": hits["uid"].tolist()[:n]}
 
 
 @app.route("/class_examples/<label>", methods=["GET"])
