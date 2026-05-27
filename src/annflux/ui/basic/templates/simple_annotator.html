@@ -143,6 +143,54 @@ limitations under the License.
         position: absolute; top: 16px; right: 24px; font-size: 2em;
         color: #fff; cursor: pointer; user-select: none;
     }
+    /* Stacked progress bar */
+    #progress-bar {
+        display: flex;
+        width: 200px;
+        height: 20px;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-left: 10px;
+        border: 1px solid #555;
+        cursor: pointer;
+        position: relative;
+    }
+    .bar-segment {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+    .bar-labeled {
+        background: #90EE90; /* light green */
+    }
+    .bar-certain {
+        background: #228B22; /* green */
+    }
+    .bar-uncertain {
+        background: #808080; /* grey */
+    }
+    #progress-tooltip {
+        position: absolute;
+        bottom: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: #ddd;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        white-space: nowrap;
+        border: 1px solid #555;
+        z-index: 1000;
+    }
+    #progress-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 5px solid transparent;
+        border-top-color: #333;
+    }
 </style>
 </head>
 <body>
@@ -176,6 +224,12 @@ limitations under the License.
     <span id="new-data-banner">&#x27F3; New predictions available — <a href="" onclick="location.reload();return false;">reload</a></span>
     <button id="save-btn" disabled>Save</button>
     <a class="settings-link" href="/metadata/visible/page" title="Configure visible metadata columns">⚙ Metadata columns</a>
+    <div id="progress-bar" title="Dataset progress: labeled (light green), likely certain unlabeled (green), uncertain unlabeled (grey)">
+        <div class="bar-segment bar-labeled"></div>
+        <div class="bar-segment bar-certain"></div>
+        <div class="bar-segment bar-uncertain"></div>
+        <div id="progress-tooltip" style="display:none"></div>
+    </div>
 </div>
 
 <div id="table-wrap">
@@ -203,7 +257,8 @@ limitations under the License.
 
 <script type="module">
     /* ── state ── */
-    let allData = [];
+    let allData = [];       // filtered to unlabeled only (for display)
+    let fullData = [];      // complete dataset (for progress bar)
     let filteredData = [];
     let labelDefs = [];
     let pending = {};       // uid -> label string (unsaved changes)
@@ -641,11 +696,13 @@ limitations under the License.
         $.when(labelSave, certSave)
             .done(() => {
                 allData.forEach(d => { if (savedUids.has(d.uid)) d.labeled = 1; });
+                fullData.forEach(d => { if (savedUids.has(d.uid)) d.labeled = 1; });
                 pending = {};
                 pendingCertainty = {};
                 reviewed = new Set();
                 applyFilter();
                 updateSaveBtn();
+                updateProgressBar();
                 $('#status').text(`Saved ${savedUids.size} image(s). Background update running…`);
                 startPollingForNewData();
             })
@@ -661,6 +718,39 @@ limitations under the License.
         const reviewedCount = filteredData.filter(d => reviewed.has(d.uid)).length;
         $('#status').text(`${reviewedCount} / ${filteredData.length} reviewed`);
     }
+
+    /* ── update progress bar from /status endpoint ── */
+    async function updateProgressBar() {
+        try {
+            const data = await $.post('/status', JSON.stringify({idleTime: 0}));
+            const total = parseInt(data.num_total) || 0;
+            const labeled = parseInt(data.num_labeled) || 0;
+            if (total === 0) return;
+            // perc_likely_certain = certain / (certain + uncertain) for all predictions
+            // perc_likely_certain_unlabeled = certain / (certain + uncertain) for unlabeled only
+            // We need to derive the three bar segments:
+            // 1. labeled% = labeled / total
+            // 2. certain unlabeled% = (total - labeled) * perc_likely_certain_unlabeled / total
+            // 3. uncertain unlabeled% = remaining
+            const pctLabeled = (labeled / total * 100);
+            const unlabeled = total - labeled;
+            const percCertainUnlabeled = parseFloat(data.perc_likely_certain_unlabeled) || 0;
+            const pctCertain = (unlabeled * percCertainUnlabeled / total * 100);
+            const pctUncertain = Math.max(0, 100 - pctLabeled - pctCertain);
+            $('.bar-labeled').css('width', `${pctLabeled.toFixed(1)}%`);
+            $('.bar-certain').css('width', `${pctCertain.toFixed(1)}%`);
+            $('.bar-uncertain').css('width', `${pctUncertain.toFixed(1)}%`);
+            const certainCount = Math.round(unlabeled * percCertainUnlabeled);
+            const uncertainCount = unlabeled - certainCount;
+            const tooltip = `Labeled: ${pctLabeled.toFixed(1)}% (${labeled}) | Likely certain: ${pctCertain.toFixed(1)}% (${certainCount}) | Uncertain: ${pctUncertain.toFixed(1)}% (${uncertainCount})`;
+            $('#progress-bar').attr('title', tooltip);
+            $('#progress-tooltip').text(tooltip);
+        } catch (e) {
+            console.error('Failed to update progress bar:', e);
+        }
+    }
+    $('#progress-bar').on('mouseenter', () => $('#progress-tooltip').show());
+    $('#progress-bar').on('mouseleave', () => $('#progress-tooltip').hide());
 
     /* ── overlay ── */
     function openOverlay(uid) {
@@ -688,10 +778,12 @@ limitations under the License.
     await loadLabelDefs();
     await loadVisibleMeta();
     const raw = await loadData();
+    fullData = raw;
     allData = sortByFreStrat(getActive(raw));
     filteredData = sliceN(allData);
     $('#status').text(`${filteredData.length} / ${allData.length} rows`);
     renderTable();
+    updateProgressBar();
 </script>
 </body>
 </html>

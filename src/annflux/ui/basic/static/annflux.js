@@ -469,6 +469,12 @@ controlHtml = `<div id="map_control">
           </td>
         </tr>
         <tr>
+          <td>Likely certain (unlabeled)</td>
+          <td>
+            <span id="likely_certain_perc_unlabeled"></span> %
+          </td>
+        </tr>
+        <tr>
           <td>UI log</td>
           <td>
             <span id="ui_log_last"></span>

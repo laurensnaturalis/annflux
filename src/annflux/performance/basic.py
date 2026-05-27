@@ -90,6 +90,8 @@ def compute_performance(
     # compute how many are certain according to a threshold
     num_certain = defaultdict(lambda: 0)
     num_uncertain = defaultdict(lambda: 0)
+    num_certain_unlabeled = defaultdict(lambda: 0)
+    num_uncertain_unlabeled = defaultdict(lambda: 0)
     num_unlabeled_for_label = defaultdict(lambda: 0)
     data.scores_predicted = data.scores_predicted.astype(str)
     data_predicted = data[~pandas.isna(data.label_predicted) & (~pandas.isna(data.scores_predicted))]
@@ -112,6 +114,7 @@ def compute_performance(
 
         predicted_labels = predicted_label_map.get(label_predicted, [])
         predicted_probs = map(float, scores_predicted.split(","))
+        is_unlabeled = len(true_labels) == 0
         for label_, prob_ in zip(predicted_labels, predicted_probs):
             if (
                 prob_ > certain_threshold
@@ -119,9 +122,13 @@ def compute_performance(
                 and num_labeled_nn > 1
             ):
                 num_certain[label_] += 1
+                if is_unlabeled:
+                    num_certain_unlabeled[label_] += 1
             else:
                 num_uncertain[label_] += 1
-            num_unlabeled_for_label[label_] += len(true_labels) == 0
+                if is_unlabeled:
+                    num_uncertain_unlabeled[label_] += 1
+            num_unlabeled_for_label[label_] += is_unlabeled
 
         #
     logger.info(f"[TIMING] compute_performance 5/8 took {time.time() - time_start:.3f} s, {len(data)=}")
@@ -143,6 +150,12 @@ def compute_performance(
     ]
     out_table["num_predicted_uncertain"] = [
         num_uncertain.get(x_, 0) for x_ in out_table.label
+    ]
+    out_table["num_predicted_certain_unlabeled"] = [
+        num_certain_unlabeled.get(x_, 0) for x_ in out_table.label
+    ]
+    out_table["num_predicted_uncertain_unlabeled"] = [
+        num_uncertain_unlabeled.get(x_, 0) for x_ in out_table.label
     ]
     out_table["num_labeled"] = [num_labeled.get(x_, 0) for x_ in out_table.label]
     out_table["num_unlabeled"] = [

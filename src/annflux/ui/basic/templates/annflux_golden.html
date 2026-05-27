@@ -1424,6 +1424,9 @@ limitations under the License.
                 $("#likely_certain_perc").attr("title",
                     `${data['num_labeled']}/${data['num_total']} = ${Math.round(parseFloat(data['num_labeled'] / data['num_total']) * 1000, 1) / 10} %`
                 );
+                $("#likely_certain_perc_unlabeled").html(
+                    Math.round(parseFloat(data["perc_likely_certain_unlabeled"]) * 1000, 1) / 10
+                );
                 $("#average_precision").html(
                     round(data["average_precision"] * 100.0, 1)
                 );

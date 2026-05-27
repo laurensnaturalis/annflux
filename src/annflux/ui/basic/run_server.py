@@ -1049,6 +1049,7 @@ def status():
     )
     num_unlabeled_certain = 0
     perc_likely_certain = 0
+    perc_likely_certain_unlabeled = 0
     average_precision = 0
     average_recall = 0
     if os.path.exists(detailed_performance_path):
@@ -1064,6 +1065,17 @@ def status():
             perc_likely_certain = (
                 detailed_performance_["num_predicted_certain"].sum() / divisor
                 if divisor > 0
+                else 0
+            )
+            # unlabeled-only certain percentage (columns may not exist in old CSV)
+            num_certain_unlabeled = detailed_performance_.get("num_predicted_certain_unlabeled", pandas.Series([0])).sum()
+            divisor_unlabeled = (
+                detailed_performance_.get("num_predicted_uncertain_unlabeled", pandas.Series([0])).sum()
+                + num_certain_unlabeled
+            )
+            perc_likely_certain_unlabeled = (
+                num_certain_unlabeled / divisor_unlabeled
+                if divisor_unlabeled > 0
                 else 0
             )
             average_recall = detailed_performance_.recall.mean()
@@ -1085,6 +1097,7 @@ def status():
         "package_version": g_version,
         "num_labeled": len(g_state.labeled_indices),
         "perc_likely_certain": perc_likely_certain,
+        "perc_likely_certain_unlabeled": perc_likely_certain_unlabeled,
         "average_precision": average_precision,
         "average_recall": average_recall,
         # "performance": json.load(open(performance_path))
