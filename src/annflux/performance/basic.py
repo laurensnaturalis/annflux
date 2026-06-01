@@ -52,12 +52,11 @@ def compute_performance(
         # Multi-label metrics
         hamming = hamming_loss(y_true_bin, y_pred_bin)
         micro_f1 = f1_score(y_true_bin, y_pred_bin, average="micro", zero_division=0.0)
-        jaccard = jaccard_score(y_true_bin, y_pred_bin, average="samples", zero_division=0.0)
         # Per-label accuracy: percentage of individual label predictions that are correct
         label_accuracy = (y_true_bin == y_pred_bin).mean()
         logger.info(
             f"[PERFORMANCE_METRICS] Subset Acc={acc_test:.3f}, Hamming Loss={hamming:.3f}, "
-            f"Micro F1={micro_f1:.3f}, Jaccard={jaccard:.3f}, Label Acc={label_accuracy:.3f}"
+            f"Micro F1={micro_f1:.3f}, Label Acc={label_accuracy:.3f}"
         )
         if performance_graph_path is not None:
             write_performance(
@@ -68,33 +67,40 @@ def compute_performance(
     label_to_index = dict(zip(labels, range(len(labels))))
     detailed_performance_table = []
 
-    true_matrix = np.zeros((len(true_test), len(labels)))
-    predicted_matrix = np.zeros((len(true_test), len(labels)))
-    for i_, (true_, predicted_) in enumerate(zip(true_test, predicted_test)):
-        for label_true in true_:
-            if label_true in label_to_index:
-                true_matrix[i_, label_to_index[label_true]] = 1
-            else:
-                # TOdO
-                pass
-        for label_predicted in predicted_:
-            predicted_matrix[i_, label_to_index[label_predicted]] = 1
+    if len(true_test) == 0 or len(labels) == 0:
+        # No test data available - return empty table
+        logger.info("[PERFORMANCE_METRICS] No test data available for per-label metrics")
+        out_table = pandas.DataFrame(
+            columns=("label", "precision", "recall", "support"),  # ty: ignore
+        )
+    else:
+        true_matrix = np.zeros((len(true_test), len(labels)))
+        predicted_matrix = np.zeros((len(true_test), len(labels)))
+        for i_, (true_, predicted_) in enumerate(zip(true_test, predicted_test)):
+            for label_true in true_:
+                if label_true in label_to_index:
+                    true_matrix[i_, label_to_index[label_true]] = 1
+                else:
+                    # TOdO
+                    pass
+            for label_predicted in predicted_:
+                predicted_matrix[i_, label_to_index[label_predicted]] = 1
 
-    precisions, recalls, f_scores, supports = precision_recall_fscore_support(
-        true_matrix, predicted_matrix, average=None, zero_division=0.0
-    )
-    for i, label_ in enumerate(labels):
-        if supports[i] > 0:
-            logger.debug(
-                f"{label_} precision={precisions[i]:.2f} recall={recalls[i]:.2f} {supports[i]}"
-            )
-            detailed_performance_table.append(
-                (label_, precisions[i], recalls[i], int(supports[i]))
-            )
-    out_table = pandas.DataFrame(
-        data=detailed_performance_table,
-        columns=("label", "precision", "recall", "support"),  # ty: ignore
-    )
+        precisions, recalls, f_scores, supports = precision_recall_fscore_support(
+            true_matrix, predicted_matrix, average=None, zero_division=0.0
+        )
+        for i, label_ in enumerate(labels):
+            if supports[i] > 0:
+                logger.debug(
+                    f"{label_} precision={precisions[i]:.2f} recall={recalls[i]:.2f} {supports[i]}"
+                )
+                detailed_performance_table.append(
+                    (label_, precisions[i], recalls[i], int(supports[i]))
+                )
+        out_table = pandas.DataFrame(
+            data=detailed_performance_table,
+            columns=("label", "precision", "recall", "support"),  # ty: ignore
+        )
     logger.info(f"[TIMING] compute_performance 1/2 took {time.time() - time_start:.3f} s")
     time_start = time.time()
 

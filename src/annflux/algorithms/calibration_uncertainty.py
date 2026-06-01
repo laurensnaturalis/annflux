@@ -255,8 +255,15 @@ def _train_calibration_model(
     rf = RandomForestClassifier(**RF_PARAMS)
     rf.fit(X_train, y_train)
     
-    # Train isotonic calibrator on validation set
-    y_val_proba = rf.predict_proba(X_val)[:, 1]
+    # Handle edge case: if all labels are same class, predict_proba has only 1 column
+    proba = rf.predict_proba(X_val)
+    if proba.shape[1] == 1:
+        # All predictions are the same class - return dummy calibrator that passes through
+        logger.warning(f"[calibration_model] Only one class in predictions ({'correct' if y.iloc[0] == 1 else 'incorrect'}), skipping calibration")
+        y_val_proba = np.full(len(X_val), float(y.iloc[0]))
+    else:
+        y_val_proba = proba[:, 1]
+    
     calibrator = IsotonicRegression(out_of_bounds="clip")
     calibrator.fit(y_val_proba, y_val)
     
@@ -287,7 +294,11 @@ def _log_calibration_analysis(labeled_df: pd.DataFrame, rf: RandomForestClassifi
         # Get predictions on labeled data
         X_labeled = _extract_features(labeled_df)
         y_true = labeled_df.apply(_is_correct_prediction, axis=1).astype(int)
-        proba_uncalibrated = rf.predict_proba(X_labeled)[:, 1]
+        proba_labeled = rf.predict_proba(X_labeled)
+        if proba_labeled.shape[1] == 1:
+            proba_uncalibrated = proba_labeled[:, 0] if len(proba_labeled) > 0 else np.array([])
+        else:
+            proba_uncalibrated = proba_labeled[:, 1]
         proba_calibrated = calibrator.predict(proba_uncalibrated)
         
         # Add to dataframe for analysis
@@ -489,7 +500,8 @@ def compute_calibrated_uncertainty(
         # Return fallback: use 1 - score_predicted if available
         if "score_predicted" in data.columns:
             logger.info("[calibration_uncertainty] Using 1 - score_predicted as fallback")
-            return 1.0 - data["score_predicted"].fillna(0.5)
+            scores = pd.to_numeric(data["score_predicted"], errors="coerce").fillna(0.5)
+            return 1.0 - scores
         return pd.Series(index=data.index, data=0.5)  # neutral uncertainty
     
     # Also need enough labeled rows with label_true to assess correctness
@@ -500,7 +512,8 @@ def compute_calibrated_uncertainty(
         )
         # Return fallback
         if "score_predicted" in data.columns:
-            return 1.0 - data["score_predicted"].fillna(0.5)
+            scores = pd.to_numeric(data["score_predicted"], errors="coerce").fillna(0.5)
+            return 1.0 - scores
         return pd.Series(index=data.index, data=0.5)
     
     logger.info(
@@ -523,7 +536,12 @@ def compute_calibrated_uncertainty(
         # Apply to all data
         t_apply_start = time.time()
         X_all = _extract_features(data)
-        proba_uncalibrated = rf.predict_proba(X_all)[:, 1]
+        proba_all = rf.predict_proba(X_all)
+        if proba_all.shape[1] == 1:
+            # Single class case - all predictions have same probability
+            proba_uncalibrated = proba_all[:, 0] if len(proba_all) > 0 else np.array([])
+        else:
+            proba_uncalibrated = proba_all[:, 1]
         proba_calibrated = calibrator.predict(proba_uncalibrated)
         
         # Log distribution of probabilities

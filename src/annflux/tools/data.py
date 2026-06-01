@@ -691,10 +691,7 @@ def init_folder(
             images_table = pandas.DataFrame(
                 data=zip(
                     image_ids,
-                    [
-                        "foo,bar",
-                    ]
-                    * len(image_ids),
+                    [""] * len(image_ids),  # Empty placeholder, won't be imported as labels
                 ),
                 columns=[id_column, label_column_for_unseen],  # ty: ignore
             )
