@@ -26,7 +26,7 @@ from datetime import datetime
 from functools import lru_cache
 from multiprocessing import Pool
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import pandas
@@ -91,12 +91,75 @@ def get_full_labeling(tuples, leaf):
     return full_label
 
 
+def _load_partial_labeling_config(project_folder: str, logger: logging.Logger = None) -> Optional[dict]:
+    """Load configuration.json from annflux folder and return partial_labeling config if present."""
+    config_path = os.path.join(project_folder, "annflux", "configuration.json")
+    log = logger or get_basic_logger("partial_labeling")
+    log.info(f"Looking for config at: {config_path}, exists={os.path.exists(config_path)}")
+    if not os.path.exists(config_path):
+        return None
+    try:
+        with open(config_path) as f:
+            config = json.load(f)
+        partial = config.get("partial_labeling")
+        log.info(f"Config loaded, partial_labeling present: {partial is not None}")
+        return partial
+    except (json.JSONDecodeError, IOError) as e:
+        log.info(f"Error loading config: {e}")
+        return None
+
+
+def _is_partially_labeled(row, partial_config: dict, certainty_map: dict) -> bool:
+    """
+    Check if a row is partially labeled based on configuration rules.
+    Returns True if the row should be labeled=0.5 (partial).
+    """
+    if not partial_config:
+        return False
+    
+    rules = partial_config.get("rules", {})
+    match_all = rules.get("match_all", [])
+    
+    # Check all match_all rules
+    for rule in match_all:
+        rule_type = rule.get("type")
+        
+        if rule_type == "certainty_equals":
+            # Check if certainty matches expected values
+            uid = row.get("uid")
+            certainty = certainty_map.get(uid, "certain")
+            expected_values = rule.get("values", [])
+            if certainty not in expected_values:
+                return False
+        
+        elif rule_type == "label_count":
+            # Check label count (excluding undetermined labels)
+            label_true = row.get("label_true", "")
+            if pandas.isna(label_true) or not label_true:
+                return False
+            
+            labels = [lbl.strip() for lbl in str(label_true).split(",") if lbl.strip()]
+            
+            # Filter out undetermined labels if needed
+            if rule.get("exclude_undetermined", True):
+                labels = [lbl for lbl in labels if not lbl.startswith("?") and "=" not in lbl]
+            
+            min_count = rule.get("min_count", 1)
+            max_count = rule.get("max_count", 2)
+            if not (min_count <= len(labels) <= max_count):
+                return False
+    
+    return True
+
+
 def color_and_label(
     data: pandas.DataFrame,
     annotations: dict[str, str],
     label_definitions: list[tuple[str, str]],
     display_update_uids: list[str] | None = None,
     logger: logging.Logger = get_basic_logger("color_and_label"),
+    certainty_map: dict[str, str] | None = None,
+    project_folder: str | None = None,
 ):
     individual_labels = list(
         itertools.chain(
@@ -136,7 +199,39 @@ def color_and_label(
         [canon_(annotations.get(uid)) for uid in data.uid.values]  # noqa
     )
     labeled_uids = set(annotations.keys())
-    data["labeled"] = data["uid"].apply(lambda x_: int(x_ in labeled_uids))
+    
+    # Load partial labeling config if project folder provided
+    partial_config = None
+    if project_folder:
+        partial_config = _load_partial_labeling_config(project_folder, logger)
+        logger.info(f"Partial labeling: project_folder={project_folder}, config_found={partial_config is not None}, certainty_map_size={len(certainty_map or {})}")
+    
+    # Build UID -> row index lookup for efficient partial labeling check
+    uid_to_idx = {uid: idx for idx, uid in enumerate(data.uid.values)}
+    
+    # Set labeled values with partial labeling support
+    def get_labeled_value(uid):
+        if uid not in labeled_uids:
+            return 0
+        # Check if partial
+        if partial_config:
+            idx = uid_to_idx.get(uid)
+            if idx is not None and _is_partially_labeled(
+                data.iloc[idx], partial_config, certainty_map or {}
+            ):
+                return 0.5  # Partial - used for training, shown as unlabeled in UI
+        return 1  # Fully labeled
+    
+    data["labeled"] = data["uid"].apply(get_labeled_value)
+    
+    # Log partial labeling statistics
+    if partial_config:
+        unlabeled_count = (data["labeled"] == 0).sum()
+        partial_count = (data["labeled"] == 0.5).sum()
+        labeled_count = (data["labeled"] == 1).sum()
+        logger.info(
+            f"Partial labeling: {unlabeled_count} unlabeled, {partial_count} partial, {labeled_count} fully labeled"
+        )
 
     data_to_update.label_predicted = data_to_update.label_predicted.apply(
         lambda x_: canon_(x_)

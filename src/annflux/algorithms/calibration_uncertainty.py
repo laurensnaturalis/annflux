@@ -129,11 +129,12 @@ def _extract_features(df: pd.DataFrame) -> pd.DataFrame:
                 col_idx = col_idx_map[feat]
                 feat_values = X_values[:, col_idx]
                 labeled_vals = feat_values[labeled_mask]
-                labeled_vals = labeled_vals[~np.isnan(labeled_vals)]
+                # Filter out both NaN and Inf values for stats computation
+                labeled_vals = labeled_vals[~np.isnan(labeled_vals) & ~np.isinf(labeled_vals)]
                 if len(labeled_vals) > 1:
-                    labeled_mean = labeled_vals.mean()
-                    labeled_std = labeled_vals.std()
-                    if labeled_std > 0:
+                    labeled_mean = np.nanmean(labeled_vals)
+                    labeled_std = np.nanstd(labeled_vals)
+                    if labeled_std > 0 and not np.isnan(labeled_std):
                         # Normalize both labeled and unlabeled using labeled stats
                         X_values[:, col_idx] = (feat_values - labeled_mean) / labeled_std
                         normalized_count += 1

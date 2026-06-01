@@ -209,6 +209,7 @@ limitations under the License.
             <option value="fre_strat" selected>Deviating cases</option>
             <option value="nn_underrepresented">Rare classes</option>
             <option value="calibrated_uncertainty">Most certain</option>
+            <option value="partial_first">Partial labeled first</option>
         </select>
     </label>
     <label style="color:#aaa;font-size:0.85em">Show:
@@ -311,23 +312,25 @@ limitations under the License.
     function getActive(data) {
         const active = data.filter(d => d.set == null || d.set === '' || d.set === 'active');
         const pool = active.length > 0 ? active : data;
-        return pool.filter(d => !d.labeled || parseInt(d.labeled) === 0);
+        // Treat 0 (unlabeled) and 0.5 (partial) as needing labeling in UI
+        return pool.filter(d => !d.labeled || parseFloat(d.labeled) < 1);
     }
 
     /* ── sort by chosen column; NaN/missing last ── */
     function sortByFreStrat(data) {
         const col = $('#sort-select').val() || 'fre_strat';
-        // Most certain: sort by calibrated_prob_correct descending (highest confidence first)
-        // if (col === 'most_certain') {
-        //     return [...data].sort((a, b) => {
-        //         // Use calibrated_uncertainty if available, fallback to score_predicted
-        //         const fa = parseFloat(a.calibrated_uncertainty || a.score_predicted);
-        //         const fb = parseFloat(b.calibrated_uncertainty || b.score_predicted);
-        //         const na = isNaN(fa), nb = isNaN(fb);
-        //         if (na && nb) return 0; if (na) return 1; if (nb) return -1;
-        //         return fb - fa; // descending
-        //     });
-        // }
+        // Partial labeled first: sort by labeled value (0.5 comes before 0 and 1)
+        if (col === 'partial_first') {
+            return [...data].sort((a, b) => {
+                const la = parseFloat(a.labeled) || 0;
+                const lb = parseFloat(b.labeled) || 0;
+                // Partial (0.5) should come first, then unlabeled (0), then labeled (1)
+                // Map: 0.5 -> 0, 0 -> 1, 1 -> 2
+                const pa = la === 0.5 ? 0 : (la === 0 ? 1 : 2);
+                const pb = lb === 0.5 ? 0 : (lb === 0 ? 1 : 2);
+                return pa - pb;
+            });
+        }
         // Default: ascending sort by column
         return [...data].sort((a, b) => {
             const fa = parseFloat(a[col]), fb = parseFloat(b[col]);
@@ -346,8 +349,8 @@ limitations under the License.
     /* ── apply filter + n-limit ── */
     function applyFilter() {
         const q = $('#filter-input').val().toLowerCase().trim();
-        // For display: unlabeled only
-        const unlabeled = allData.filter(d => !d.labeled || parseInt(d.labeled) === 0);
+        // For display: unlabeled (0) and partial (0.5), but not fully labeled (1)
+        const unlabeled = allData.filter(d => !d.labeled || parseFloat(d.labeled) < 1);
         const base = q
             ? unlabeled.filter(d => (d.label_predicted || '').toLowerCase().includes(q))
             : unlabeled;
@@ -795,7 +798,8 @@ limitations under the License.
     }
 
     function updateSaveBtn() {
-        const allReviewed = filteredData.length > 0 && filteredData.every(d => reviewed.has(d.uid) || (pending[d.uid] === undefined && pendingCertainty[d.uid] === undefined));
+        // Require explicit approval (in reviewed set) for all visible rows
+        const allReviewed = filteredData.length > 0 && filteredData.every(d => reviewed.has(d.uid));
         $('#save-btn').prop('disabled', !allReviewed);
         const reviewedCount = filteredData.filter(d => reviewed.has(d.uid)).length;
         $('#status').text(`${reviewedCount} / ${filteredData.length} reviewed`);
@@ -814,11 +818,11 @@ limitations under the License.
             $('#progress-tooltip').text(tooltip);
             return;
         }
-        const labeled = filteredDataAll.filter(d => d.labeled && parseInt(d.labeled) === 1).length;
+        const labeled = filteredDataAll.filter(d => d.labeled && parseFloat(d.labeled) >= 1).length;
         const unlabeled = total - labeled;
         // Use calibrated_uncertainty if available (uncertainty < 0.1 means >90% confident), fallback to score_predicted
         const certainUnlabeled = filteredDataAll.filter(d => {
-            if (d.labeled && parseInt(d.labeled) === 1) return false;
+            if (d.labeled && parseFloat(d.labeled) >= 1) return false;
             // const calUnc = parseFloat(d.calibrated_uncertainty);
             // if (!isNaN(calUnc)) {
             //     return calUnc < 0.1; // Low uncertainty = high confidence
@@ -882,6 +886,7 @@ limitations under the License.
     applyFilter(); // sets both filteredData and filteredDataAll
     $('#status').text(`${filteredData.length} / ${allData.length} rows`);
     renderTable();
+    updateSaveBtn();
 </script>
 </body>
 </html>

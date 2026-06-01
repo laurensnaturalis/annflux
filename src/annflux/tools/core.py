@@ -31,7 +31,7 @@ class AnnFluxState(object):
 
     @property
     def project_folder(self) -> str:
-        return str(self.working_folder_ / "..")
+        return str((self.working_folder_ / "..").resolve())
 
     @property
     def annflux_folder(self) -> str:

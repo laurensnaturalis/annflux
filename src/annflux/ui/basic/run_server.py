@@ -341,7 +341,6 @@ def data_get():
                     ),
                 )
             except ValueError as e:
-                raise e
                 abort(400, str(e))
             print(f"{len(t)=}")
             with tempfile.NamedTemporaryFile() as fn:
