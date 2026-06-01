@@ -18,7 +18,6 @@ import shutil
 import tempfile
 
 from PIL import Image
-from keras.src.callbacks import Callback
 from pandas.errors import EmptyDataError
 
 from annflux.repo_results_to_embedding import group_embedding
@@ -37,7 +36,6 @@ from annflux.tools.progress_learn import estimate_duration
 from annflux.tools.visualization import most_contrasting_gray, brighten_hex_color
 from annflux.training.annflux.feature_extractor import make_resultset
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import json
 import logging
 import os
@@ -76,9 +74,7 @@ from annflux.training.annflux.quick import (
     group_classification,
     load_data,
 )
-#from annflux.training.tensorflow.tf_backend import linear_retraining
-# from annflux.training.tensorflow.torch_backend import linear_retraining
-from annflux.training.tensorflow.torch_backend import supcon_retraining as linear_retraining
+from annflux.training.pytorch.torch_backend import supcon_retraining as linear_retraining
 
 project_root: Optional[str]
 images_path: str
@@ -569,15 +565,11 @@ def sound(uid):
         return send_file(thumb_path, mimetype="audio/wav", as_attachment=False)
 
 
-class StatusUpdate(Callback):
+class StatusUpdate:
     def __init__(self, state: AnnFluxState):
-        super().__init__()
         self.state = state
 
-    def __call__(self, epoch, logs=None):
-        self.state.linear_status_epoch = epoch
-
-    def on_epoch_end(self, epoch, logs=None):
+    def __call__(self, epoch, val_loss=None):
         self.state.linear_status_epoch = epoch
 
 

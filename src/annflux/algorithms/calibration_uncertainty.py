@@ -459,6 +459,108 @@ def _log_calibration_analysis(labeled_df: pd.DataFrame, rf: RandomForestClassifi
         logger.warning(f"[calibration_model] Could not compute calibration analysis: {e}")
 
 
+def _select_best_probability_score(
+    labeled_df: pd.DataFrame,
+    rf: RandomForestClassifier,
+    calibrator: IsotonicRegression,
+    proba_calibrated_all: np.ndarray,
+    proba_uncalibrated_all: np.ndarray,
+    score_predicted_all: np.ndarray | None = None,
+) -> np.ndarray:
+    """
+    Compute last bin calibration errors on labeled data and select the best probability score.
+    
+    Returns the probability array (calibrated, uncalibrated, or score_predicted) 
+    that has the lowest last bin [0.9, 1.0] calibration error.
+    """
+    try:
+        # Get predictions on labeled data
+        X_labeled = _extract_features(labeled_df)
+        y_true = labeled_df.apply(_is_correct_prediction, axis=1).astype(int)
+        
+        proba_labeled = rf.predict_proba(X_labeled)
+        if proba_labeled.shape[1] == 1:
+            proba_uncal_labeled = proba_labeled[:, 0] if len(proba_labeled) > 0 else np.array([])
+        else:
+            proba_uncal_labeled = proba_labeled[:, 1]
+        proba_cal_labeled = calibrator.predict(proba_uncal_labeled)
+        
+        # Build analysis dataframe
+        labeled_analysis = pd.DataFrame({
+            "correct": y_true,
+            "calibrated": proba_cal_labeled,
+            "uncalibrated": proba_uncal_labeled,
+        })
+        
+        # Filter to valid score_predicted if available
+        if "score_predicted" in labeled_df.columns:
+            score_not_null = labeled_df["score_predicted"].notna()
+            labeled_analysis_filtered = labeled_analysis[score_not_null]
+            labeled_analysis_filtered["score"] = pd.to_numeric(
+                labeled_df.loc[score_not_null, "score_predicted"], errors="coerce"
+            ).clip(0, 1).values
+        else:
+            labeled_analysis_filtered = labeled_analysis
+        
+        # Compute last bin [0.9, 1.0] errors for all three scores
+        bins = np.arange(0, 1.1, 0.1)
+        last_bin_idx = len(bins) - 2  # Index of [0.9, 1.0] bin
+        lower, upper = bins[last_bin_idx], bins[last_bin_idx + 1]
+        
+        errors = {}
+        
+        # Calibrated last bin error
+        mask_cal = (labeled_analysis_filtered["calibrated"] >= lower) & (labeled_analysis_filtered["calibrated"] <= upper)
+        subset_cal = labeled_analysis_filtered[mask_cal]
+        if len(subset_cal) > 0:
+            actual_acc = subset_cal["correct"].mean()
+            expected_prob = subset_cal["calibrated"].mean()
+            errors["calibrated"] = abs(expected_prob - actual_acc)
+        
+        # Uncalibrated last bin error
+        mask_uncal = (labeled_analysis_filtered["uncalibrated"] >= lower) & (labeled_analysis_filtered["uncalibrated"] <= upper)
+        subset_uncal = labeled_analysis_filtered[mask_uncal]
+        if len(subset_uncal) > 0:
+            actual_acc = subset_uncal["correct"].mean()
+            expected_prob = subset_uncal["uncalibrated"].mean()
+            errors["uncalibrated"] = abs(expected_prob - actual_acc)
+        
+        # Score_predicted last bin error
+        if "score" in labeled_analysis_filtered.columns:
+            mask_score = (labeled_analysis_filtered["score"] >= lower) & (labeled_analysis_filtered["score"] <= upper)
+            subset_score = labeled_analysis_filtered[mask_score]
+            if len(subset_score) > 0:
+                actual_acc = subset_score["correct"].mean()
+                expected_prob = subset_score["score"].mean()
+                errors["score_predicted"] = abs(expected_prob - actual_acc)
+        
+        # Select best score (lowest last bin error)
+        if not errors:
+            logger.info("[calibration_selection] No valid last bin errors computed, using calibrated")
+            return proba_calibrated_all
+        
+        best_score_name = min(errors, key=errors.get)
+        best_error = errors[best_score_name]
+        
+        logger.info(f"[calibration_selection] Last bin [0.9,1.0] errors: {errors}")
+        logger.info(f"[calibration_selection] Selected '{best_score_name}' with error={best_error:.4f}")
+        
+        if best_score_name == "calibrated":
+            return proba_calibrated_all
+        elif best_score_name == "uncalibrated":
+            return proba_uncalibrated_all
+        else:  # score_predicted
+            if score_predicted_all is not None:
+                logger.info("[calibration_selection] Using score_predicted (best last bin calibration)")
+                return score_predicted_all
+            logger.info("[calibration_selection] score_predicted has best calibration but no all-data scores available, using calibrated")
+            return proba_calibrated_all
+            
+    except Exception as e:
+        logger.warning(f"[calibration_selection] Error selecting best score: {e}, using calibrated")
+        return proba_calibrated_all
+
+
 def compute_calibrated_uncertainty(
     data: pd.DataFrame,
     labeled_indices: Optional[np.ndarray] = None,
@@ -548,9 +650,17 @@ def compute_calibrated_uncertainty(
         logger.info(f"[calibration_model] All data - Uncalibrated: min={proba_uncalibrated.min():.3f}, max={proba_uncalibrated.max():.3f}, mean={proba_uncalibrated.mean():.3f}")
         logger.info(f"[calibration_model] All data - Calibrated: min={proba_calibrated.min():.3f}, max={proba_calibrated.max():.3f}, mean={proba_calibrated.mean():.3f}")
         
+        # Prepare score_predicted_all if available
+        score_predicted_all = None
+        if "score_predicted" in data.columns:
+            score_predicted_all = pd.to_numeric(data["score_predicted"], errors="coerce").fillna(0.5).values
+        
+        # Compute last bin errors on labeled data to select best score
+        best_proba = _select_best_probability_score(labeled_with_true, rf, calibrator, proba_calibrated, proba_uncalibrated, score_predicted_all)
+        
         # Uncertainty = 1 - probability of being correct
         # This means uncertain predictions (low prob_correct) get high uncertainty
-        uncertainty = 1.0 - proba_calibrated
+        uncertainty = 1.0 - best_proba
         
         logger.info(f"[TIMING] calibration_uncertainty inference={time.time() - t_apply_start:.3f}s")
         logger.info(f"[TIMING] calibration_uncertainty total={time.time() - t_start:.3f}s")

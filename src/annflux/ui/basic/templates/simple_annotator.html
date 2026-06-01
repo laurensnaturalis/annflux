@@ -823,10 +823,10 @@ limitations under the License.
         // Use calibrated_uncertainty if available (uncertainty < 0.1 means >90% confident), fallback to score_predicted
         const certainUnlabeled = filteredDataAll.filter(d => {
             if (d.labeled && parseFloat(d.labeled) >= 1) return false;
-            // const calUnc = parseFloat(d.calibrated_uncertainty);
-            // if (!isNaN(calUnc)) {
-            //     return calUnc < 0.1; // Low uncertainty = high confidence
-            // }
+            const calUnc = parseFloat(d.calibrated_uncertainty);
+            if (!isNaN(calUnc)) {
+                return calUnc < 0.1; // Low uncertainty = high confidence
+            }
             // Fallback to raw score_predicted
             return parseFloat(d.score_predicted) > 0.90;
         }).length;

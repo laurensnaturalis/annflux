@@ -26,7 +26,6 @@ import logging
 from datetime import datetime
 
 import numpy as np
-from tensorflow.python.keras.callbacks import Callback
 
 from annflux.algorithms.embeddings import compute_tsne
 from annflux.algorithms.fastdpeak import fast_density_peak_clustering
@@ -41,20 +40,16 @@ from annflux.tools.data import create_group_flux_data
 from annflux.tools.progress_learn import estimate_duration
 from annflux.training.annflux.feature_extractor import make_resultset
 from annflux.training.annflux.quick import quick_reclassification, group_classification, load_data
-from annflux.training.tensorflow.tf_backend import linear_retraining
+from annflux.training.pytorch.torch_backend import linear_retraining
 
 
-class StatusUpdate(Callback):
+class StatusUpdate:
     """Callback for updating training status during linear retraining."""
     
     def __init__(self, state: AnnFluxState):
-        super().__init__()
         self.state = state
 
-    def __call__(self, epoch, logs=None):
-        self.state.linear_status_epoch = epoch
-
-    def on_epoch_end(self, epoch, logs=None):
+    def __call__(self, epoch, val_loss=None):
         self.state.linear_status_epoch = epoch
 
 
