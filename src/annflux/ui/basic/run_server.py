@@ -76,8 +76,9 @@ from annflux.training.annflux.quick import (
     group_classification,
     load_data,
 )
-from annflux.training.tensorflow.tf_backend import linear_retraining
+#from annflux.training.tensorflow.tf_backend import linear_retraining
 # from annflux.training.tensorflow.torch_backend import linear_retraining
+from annflux.training.tensorflow.torch_backend import supcon_retraining as linear_retraining
 
 project_root: Optional[str]
 images_path: str
@@ -1117,6 +1118,15 @@ def status():
         except EmptyDataError:
             pass
 
+    # Load label_accuracy from performance.json
+    label_accuracy = 0
+    if os.path.exists(g_state.performance_path):
+        try:
+            perf_data = json.load(open(g_state.performance_path))
+            label_accuracy = perf_data.get("label_accuracy", 0)
+        except (json.JSONDecodeError, FileNotFoundError):
+            pass
+
     time_remaining_s = estimated_duration_s - status_duration
     return {
         "status": g_state.g_quick_status,
@@ -1134,6 +1144,7 @@ def status():
         "perc_likely_certain_unlabeled": perc_likely_certain_unlabeled,
         "average_precision": average_precision,
         "average_recall": average_recall,
+        "label_accuracy": label_accuracy,
         # "performance": json.load(open(performance_path))
     }
 

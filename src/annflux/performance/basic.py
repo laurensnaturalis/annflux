@@ -23,7 +23,7 @@ from typing import Dict, List, Tuple, Any
 
 import numpy as np
 import pandas
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, f1_score, hamming_loss, jaccard_score
 from sklearn.preprocessing import MultiLabelBinarizer
 
 
@@ -46,13 +46,24 @@ def compute_performance(
     if len(true_test) > 0 and len(predicted_test) > 0:
         binarizer = MultiLabelBinarizer()
         binarizer.fit(true_test)
-        acc_test = accuracy_score(
-            binarizer.transform(true_test), binarizer.transform(predicted_test)
+        y_true_bin = binarizer.transform(true_test)
+        y_pred_bin = binarizer.transform(predicted_test)
+        acc_test = accuracy_score(y_true_bin, y_pred_bin)
+        # Multi-label metrics
+        hamming = hamming_loss(y_true_bin, y_pred_bin)
+        micro_f1 = f1_score(y_true_bin, y_pred_bin, average="micro", zero_division=0.0)
+        jaccard = jaccard_score(y_true_bin, y_pred_bin, average="samples", zero_division=0.0)
+        # Per-label accuracy: percentage of individual label predictions that are correct
+        label_accuracy = (y_true_bin == y_pred_bin).mean()
+        logger.info(
+            f"[PERFORMANCE_METRICS] Subset Acc={acc_test:.3f}, Hamming Loss={hamming:.3f}, "
+            f"Micro F1={micro_f1:.3f}, Jaccard={jaccard:.3f}, Label Acc={label_accuracy:.3f}"
         )
         if performance_graph_path is not None:
             write_performance(
                 performance_graph_path, acc_test, num_train_val, len(true_test)
             )
+            write_performance_key_val(performance_graph_path, "label_accuracy", label_accuracy)
     labels = list(set(itertools.chain(*[x_.split(",") for x_ in annotations.values()])))
     label_to_index = dict(zip(labels, range(len(labels))))
     detailed_performance_table = []

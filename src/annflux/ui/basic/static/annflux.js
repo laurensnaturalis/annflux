@@ -403,6 +403,11 @@ function renderPerformance(data) {
         $("#percentage_near_labeled").attr("title",
             `With prediction ${round(data['percentage_labeled_possible'] * 100.0, 1)} %`
         );
+        // Show label accuracy if available
+        const label_accuracy = data["label_accuracy"];
+        if (label_accuracy !== undefined) {
+            $("#label_accuracy").html(round(label_accuracy * 100.0, 1));
+        }
     }
 }
 
@@ -453,7 +458,7 @@ controlHtml = `<div id="map_control">
             <a href="/detailed_performance">Performance</a>
           </td>
           <td>
-            acc. = <span id="test_performance"></span> aP = <span id="average_precision" title="Average precision: averaged across labels how often a prediction is correct for a certain label"></span> % - aR <span id="average_recall"></span> %
+            acc. = <span id="test_performance"></span> aP = <span id="average_precision" title="Average precision: averaged across labels how often a prediction is correct for a certain label"></span> % - aR <span id="average_recall"></span> % - lA <span id="label_accuracy" title="Label accuracy: percentage of individual label predictions that are correct"></span> %
           </td>
         </tr>
         <tr>

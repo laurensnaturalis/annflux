@@ -208,7 +208,7 @@ limitations under the License.
         <select id="sort-select" style="background:#333;color:#ddd;border:1px solid #555;border-radius:4px;padding:3px 6px">
             <option value="fre_strat" selected>Deviating cases</option>
             <option value="nn_underrepresented">Rare classes</option>
-            <option value="most_certain">Most certain</option>
+            <option value="calibrated_uncertainty">Most certain</option>
         </select>
     </label>
     <label style="color:#aaa;font-size:0.85em">Show:
@@ -231,6 +231,7 @@ limitations under the License.
         <div class="bar-segment bar-uncertain"></div>
         <div id="progress-tooltip" style="display:none"></div>
     </div>
+    <span id="al-acceleration" style="margin-left: 10px; font-size: 0.85em; color: #aaa;" title="Active Learning Acceleration = Likely Certain % / Labeled % (higher = more efficient)"></span>
 </div>
 
 <div id="table-wrap">
@@ -316,15 +317,17 @@ limitations under the License.
     /* ── sort by chosen column; NaN/missing last ── */
     function sortByFreStrat(data) {
         const col = $('#sort-select').val() || 'fre_strat';
-        // Most certain: sort by score_predicted descending (highest confidence first)
-        if (col === 'most_certain') {
-            return [...data].sort((a, b) => {
-                const fa = parseFloat(a.score_predicted), fb = parseFloat(b.score_predicted);
-                const na = isNaN(fa), nb = isNaN(fb);
-                if (na && nb) return 0; if (na) return 1; if (nb) return -1;
-                return fb - fa; // descending
-            });
-        }
+        // Most certain: sort by calibrated_prob_correct descending (highest confidence first)
+        // if (col === 'most_certain') {
+        //     return [...data].sort((a, b) => {
+        //         // Use calibrated_uncertainty if available, fallback to score_predicted
+        //         const fa = parseFloat(a.calibrated_uncertainty || a.score_predicted);
+        //         const fb = parseFloat(b.calibrated_uncertainty || b.score_predicted);
+        //         const na = isNaN(fa), nb = isNaN(fb);
+        //         if (na && nb) return 0; if (na) return 1; if (nb) return -1;
+        //         return fb - fa; // descending
+        //     });
+        // }
         // Default: ascending sort by column
         return [...data].sort((a, b) => {
             const fa = parseFloat(a[col]), fb = parseFloat(b[col]);
@@ -451,9 +454,49 @@ limitations under the License.
 
         function renderPicker(q) {
             $picker.empty();
-            const matches = q
-                ? labelDefs.filter(l => l.toLowerCase().includes(q))
-                : labelDefs;
+            let matches;
+            if (q) {
+                // Search mode: filter all labels
+                matches = labelDefs.filter(l => l.toLowerCase().includes(q));
+            } else {
+                // Default mode: show descendants of all predicted labels,
+                // with descendants of most specific labels shown first
+                const currentLbls = currentLabels(d);
+                
+                // Sort labels by depth (deepest/most specific first)
+                const sortedLabels = [...currentLbls]
+                    .filter(l => !l.includes('=')) // skip undetermined
+                    .sort((a, b) => ancestors(b).length - ancestors(a).length);
+                
+                // Collect descendants from each label in specificity order
+                const descendantSet = new Set();
+                const descendantOrder = [];
+                
+                sortedLabels.forEach((lbl, labelIdx) => {
+                    const descs = descendants(lbl);
+                    descs.forEach(desc => {
+                        if (!descendantSet.has(desc)) {
+                            descendantSet.add(desc);
+                            // Priority = label specificity rank (0 = most specific)
+                            const depth = ancestors(desc).length;
+                            descendantOrder.push({label: desc, labelRank: labelIdx, depth});
+                        }
+                    });
+                });
+                
+                // Sort: most specific parent's descendants first, then by depth, then alphabetically
+                descendantOrder.sort((a, b) => {
+                    if (a.labelRank !== b.labelRank) return a.labelRank - b.labelRank;
+                    if (b.depth !== a.depth) return b.depth - a.depth;
+                    return a.label.localeCompare(b.label);
+                });
+                
+                // Build matches: descendants first (by specificity), then other labels
+                const descendantLabels = descendantOrder.map(item => item.label);
+                const otherLabels = labelDefs.filter(l => !descendantSet.has(l) && !currentLbls.includes(l));
+                matches = [...descendantLabels, ...otherLabels];
+            }
+            
             matches.slice(0, 10).forEach(lbl => {
                 $('<button>').addClass('pick-btn')
                     .toggleClass('selected', currentLabels(d).includes(lbl))
@@ -484,13 +527,16 @@ limitations under the License.
 
     /* ── walk all descendants of a label (recursive) ── */
     function descendants(lbl) {
+        const children = parentToChildren.get(lbl);
+        console.log(`[descendants] lbl="${lbl}", children=${JSON.stringify(children)}`);
         const result = [];
-        const stack = parentToChildren.get(lbl) ? [...parentToChildren.get(lbl)] : [];
+        const stack = children ? [...children] : [];
         while (stack.length) {
             const cur = stack.pop();
             result.push(cur);
             if (parentToChildren.has(cur)) stack.push(...parentToChildren.get(cur));
         }
+        console.log(`[descendants] lbl="${lbl}", result=${JSON.stringify(result.slice(0,5))}`);
         return result;
     }
 
@@ -770,7 +816,16 @@ limitations under the License.
         }
         const labeled = filteredDataAll.filter(d => d.labeled && parseInt(d.labeled) === 1).length;
         const unlabeled = total - labeled;
-        const certainUnlabeled = filteredDataAll.filter(d => (!d.labeled || parseInt(d.labeled) === 0) && parseFloat(d.score_predicted) > 0.90).length;
+        // Use calibrated_uncertainty if available (uncertainty < 0.1 means >90% confident), fallback to score_predicted
+        const certainUnlabeled = filteredDataAll.filter(d => {
+            if (d.labeled && parseInt(d.labeled) === 1) return false;
+            // const calUnc = parseFloat(d.calibrated_uncertainty);
+            // if (!isNaN(calUnc)) {
+            //     return calUnc < 0.1; // Low uncertainty = high confidence
+            // }
+            // Fallback to raw score_predicted
+            return parseFloat(d.score_predicted) > 0.90;
+        }).length;
         const uncertainUnlabeled = unlabeled - certainUnlabeled;
         const pctLabeled = (labeled / total * 100).toFixed(1);
         const pctCertain = (certainUnlabeled / total * 100).toFixed(1);
@@ -781,6 +836,10 @@ limitations under the License.
         const tooltip = `Labeled: ${pctLabeled}% (${labeled}) | Likely certain: ${pctCertain}% (${certainUnlabeled}) | Uncertain: ${pctUncertain}% (${uncertainUnlabeled}) — of ${total} filtered items`;
         $('#progress-bar').attr('title', tooltip);
         $('#progress-tooltip').text(tooltip);
+        
+        // AL Acceleration = ratio of likely certain to labeled (higher = more efficient)
+        const alAccel = labeled > 0 ? (certainUnlabeled / labeled).toFixed(2) : '0.00';
+        $('#al-acceleration').text(`AL Accel: ${alAccel}x`);
     }
     $('#progress-bar').on('mouseenter', () => $('#progress-tooltip').show());
     $('#progress-bar').on('mouseleave', () => $('#progress-tooltip').hide());

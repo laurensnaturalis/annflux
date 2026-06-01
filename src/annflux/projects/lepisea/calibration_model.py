@@ -107,6 +107,7 @@ def extract_features(df: pd.DataFrame) -> pd.DataFrame:
         "certainty",  # if exists
         "correct",  # target variable we create during training
         "calibrated_prob_correct",  # model output, not a feature
+        "calibrated_uncertainty",
         "incorrect_score"  # only for labeled data
     }
     
@@ -271,8 +272,12 @@ def analyze_calibration(df_with_proba: pd.DataFrame):
     
     print("\n=== Calibration Analysis ===")
     
-    # Binned calibration
+    # Binned calibration with ECE calculation
     bins = np.arange(0, 1.1, 0.1)
+    ece_total = 0.0
+    total_samples = len(labeled)
+    last_bin_error = None
+    
     for i in range(len(bins) - 1):
         lower, upper = bins[i], bins[i + 1]
         mask = (labeled["calibrated_prob_correct"] >= lower) & (
@@ -281,10 +286,24 @@ def analyze_calibration(df_with_proba: pd.DataFrame):
         subset = labeled[mask]
         if len(subset) > 0:
             actual_acc = subset["correct"].mean()
+            expected_prob = subset["calibrated_prob_correct"].mean()
+            calibration_error = abs(expected_prob - actual_acc)
+            bin_weight = len(subset) / total_samples
+            ece_total += bin_weight * calibration_error
+            
+            # Store last bin (0.9-1.0) error
+            if i == len(bins) - 2:  # Last bin is 0.9-1.0
+                last_bin_error = calibration_error
+            
             print(
                 f"Prob [{lower:.1f}, {upper:.1f}): "
-                f"n={len(subset)}, actual_acc={actual_acc:.3f}"
+                f"n={len(subset)}, actual_acc={actual_acc:.3f}, "
+                f"expected={expected_prob:.3f}, cal_error={calibration_error:.3f}"
             )
+    
+    print(f"\nExpected Calibration Error (ECE): {ece_total:.4f}")
+    if last_bin_error is not None:
+        print(f"Calibration error for bin [0.9, 1.0): {last_bin_error:.4f}")
     
     # Correlation between predicted probability and actual correctness
     corr = labeled["calibrated_prob_correct"].corr(labeled["correct"])

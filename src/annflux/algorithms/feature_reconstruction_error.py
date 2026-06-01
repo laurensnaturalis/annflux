@@ -104,6 +104,7 @@ def compute_fre(
     # compute FRE values
     time_start = time.time()
     column_name = "fre"
+    # Initialize with NaN - we'll track which rows get computed
     fre_arr = np.full(len(data), np.nan)
 
     label_to_indices = {
@@ -121,9 +122,15 @@ def compute_fre(
     data[column_name] = fre_arr
 
     logger.info(f"pca application took={time.time() - time_start:.2f}")
-    data[column_name] /= data[column_name].max()
-    data[column_name] = 1 - data[column_name]
-    # data[column_name] = data[column_name].fillna(0)
+    
+    # Get max of computed values only (ignoring NaN)
+    fre_max = np.nanmax(fre_arr) if np.any(~np.isnan(fre_arr)) else 1.0
+    
+    # Normalize and invert: high raw error -> low inverted value (0 = most deviating)
+    data[column_name] = 1 - (data[column_name] / fre_max)
+    
+    # Fill NaN with 0 so uncomputable FRE gets highest deviating score (0 = most deviating after inversion)
+    data[column_name] = data[column_name].fillna(0)
     logger.info(f"[TIMING] FRE setting in DataFrame took {time.time() - time_start} s")
     #
     # - stratify by predicted label
