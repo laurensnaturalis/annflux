@@ -8,6 +8,8 @@ uv.lock
 tmp.*
 tmp/
 tmp.weights.h5
+__pycache__/
+*.py[cod]
 src/annflux/ui/basic/prof/
 src/annflux/ui/basic/*_bak.py
 src/annflux/ui/basic/*_original.py
