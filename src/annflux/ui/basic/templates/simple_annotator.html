@@ -309,7 +309,16 @@ limitations under the License.
     async function loadData() {
         const urlParams = new URLSearchParams(window.location.search);
         const filter_query = urlParams.get('filter_query');
-        const url = filter_query ? `/data?filter_query=${encodeURIComponent(filter_query)}` : '/data';
+        const baseColumns = [
+            'uid', 'label_predicted', 'scores_predicted', 'labeled', 'set',
+            'certainty', 'fre_strat', 'nn_underrepresented', 'calibrated_uncertainty',
+            'partial_first', 'score_predicted',
+        ];
+        const allColumns = [...new Set([...baseColumns, ...visibleMeta])];
+        const params = new URLSearchParams();
+        params.set('columns', allColumns.join(','));
+        if (filter_query) params.set('filter_query', filter_query);
+        const url = `/data?${params.toString()}`;
         const file = await window.asyncBufferFromUrl({url});
         return await window.parquetReadObjects({file});
     }

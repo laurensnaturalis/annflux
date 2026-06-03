@@ -161,10 +161,14 @@ def generate_missing_thumbnail(uid, size=(224, 224)) -> PIL.Image:
     return image
 
 
-def to_js_arrow(annflux_data_path, annflux_pq_cache_path):
-    pandas.read_csv(
+def to_js_arrow(annflux_data_path, annflux_pq_cache_path, columns=None):
+    df = pandas.read_csv(
         annflux_data_path, dtype={"score_possible": str, "scores_predicted": str}
-    ).to_parquet(annflux_pq_cache_path)
+    )
+    if columns is not None:
+        keep = [c for c in columns if c in df.columns]
+        df = df[keep]
+    df.to_parquet(annflux_pq_cache_path)
 
 import pandas as pd
 

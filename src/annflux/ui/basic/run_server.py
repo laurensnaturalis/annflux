@@ -310,10 +310,14 @@ def data_get():
     annflux_data_path = os.path.join(g_state.project_folder, "annflux", "annflux.csv")
     time_start = time.time()
     filter_query = flask.request.args.get("filter_query")
+    columns_param = flask.request.args.get("columns")
+    columns = [c.strip() for c in columns_param.split(",")] if columns_param else None
     print(f"data_get: {filter_query=}")
     hash_ = file_fingerprint(annflux_data_path)
     if filter_query is not None:
         hash_ += compute_hash(filter_query)
+    if columns is not None:
+        hash_ += compute_hash(",".join(sorted(columns)))
     print(f"{annflux_data_path} took {(time.time() - time_start) * 1000} ms")
     annflux_pq_cache_path = os.path.join(
         g_state.project_folder, "annflux", f"annflux_{hash_}.parquet"
@@ -344,10 +348,9 @@ def data_get():
             with tempfile.NamedTemporaryFile() as fn:
                 t.to_csv(fn, index=False)
                 annflux_data_path = fn.name
-
-                to_js_arrow(annflux_data_path, annflux_pq_cache_path)
+                to_js_arrow(annflux_data_path, annflux_pq_cache_path, columns=columns)
         else:
-            to_js_arrow(annflux_data_path, annflux_pq_cache_path)
+            to_js_arrow(annflux_data_path, annflux_pq_cache_path, columns=columns)
 
     logger.info(f"annflux_data_path = {annflux_data_path}")
     return send_file(
