@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import fcntl
+import csv
 import math
 import os
 import shutil
 import tempfile
 
+import duckdb
 from PIL import Image
 from pandas.errors import EmptyDataError
 
@@ -29,6 +31,7 @@ from annflux.tools.io import (
     generate_missing_thumbnail,
     to_js_arrow,
     compute_hash,
+    file_fingerprint,
     sql_to_pandas_query,
     numpy_load,
 )
@@ -68,7 +71,6 @@ from annflux.tools.data import (
     make_backup,
 )
 from annflux.tools.mixed import get_logger, str2bool, get_version
-from annflux.tools.io import file_hash
 from annflux.training.annflux.quick import (
     quick_reclassification,
     group_classification,
@@ -293,7 +295,7 @@ def annflux_endpoint():
             os.getenv("INDEED_TEMPLATE", "golden")
         ],
         layout=g_layout,
-        auto_linear_train_idle_time=int(os.getenv("AUTO_LINEAR_TRAIN_IDLE_TIME", 1800)),
+        auto_linear_train_idle_time=int(os.getenv("AUTO_LINEAR_TRAIN_IDLE_TIME", -1)),
     )
 
 
@@ -309,7 +311,7 @@ def data_get():
     time_start = time.time()
     filter_query = flask.request.args.get("filter_query")
     print(f"data_get: {filter_query=}")
-    hash_ = file_hash(annflux_data_path)
+    hash_ = file_fingerprint(annflux_data_path)
     if filter_query is not None:
         hash_ += compute_hash(filter_query)
     print(f"{annflux_data_path} took {(time.time() - time_start) * 1000} ms")
@@ -666,6 +668,81 @@ def version_endpoint():
 g_version = get_version()
 
 
+def _append_annotation_log(label_update: dict):
+    annotation_log_path = os.path.join(g_state.annflux_folder, "annotation_log.csv")
+    fieldnames = [
+        "uid",
+        "label_true",
+        "date",
+        "annotator",
+        "label_predicted",
+    ]
+    predictions = {}
+    try:
+        uids_to_log = {
+            uid
+            for uid, label_true in label_update.items()
+            if label_true != "n/a" and label_true != ""
+        }
+        if not uids_to_log:
+            return
+        time_start = time.time()
+        hash_ = file_fingerprint(g_state.annflux_path)
+        logger.info(
+            f"annotation log file_fingerprint took {(time.time() - time_start) * 1000:.1f} ms"
+        )
+        annflux_parquet_path = os.path.join(
+            g_state.annflux_folder, f"annflux_{hash_}.parquet"
+        )
+        if os.path.exists(annflux_parquet_path):
+            time_start = time.time()
+            placeholders = ", ".join(["?"] * len(uids_to_log))
+            query = f"""
+                SELECT CAST(uid AS VARCHAR) AS uid, label_predicted
+                FROM read_parquet(?)
+                WHERE CAST(uid AS VARCHAR) IN ({placeholders})
+            """
+            rows = duckdb.execute(query, [annflux_parquet_path, *uids_to_log]).fetchall()
+            predictions = {uid: label_predicted for uid, label_predicted in rows}
+            logger.info(
+                f"annotation log duckdb lookup for {len(uids_to_log)} uid(s) took {(time.time() - time_start) * 1000:.1f} ms"
+            )
+        else:
+            time_start = time.time()
+            data = pandas.read_csv(
+                g_state.annflux_path,
+                dtype={"uid": str, "label_predicted": str},
+                usecols=["uid", "label_predicted"],
+            )
+            data = data[data["uid"].isin(uids_to_log)]
+            predictions = dict(zip(data["uid"], data["label_predicted"]))
+            logger.info(
+                f"annotation log pandas fallback for {len(uids_to_log)} uid(s) took {(time.time() - time_start) * 1000:.1f} ms"
+            )
+    except Exception as e:
+        logger.error(f"Could not read predictions for annotation log: {e}", exc_info=True)
+
+    annotator = auth.current_user() or ""
+    annotation_date = datetime.now().isoformat(timespec="seconds")
+    file_exists = os.path.exists(annotation_log_path)
+    with open(annotation_log_path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        if not file_exists or os.path.getsize(annotation_log_path) == 0:
+            writer.writeheader()
+        for uid, label_true in label_update.items():
+            if label_true == "n/a" or label_true == "":
+                continue
+            writer.writerow(
+                {
+                    "uid": uid,
+                    "label_true": label_true,
+                    "date": annotation_date,
+                    "annotator": annotator,
+                    "label_predicted": predictions.get(uid, ""),
+                }
+            )
+
+
 @app.route("/label", methods=["POST"])
 def label():
     g_state.new_labeled_uids = set()
@@ -695,6 +772,10 @@ def label():
     # TODO: check that not incidentally undetermined labels are removed
     j_labels.update({k: v for k, v in label_update.items() if v != "n/a" and v != ""})
     write_json_atomic(g_state.labels_path, j_labels)
+    try:
+        _append_annotation_log(label_update)
+    except Exception as e:
+        logger.error(f"Could not append annotation log: {e}", exc_info=True)
 
     async_mode = str2bool(request.args.get("async", "0"))
     if async_mode:
@@ -1024,16 +1105,21 @@ def group_train_job(state: AnnFluxState):
 def status():
     label_update = request.get_json(force=True)
     # print(f"{label_update=}")
-    auto_linear_train_idle_time = int(os.getenv("AUTO_LINEAR_TRAIN_IDLE_TIME", 1800))
+    auto_linear_train_idle_time = int(os.getenv("AUTO_LINEAR_TRAIN_IDLE_TIME", -1))
     # print(label_update["idleTime"], auto_linear_train_idle_time, g_state.labeled_indices)
     group_train = label_update["groupTrain"] if "groupTrain" in label_update else False
-    if label_update["idleTime"] > auto_linear_train_idle_time:
+    force_train = label_update["forceTrain"] if "forceTrain" in label_update else False
+    should_train = force_train or (
+        auto_linear_train_idle_time >= 0
+        and label_update["idleTime"] > auto_linear_train_idle_time
+    )
+    if should_train:
         if g_state.train_thread is None or not g_state.train_thread.is_alive():
             if g_state.labeled_indices is not None:
                 if g_state.trained_for_version != len(g_state.labeled_indices):
                     training_logger.info(
                         f"Training from status: {g_state.trained_for_version=}"
-                        f", {len(g_state.labeled_indices)=}, {label_update['idleTime']}"
+                        f", {len(g_state.labeled_indices)=}, {label_update['idleTime']}, {force_train=}"
                     )
                     g_state.train_thread = threading.Thread(
                         target=retrain_job, args=(g_state,)

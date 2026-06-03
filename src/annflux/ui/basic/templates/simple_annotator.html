@@ -278,6 +278,10 @@ limitations under the License.
     let childToParent = new Map(); // label -> parent label (or null)
     let parentToChildren = new Map(); // label -> [child labels]
 
+    function normLabel(lbl) {
+        return (lbl || '').toString().trim();
+    }
+
     /* ── load visible metadata config ── */
     async function loadVisibleMeta() {
         const r = await $.getJSON('/metadata/visible');
@@ -287,10 +291,12 @@ limitations under the License.
     /* ── load label defs ── */
     async function loadLabelDefs() {
         const j = await $.getJSON('/label_defs');
-        labelDefs = (j.labels || []).map(l => l[0]);
+        labelDefs = (j.labels || []).map(l => normLabel(l[0]));
         childToParent = new Map();
         parentToChildren = new Map();
         (j.labels || []).forEach(([lbl, parent]) => {
+            lbl = normLabel(lbl);
+            parent = normLabel(parent);
             if (parent && parent !== 'null') {
                 childToParent.set(lbl, parent);
                 if (!parentToChildren.has(parent)) parentToChildren.set(parent, []);
@@ -372,7 +378,7 @@ limitations under the License.
         } else {
             raw = d.label_predicted || '';
         }
-        return raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
+        return raw ? raw.split(',').map(normLabel).filter(Boolean) : [];
     }
 
     /* ── serialize label list to string ── */
@@ -519,6 +525,7 @@ limitations under the License.
 
     /* ── walk ancestors of a label ── */
     function ancestors(lbl) {
+        lbl = normLabel(lbl);
         const result = [];
         let cur = childToParent.get(lbl);
         while (cur) {
@@ -530,8 +537,8 @@ limitations under the License.
 
     /* ── walk all descendants of a label (recursive) ── */
     function descendants(lbl) {
+        lbl = normLabel(lbl);
         const children = parentToChildren.get(lbl);
-        console.log(`[descendants] lbl="${lbl}", children=${JSON.stringify(children)}`);
         const result = [];
         const stack = children ? [...children] : [];
         while (stack.length) {
@@ -539,7 +546,6 @@ limitations under the License.
             result.push(cur);
             if (parentToChildren.has(cur)) stack.push(...parentToChildren.get(cur));
         }
-        console.log(`[descendants] lbl="${lbl}", result=${JSON.stringify(result.slice(0,5))}`);
         return result;
     }
 
@@ -590,7 +596,8 @@ limitations under the License.
 
     /* ── remove a label from a row ── */
     function removeLabel(d, lbl, $tr) {
-        const lbls = currentLabels(d).filter(l => l !== lbl);
+        const removeSet = new Set([lbl, ...descendants(lbl)]);
+        const lbls = currentLabels(d).filter(l => !removeSet.has(l) && !ancestors(l).includes(lbl));
         pending[d.uid] = labelsToString(lbls);
         reviewed.add(d.uid);
         refreshRow(d, $tr);

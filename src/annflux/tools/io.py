@@ -132,6 +132,11 @@ def file_hash(path):
     return hasher.hexdigest()
 
 
+def file_fingerprint(path):
+    stat = os.stat(path)
+    return f"{stat.st_ino}_{stat.st_size}_{stat.st_mtime_ns}"
+
+
 def basename_no_extension(path: str):
     return os.path.splitext(os.path.basename(path))[0]
 
