@@ -6,22 +6,29 @@ from annflux.tools.mixed import get_version
 
 def extract_test_results(input_path: str, out_path:str):
     content = open(input_path, "r").read()
-    summary_match = re.search(r"=+ (.*?) in [\d.]+s \((\d+:\d+:\d+)\) =+", content)
+    summary_match = re.search(r"=+ (.*?) in ([\d.]+s(?: \(\d+:\d+:\d+\))?) =+", content)
     if not summary_match:
         raise RuntimeError(f"Unknown test output format {open(input_path).readlines()[-1]}")
     summary_str = summary_match.group(1)
     time_taken = summary_match.group(2)
 
-    counts = {key: int(n) for n, key in re.findall(r"(\d+) (failed|passed|skipped|warning)", summary_str)}
+    counts = {key: int(n) for n, key in re.findall(r"(\d+) (failed|passed|skipped|warning|error[s]?)", summary_str)}
     failed = counts.get("failed", 0)
     passed = counts.get("passed", 0)
     skipped = counts.get("skipped", 0)
     warnings = counts.get("warning", 0)
+    errors = counts.get("errors", counts.get("error", 0))
 
-    # split time into hours, minutes, and seconds
-    hours, minutes, seconds = map(int, time_taken.split(':'))
+    # parse time: either "H:MM:SS" or "Xs"
+    hms_match = re.search(r"(\d+):(\d+):(\d+)", time_taken)
+    if hms_match:
+        hours, minutes, seconds = map(int, hms_match.groups())
+    else:
+        total_seconds = float(re.search(r"[\d.]+", time_taken).group())
+        hours, minutes, seconds = 0, int(total_seconds // 60), int(total_seconds % 60)
+        time_taken = f"{hours}:{minutes:02d}:{seconds:02d}"
 
-    passed_condition = hours == 0 and minutes < 5 and failed == 0
+    passed_condition = hours == 0 and minutes < 5 and failed == 0 and errors == 0
 
     result = {
         "passed": passed,

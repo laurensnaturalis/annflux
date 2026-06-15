@@ -1,0 +1,69 @@
+Name                                                 Stmts   Miss  Cover   Missing
+----------------------------------------------------------------------------------
+__init__.py                                              0      0   100%
+annflux/__init__.py                                      0      0   100%
+annflux/algorithms/__init__.py                           0      0   100%
+annflux/algorithms/calibration_uncertainty.py          373    315    16%   36-47, 56-161, 174-230, 244-285, 293-459, 476-561, 588-592, 607-681, 735, 739
+annflux/algorithms/cood.py                             332    303     9%   62-66, 70-104, 109-155, 160-179, 186-207, 212-219, 227, 236-258, 273-341, 355-409, 418-452, 474-476, 499-559, 574-598, 602-611, 625-652, 679-783, 806-812
+annflux/algorithms/embeddings.py                        23     13    43%   25-29, 33-37, 41-45, 51
+annflux/algorithms/fastdpeak.py                        202    189     6%   22-223, 229-258, 262-286, 290
+annflux/algorithms/fastdpeak_merge.py                  140    132     6%   11-18, 31-243, 247
+annflux/algorithms/feature_reconstruction_error.py     157     22    86%   45-56, 100-101, 116-118, 218, 222, 230-231, 290
+annflux/algorithms/most_needed.py                       70     30    57%   56-102
+annflux/data/__init__.py                                 0      0   100%
+annflux/data/bombus_plant_test/data.py                  86     34    60%   26, 30-35, 41, 44-50, 54, 70-71, 74-84, 89, 96-97, 100-106, 109-110, 114, 124-125, 128, 132
+annflux/performance/__init__.py                          0      0   100%
+annflux/performance/basic.py                           119     39    67%   47-65, 77-100, 143, 187-193, 200, 207-211
+annflux/projects/__init__.py                             0      0   100%
+annflux/projects/bioscan/__init__.py                     0      0   100%
+annflux/projects/bioscan/align.py                       85     68    20%   15-16, 25, 30-31, 34, 46-91, 95-120, 123-127
+annflux/repo_results_to_embedding.py                   110     88    20%   39-53, 83-165, 169-176, 188
+annflux/repository/__init__.py                           0      0   100%
+annflux/repository/dataset.py                           65     38    42%   27-31, 38-56, 62, 65-71, 76-81, 89, 93, 97, 106, 110-111, 116, 119-121, 124
+annflux/repository/model.py                            131     85    35%   30-31, 50-58, 62, 66, 70, 74, 78, 82, 88-94, 101-110, 114, 117, 124-127, 130-134, 137, 152-209, 217, 220, 227-231, 234
+annflux/repository/repository.py                       165     56    66%   37-44, 47-57, 60-64, 98, 105, 108, 152, 167-188, 216-217, 222-233, 242, 250-251, 305, 312, 316, 320, 335, 342
+annflux/repository/resultset.py                        100     38    62%   29-30, 92-98, 100, 109, 113, 117-118, 122, 127, 131, 143-159, 168-187, 190
+annflux/scripts/__init__.py                              0      0   100%
+annflux/scripts/annflux_cli.py                         344    291    15%   56-86, 91-196, 215-231, 235-236, 240-249, 253-262, 282-476, 491-498, 504-510, 514-543, 547-572, 579-606, 612-637, 641-673, 677-691, 695-723, 733-751, 755-777, 781-786, 790
+annflux/scripts/extract_video_frames.py                 68     54    21%   19-26, 32-112, 118-138
+annflux/scripts/run_tests.py                            70     50    29%   32, 36-41, 45-50, 54-62, 71-107, 111-112, 116
+annflux/scripts/tile_images.py                         110     93    15%   35-93, 105-144, 153-190, 204-216, 225-247, 251-269
+annflux/shared.py                                       71     18    75%   45, 53, 59, 64, 71, 79, 89, 97, 104, 108, 112, 116, 123, 127, 131-132, 136-137
+annflux/tests/__init__.py                                0      0   100%
+annflux/tests/test_active_learning.py                    6      0   100%
+annflux/tests/test_api_integration.py                  205     37    82%   141-156, 195-196, 284-287, 402-438, 442
+annflux/tests/test_api_utils.py                        165    100    39%   48-88, 93-115, 120-129, 134-145, 150-160, 165-175, 184-206, 216-244, 255-257, 266-267, 279-282, 288-294, 300, 306, 312, 318, 328
+annflux/tests/test_cli.py                                5      0   100%
+annflux/tests/test_diversify.py                         59      1    98%   84
+annflux/tests/test_knn_predictions.py                   98      5    95%   47, 67, 79, 89, 176
+annflux/tests/test_performance.py                       12      6    50%   12-18
+annflux/tests/test_query.py                             14      0   100%
+annflux/tests/test_rest_api.py                         331      2    99%   614, 618
+annflux/tests/test_server.py                           132     98    26%   40-52, 59, 64, 69, 73-75, 79-81, 84-98, 101-120, 124-161, 165-167, 170-171, 174-175
+annflux/tests/test_simple_selenium.py                  230    193    16%   40-141, 147-195, 205-218, 222-243, 247-267, 271-286, 292-309, 313-332, 337-360, 364-370, 374-385, 389-394, 398-405, 409-413, 417
+annflux/tests/test_train.py                             29     10    66%   35-37, 40-57
+annflux/tools/__init__.py                                0      0   100%
+annflux/tools/api_sdk.py                                28     18    36%   21-43, 48-54
+annflux/tools/core.py                                   79      1    99%   111
+annflux/tools/data.py                                  438    250    43%   79, 85-86, 101-109, 117-152, 218-222, 229-232, 264-266, 268, 286-300, 306-315, 340-347, 350-363, 365-371, 381, 437-438, 487, 490-491, 521-531, 569, 577-595, 604-608, 612-622, 626-628, 640-795, 802-847, 851-853, 889-893
+annflux/tools/io.py                                    159     54    66%   43, 49-65, 78-83, 89-105, 110, 125-132, 141, 169-170, 222-224, 243, 263-264, 288, 295-298
+annflux/tools/mixed.py                                  55      4    93%   37, 86, 90-91
+annflux/tools/progress_learn.py                         37      5    86%   54-68
+annflux/tools/remote_io.py                              64     51    20%   24-54, 67-122
+annflux/tools/visualization.py                          20      0   100%
+annflux/train_features.py                              186    159    15%   32-60, 78-221, 225-231, 235-259, 263-271, 283-376
+annflux/training/__init__.py                             0      0   100%
+annflux/training/annflux/__init__.py                     0      0   100%
+annflux/training/annflux/clip.py                       334    293    12%   60-90, 108-224, 231-237, 244-259, 268-288, 291-292, 301-321, 337-521, 524-535, 547-714
+annflux/training/annflux/clip_shared.py                 72     59    18%   33-85, 90-100, 103, 107-119
+annflux/training/annflux/feature_extractor.py           59     31    47%   34-60, 70, 83, 87, 98, 103, 108-115
+annflux/training/annflux/group_classifier_cnn.py       210    177    16%   25-29, 40-60, 73-86, 101-266, 270-273, 277-286, 290-301, 306-308, 311, 314-320, 333-421, 432-447, 451-463
+annflux/training/annflux/quick.py                      528    127    76%   64, 80, 105-109, 171-181, 219-237, 306-308, 332-348, 362-382, 387-388, 439-440, 462-464, 469, 502-506, 510, 601, 658-795, 799, 888-889, 896, 909, 952-954, 971, 1001, 1003, 1135
+annflux/training/pytorch/__init__.py                     0      0   100%
+annflux/training/pytorch/torch_backend.py              231    207    10%   14-15, 21-22, 29-62, 68-83, 90-95, 100-113, 116, 119-124, 128-244, 252-381
+annflux/ui/__init__.py                                   0      0   100%
+annflux/ui/basic/__init__.py                             0      0   100%
+annflux/ui/basic/run_server.py                         734    281    62%   113-119, 124, 144, 157-160, 185-190, 208, 240-242, 245-247, 250-252, 255-257, 273, 294, 319, 374-407, 441, 449, 471-480, 492-512, 517-520, 525-535, 540-577, 586, 595, 622, 625, 631, 668, 675-705, 772-773, 784, 827-828, 834-845, 865-869, 874-883, 888, 896-912, 917-929, 934-946, 950, 955-958, 963-966, 972, 1066-1106, 1114, 1118-1151, 1167-1177, 1200-1202, 1245-1246, 1254-1255, 1287-1294, 1304-1305, 1309-1313, 1323
+annflux/utils/file_utils.py                              4      2    50%   24-25
+----------------------------------------------------------------------------------
+TOTAL                                                 7345   4127    44%

@@ -13,8 +13,9 @@
 # limitations under the License.
 import os
 
+import warnings
+
 import numpy as np
-import umap
 from sklearn.manifold import TSNE
 
 tsne_method = os.getenv("TSNE_METHOD", "umap")
@@ -37,6 +38,9 @@ def compute_tsne_scikit(features):
 
 
 def compute_umap(features):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*ParametricUMAP.*")
+        import umap
     embedding = umap.UMAP().fit_transform(features)
     return normalize_and_scale(embedding)
 
