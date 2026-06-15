@@ -86,6 +86,45 @@ HIGH
 
 # Changelog
 
+## 1.3.1.0
+
+- BioClip2 PEFT (LoRA) training support via `open_clip`
+- Full-screen image overlay uses `image_url` from dataset when available
+- Dynamic column ordering in data head (fallback from `fre_strat` to `score_predicted` to `uid`)
+- Reduced parquet size for `/simple` by sending only needed columns
+- Annotation logging per project
+- File utility: `append_to_filename`
+- `image_url` support in map view (`annflux.js`)
+
+## 1.3.0.0
+
+- Calibration model with SHAP explanations and train/val/test split
+- Calibrated uncertainty selection for active learning
+- Removed TensorFlow/Keras dependency
+- Atomic `labels.json` writes to prevent corruption
+- Stacked progress bar with labeled/certain/uncertain segments
+- Certainty dropdown, multilabel examples, and prediction probabilities in `/simple`
+- Debounce and image loading prevention while typing in filter
+- Selenium test for `/simple` endpoint
+- Fix label picker to show descendants per row, prioritizing most specific label first
+- Fix calibration uncertainty NaN/Inf handling
+- Fix save button logic and partial label sort option
+- Clean up old parquet files before creating new cache
+
+## 1.2.0.0
+
+- Simple annotator UI at `/simple` endpoint
+- Hierarchy-aware label assignment with label search and parent sorting
+- Inline child label creation from chip + button
+- Async `/label` endpoint with file locking
+- Visible metadata and annotator UX improvements
+- Class examples column
+- Performance: vectorise `make_predictions`, `compute_fre`, `color_and_label`, `compute_near_labeled`, PCA
+- Fix multi-label normalisation in `make_predictions`
+- Fix FRE coloring NaN crash
+- KNN prediction tests
+- Separate log files per component
+
 ## 1.1.0.0
 
 - Added density peak based display order and most needed computation
