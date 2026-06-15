@@ -305,8 +305,8 @@ limitations under the License.
         });
     }
 
-    /* ── load parquet data ── */
-    async function loadData() {
+    /* ── build column list and filter params ── */
+    function dataParams() {
         const urlParams = new URLSearchParams(window.location.search);
         const filter_query = urlParams.get('filter_query');
         const baseColumns = [
@@ -318,8 +318,21 @@ limitations under the License.
         const params = new URLSearchParams();
         params.set('columns', allColumns.join(','));
         if (filter_query) params.set('filter_query', filter_query);
-        const url = `/data?${params.toString()}`;
-        const file = await window.asyncBufferFromUrl({url});
+        return params;
+    }
+
+    /* ── load parquet data (full) ── */
+    async function loadData() {
+        const params = dataParams();
+        const file = await window.asyncBufferFromUrl({url: `/data?${params.toString()}`});
+        return await window.parquetReadObjects({file});
+    }
+
+    /* ── load head parquet (fast initial render) ── */
+    async function loadDataHead(n = 100) {
+        const params = dataParams();
+        params.set('n', n);
+        const file = await window.asyncBufferFromUrl({url: `/data/head?${params.toString()}`});
         return await window.parquetReadObjects({file});
     }
 
@@ -628,7 +641,7 @@ limitations under the License.
             if (!isTyping) {
                 $('<img>').addClass('thumb')
                     .attr({src: `/images/thumbnail/${d.uid}`, alt: d.uid})
-                    .on('click', () => openOverlay(d.uid))
+                    .on('click', () => openOverlay(d))
                     .appendTo($imgCell);
             } else {
                 $('<div>').addClass('thumb-placeholder')
@@ -865,8 +878,9 @@ limitations under the License.
     $('#progress-bar').on('mouseleave', () => $('#progress-tooltip').hide());
 
     /* ── overlay ── */
-    function openOverlay(uid) {
-        $('#overlay-img').attr('src', `/images/full/${uid}`);
+    function openOverlay(d) {
+        const src = d.image_url ? d.image_url : `/images/full/${d.uid}`;
+        $('#overlay-img').attr('src', src);
         $('#overlay').addClass('open');
     }
     $('#overlay-close, #overlay').on('click', function (e) {
@@ -896,13 +910,23 @@ limitations under the License.
     /* ── init ── */
     await loadLabelDefs();
     await loadVisibleMeta();
+
+    /* fast initial render from head - DISABLED */
+    const headRaw = await loadDataHead(100);
+    fullData = headRaw;
+    allData = sortByFreStrat(getActive(headRaw));
+    applyFilter();
+    renderTable();
+    updateSaveBtn();
+
+    /* load full dataset directly */
     const raw = await loadData();
     fullData = raw;
     allData = sortByFreStrat(getActive(raw));
-    applyFilter(); // sets both filteredData and filteredDataAll
-    $('#status').text(`${filteredData.length} / ${allData.length} rows`);
+    applyFilter();
     renderTable();
     updateSaveBtn();
+    updateProgressBar();
 </script>
 </body>
 </html>

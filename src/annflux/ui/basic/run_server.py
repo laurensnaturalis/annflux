@@ -38,6 +38,7 @@ from annflux.tools.io import (
 from annflux.tools.progress_learn import estimate_duration
 from annflux.tools.visualization import most_contrasting_gray, brighten_hex_color
 from annflux.training.annflux.feature_extractor import make_resultset
+from annflux.utils.file_utils import append_to_filename
 
 import json
 import logging
@@ -149,6 +150,14 @@ def _init():
         working_folder = os.path.join(project_root, "annflux")
 
     g_state = AnnFluxState(working_folder)
+
+    annflux_dir = os.path.join(g_state.project_folder, "annflux")
+    for fname in os.listdir(annflux_dir):
+        if fname.endswith(".parquet") and fname.startswith("annflux_"):
+            try:
+                os.remove(os.path.join(annflux_dir, fname))
+            except OSError:
+                pass
 
     g_state.doublecheck_path = os.path.join(
         g_state.project_folder, "annflux", "doublecheck.json"
@@ -299,19 +308,9 @@ def annflux_endpoint():
     )
 
 
-@app.route("/data")
-@app.route("/v1/data")
-@nocache
-def data_get():
-    """
-    http://127.0.0.1:8006/data?filter_query=Papi%20in%20row.label_predicted
-    blurry-or-low-res NOT IN row.label_possible AND blurry-or-low-res NOT IN row.label_predicted
-    """
-    annflux_data_path = os.path.join(g_state.project_folder, "annflux", "annflux.csv")
+def make_parquet(annflux_data_path, columns=None, filter_query=None):
     time_start = time.time()
-    filter_query = flask.request.args.get("filter_query")
-    columns_param = flask.request.args.get("columns")
-    columns = [c.strip() for c in columns_param.split(",")] if columns_param else None
+    
     print(f"data_get: {filter_query=}")
     hash_ = file_fingerprint(annflux_data_path)
     if filter_query is not None:
@@ -322,16 +321,6 @@ def data_get():
     annflux_pq_cache_path = os.path.join(
         g_state.project_folder, "annflux", f"annflux_{hash_}.parquet"
     )
-
-    # Clean up old parquet files before creating new one
-    annflux_dir = os.path.join(g_state.project_folder, "annflux")
-    for fname in os.listdir(annflux_dir):
-        if fname.endswith(".parquet") and fname.startswith("annflux_"):
-            old_path = os.path.join(annflux_dir, fname)
-            try:
-                os.remove(old_path)
-            except OSError:
-                pass  # Ignore if file is in use or permission issues
 
     if not os.path.exists(annflux_pq_cache_path):
         if filter_query is not None:
@@ -351,6 +340,21 @@ def data_get():
                 to_js_arrow(annflux_data_path, annflux_pq_cache_path, columns=columns)
         else:
             to_js_arrow(annflux_data_path, annflux_pq_cache_path, columns=columns)
+    return annflux_pq_cache_path
+
+@app.route("/data")
+@app.route("/v1/data")
+@nocache
+def data_get():
+    """
+    http://127.0.0.1:8006/data?filter_query=Papi%20in%20row.label_predicted
+    blurry-or-low-res NOT IN row.label_possible AND blurry-or-low-res NOT IN row.label_predicted
+    """
+    annflux_data_path = os.path.join(g_state.project_folder, "annflux", "annflux.csv")
+    filter_query = flask.request.args.get("filter_query")
+    columns_param = flask.request.args.get("columns")
+    columns = [c.strip() for c in columns_param.split(",")] if columns_param else None
+    annflux_pq_cache_path = make_parquet(annflux_data_path, columns=columns, filter_query=filter_query)
 
     logger.info(f"annflux_data_path = {annflux_data_path}")
     return send_file(
@@ -358,6 +362,49 @@ def data_get():
         mimetype="application/x-binary",
         as_attachment=False,
     )
+
+
+@app.route("/data/head")
+@nocache
+def data_head_get():
+    """
+    Returns the first N rows of the dataset sorted by fre_strat DESC (for fast initial render in /simple).
+    Uses DuckDB on the cached parquet produced by data_get.
+    """
+    n = int(flask.request.args.get("n", 100))
+    columns_param = flask.request.args.get("columns")
+    columns = [c.strip() for c in columns_param.split(",")] if columns_param else None
+
+    annflux_data_path = os.path.join(g_state.project_folder, "annflux", "annflux.csv")
+    annflux_dir = os.path.join(g_state.project_folder, "annflux")
+
+    full_pq_path = make_parquet(annflux_data_path, columns=columns)
+    head_pq_path = os.path.join(annflux_dir, append_to_filename(full_pq_path, f"_head{n}"))
+
+    if not os.path.exists(head_pq_path):
+        actual_cols = duckdb.execute("SELECT * FROM read_parquet(?) LIMIT 0", [full_pq_path]).description
+        actual_col_names = {row[0] for row in actual_cols}
+        if columns:
+            col_select = ", ".join(f'"{c}"' for c in columns if c in actual_col_names)
+        else:
+            col_select = "*"
+        # Use fre_strat if available, otherwise fall back to score_predicted or uid
+        order_col = "fre_strat" if "fre_strat" in actual_col_names else (
+            "score_predicted" if "score_predicted" in actual_col_names else "uid"
+        )
+        print(f"{order_col=}")
+        query = f"""
+            COPY (
+                SELECT {col_select}
+                FROM read_parquet(?)
+                WHERE labeled IS NULL OR CAST(labeled AS DOUBLE) < 1
+                ORDER BY {order_col} ASC NULLS LAST
+                LIMIT {n}
+            ) TO '{head_pq_path}' (FORMAT PARQUET)
+        """
+        duckdb.execute(query, [full_pq_path])
+
+    return send_file(head_pq_path, mimetype="application/x-binary", as_attachment=False)
 
 
 @app.route("/data/group")

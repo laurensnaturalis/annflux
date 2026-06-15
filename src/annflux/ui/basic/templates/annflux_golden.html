@@ -112,9 +112,6 @@ limitations under the License.
 </body>
 <script>
     let gLayout = "{{ layout }}";
-    <!--@formatter:off-->
-    let forceIdleTime = {{ auto_linear_train_idle_time }} + 1;
-    <!--@formatter:on-->
     var myLayout;
     // localStorage.clear();
     savedState = localStorage.getItem("savedState");
@@ -1379,19 +1376,18 @@ limitations under the License.
         );
     }
 
-    function statusPoll(forceIdleTime, groupTrain) {
+    function statusPoll(groupTrain, forceTrain) {
         // if (urlParams.get("linear_auto_train") == "on") {
         idleTime++;
         // logUI(`idleTime = ${idleTime}`);
         // }
         groupTrain = groupTrain ?? false;
-        const idleTimeForPost =
-            forceIdleTime !== undefined ? forceIdleTime : idleTime;
-        if (idleTimeForPost > 1000) {
-            console.log(`idleTimeForPost = ${idleTimeForPost}, forceIdleTime = ${forceIdleTime}, idleTime = ${idleTime}`);
+        forceTrain = forceTrain ?? false;
+        if (idleTime > 1000) {
+            console.log(`idleTime = ${idleTime}`);
         }
         // console.log(`idleTimeForPost = ${idleTimeForPost}`);
-        $.post("/status", JSON.stringify({idleTime: idleTimeForPost, groupTrain: groupTrain})).done(
+        $.post("/status", JSON.stringify({idleTime: idleTime, groupTrain: groupTrain, forceTrain: forceTrain})).done(
             function (data) {
                 $("#status").attr("title", JSON.stringify(data, null, " "));
                 $("#status").html(data["status"]);
@@ -1511,12 +1507,12 @@ limitations under the License.
 
     function forceLinearTrain() {
         $("#loading_circle").toggle();
-        statusPoll(forceIdleTime);
+        statusPoll(false, true);
     }
 
     function groupTrain() {
         $("#loading_circle").toggle();
-        statusPoll(1, true);
+        statusPoll(true);
     }
 
 

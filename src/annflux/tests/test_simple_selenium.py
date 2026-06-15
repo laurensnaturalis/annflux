@@ -284,6 +284,8 @@ class TestSimpleAnnotator:
         # Change to show 10 items
         n_select.select_by_value("10")
         time.sleep(1)
+
+        
     
     def test_approve_button(self, driver):
         """Test approving a row."""

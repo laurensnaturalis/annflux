@@ -288,7 +288,8 @@ function Map2D($container) {
                 as_ranking_column == "fre_strat" ||
                 as_ranking_column == "most_needed" ||
                 as_ranking_column == "incorrect_score" ||
-                as_ranking_column == "certain_incorrect"
+                as_ranking_column == "certain_incorrect" ||
+                as_ranking_column == "cood_score"
             ) {
                 show_data2 = show_data_start.filter(
                     (row) => row.labeled == (show_labeled == "unlabeled" ? 0 : 1) //&& row.in_test == 1

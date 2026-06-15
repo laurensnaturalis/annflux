@@ -55,9 +55,8 @@ def get_repo_model(
             data=list(zip(range(2), ["foo", "bar"])),
             columns=["index", "class_name"],  # ty: ignore
         ).to_csv(model.class_to_label_path, index=False)
-        repo.commit(model, tag=tag)
+        model = repo.commit(model, tag=tag)
         shutil.rmtree(tmp_dir)
-        model = repo.get(label=model_type, tag=tag).first()
     return model
 
 

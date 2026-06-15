@@ -415,16 +415,17 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                             feature_sum = np.all(
                                 np.sum(cache_batch_features, axis=1) != 0
                             )
-                            if (
-                                feature_sum
-                            ):  # TODO: replace by explicit column for computed or not
+                            # Check number of classes matches
+                            cache_probs = get_sliced_array(
+                                feature_cache, "probs", start, end
+                            )
+                            num_classes = len(self.index_to_label) if self.index_to_label else len(classes_)
+                            if feature_sum and cache_probs.shape[1] == num_classes:
                                 print(
                                     f"Features already in cache, skipping batch, {cache_batch_features.shape=}, {feature_sum=}, {batch_i=}"
                                 )
                                 features_per_batch[batch_i] = cache_batch_features
-                                probs_per_batch[batch_i] = get_sliced_array(
-                                    feature_cache, "probs", start, end
-                                )[:, :2]
+                                probs_per_batch[batch_i] = cache_probs
 
                                 batch_i += 1
                                 continue
@@ -483,7 +484,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
                 #
                 if feature_cache_path is not None:
                     start = batch_i * batch_size
-                    end = start + batch_size
+                    end = start + len(batch)
                     if feature_cache is None:
                         feature_cache = zarr.open_group(feature_cache_path)
                     feature_cache.get("features")[

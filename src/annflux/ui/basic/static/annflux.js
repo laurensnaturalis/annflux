@@ -503,7 +503,8 @@ controlHtml = `<div id="map_control">
               <option value="fre_strat">FRE - stratified</option>
               <option value="certain_incorrect">Certain incorrect</option>
               <option value="most_needed" selected="selected">Most needed</option>
-              <option value="incorrect_score">Incorrect score</option></select
+              <option value="incorrect_score">Incorrect score</option>
+              <option value="cood_score">COOD (most OOD)</option></select
             ><input
               type="checkbox"
               id="invert_ranking"

@@ -49,6 +49,7 @@ def get_logger(filename: str, mode: str = "a", level=logging.INFO, name="") -> l
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.handlers = []
+    logger.propagate = False  # Prevent duplicate output to root logger
     file_logger, formatter = create_file_logger(filename, mode)
     logger.addHandler(file_logger)
     console = logging.StreamHandler()

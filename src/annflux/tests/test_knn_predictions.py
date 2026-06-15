@@ -5,7 +5,7 @@ focusing on multi-label cases.
 import numpy as np
 import pandas
 
-from annflux.training.annflux.quick import make_predictions, make_predictions_alt
+from annflux.training.annflux.quick import make_predictions, make_predictions_alt, make_predictions_fast
 
 
 def _make_data(n=10):
@@ -29,7 +29,7 @@ def _run_both(indices, distances, train_labels, skip_first=False, knn_rank_expon
     )
 
     data_new = _make_data(N)
-    make_predictions(
+    make_predictions_fast(
         data_new, indices, distances, train_labels, data_indices,
         skip_first=skip_first, knn_rank_exponent=knn_rank_exponent,
     )
