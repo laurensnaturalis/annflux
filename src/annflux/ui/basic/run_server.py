@@ -52,7 +52,7 @@ from typing import Dict, List, Optional, Tuple
 
 import flask
 import pandas
-from flask import make_response, render_template, request, send_file, Response, abort
+from flask import make_response, render_template, request, send_file, Response, abort, jsonify
 from flask_httpauth import HTTPBasicAuth
 # from tensorflow.python.keras.callbacks import Callback
 from werkzeug.security import check_password_hash
@@ -791,6 +791,219 @@ def _append_annotation_log(label_update: dict):
                     "label_predicted": predictions.get(uid, ""),
                 }
             )
+
+
+def _sort_multilabel_by_hierarchy(multilabel: str, depth_map: dict, separator: str = " ") -> str:
+    """Sort components of a multilabel string by hierarchy depth (root -> leaf)."""
+    components = multilabel.split(separator) if multilabel else []
+    if not depth_map or len(components) <= 1:
+        return multilabel
+    # Sort by depth (ascending = root first), then alphabetically as tiebreaker
+    sorted_components = sorted(components, key=lambda x: (depth_map.get(x, 999), x))
+    return separator.join(sorted_components)
+
+
+def _build_label_depth_map(label_defs_path: str | None) -> dict:
+    """Build a map of label -> depth (distance from root) from label_defs.json."""
+    if not label_defs_path or not os.path.exists(label_defs_path):
+        return {}
+    with open(label_defs_path) as f:
+        defs = json.load(f)
+    # Build parent map from [[child, parent], ...] format
+    parent_map = {}
+    for child, parent in defs.get("labels", []):
+        if parent and parent != "null":
+            parent_map[child] = parent
+    # Compute depth for each label (distance from root)
+    depth_cache = {}
+    def get_depth(label):
+        if label in depth_cache:
+            return depth_cache[label]
+        depth = 0
+        current = label
+        while current in parent_map:
+            depth += 1
+            current = parent_map[current]
+        depth_cache[label] = depth
+        return depth
+    all_labels = set(parent_map.keys()) | set(parent_map.values())
+    return {label: get_depth(label) for label in all_labels}
+
+
+@app.route("/annotation_log", methods=["GET"])
+def annotation_log():
+    """Paged annotation log with daily and weekly statistics."""
+    annotation_log_path = os.path.join(g_state.annflux_folder, "annotation_log.csv")
+    
+    # Pagination params
+    page = int(request.args.get("page", 1))
+    per_page = int(request.args.get("per_page", 50))
+    
+    if not os.path.exists(annotation_log_path):
+        return render_template("annotation_log.html", 
+                             annotations=[], 
+                             page=1, 
+                             total_pages=1,
+                             daily_stats={},
+                             weekly_stats={})
+    
+    # Build label depth map for hierarchical sorting
+    label_defs_path = os.path.join(g_state.annflux_folder, "label_defs.json")
+    depth_map = _build_label_depth_map(label_defs_path)
+    
+    # Read all annotations
+    df = pandas.read_csv(annotation_log_path, dtype={"uid": str, "label_true": str, 
+                                                      "label_predicted": str, "annotator": str})
+    
+    # Sort labels hierarchically and detect mismatches
+    def process_labels(row):
+        true_sorted = _sort_multilabel_by_hierarchy(row["label_true"] or "", depth_map, ",")
+        pred_sorted = _sort_multilabel_by_hierarchy(row["label_predicted"] or "", depth_map, ",")
+        # Normalize for comparison (split, sort alphabetically, rejoin)
+        true_set = set(row["label_true"].split(",")) if row["label_true"] else set()
+        pred_set = set(row["label_predicted"].split(",")) if row["label_predicted"] else set()
+        is_mismatch = true_set != pred_set
+        return pandas.Series([true_sorted, pred_sorted, is_mismatch])
+    
+    if not df.empty:
+        df[["label_true_sorted", "label_predicted_sorted", "is_mismatch"]] = df.apply(process_labels, axis=1)
+    else:
+        df["label_true_sorted"] = df["label_true"]
+        df["label_predicted_sorted"] = df["label_predicted"]
+        df["is_mismatch"] = False
+    
+    # Parse dates for stats
+    df["date"] = pandas.to_datetime(df["date"], errors="coerce")
+    df["date_only"] = df["date"].dt.date
+    df["week"] = df["date"].dt.isocalendar().week
+    df["year"] = df["date"].dt.isocalendar().year
+    df["year_week"] = df["year"].astype(str) + "-W" + df["week"].astype(str).str.zfill(2)
+    
+    # Daily stats with mismatch count
+    daily_stats = df.groupby("date_only").agg({
+        "uid": "count",
+        "annotator": lambda x: x.nunique(),
+        "is_mismatch": "sum"
+    }).rename(columns={"uid": "annotations", "annotator": "annotators", "is_mismatch": "corrections"}).to_dict(orient="index")
+    
+    # Weekly stats with mismatch count
+    weekly_stats = df.groupby("year_week").agg({
+        "uid": "count",
+        "annotator": lambda x: x.nunique(),
+        "is_mismatch": "sum"
+    }).rename(columns={"uid": "annotations", "annotator": "annotators", "is_mismatch": "corrections"}).to_dict(orient="index")
+    
+    # Sort by date desc for display
+    df = df.sort_values("date", ascending=False)
+    
+    # Pagination
+    total = len(df)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * per_page
+    end = start + per_page
+    
+    annotations = df.iloc[start:end].to_dict(orient="records")
+    
+    return render_template("annotation_log.html",
+                         annotations=annotations,
+                         page=page,
+                         per_page=per_page,
+                         total_pages=total_pages,
+                         total=total,
+                         daily_stats=daily_stats,
+                         weekly_stats=weekly_stats)
+
+
+@app.route("/annotation_log/data", methods=["GET"])
+def annotation_log_data():
+    """JSON API for annotation log data (for AJAX updates)."""
+    annotation_log_path = os.path.join(g_state.annflux_folder, "annotation_log.csv")
+    
+    page = int(request.args.get("page", 1))
+    per_page = int(request.args.get("per_page", 50))
+    
+    if not os.path.exists(annotation_log_path):
+        return jsonify({"annotations": [], "page": 1, "total_pages": 1, "total": 0})
+    
+    df = pandas.read_csv(annotation_log_path, dtype={"uid": str, "label_true": str,
+                                                      "label_predicted": str, "annotator": str})
+    df["date"] = pandas.to_datetime(df["date"], errors="coerce")
+    df = df.sort_values("date", ascending=False)
+    
+    total = len(df)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * per_page
+    end = start + per_page
+    
+    annotations = df.iloc[start:end].to_dict(orient="records")
+    
+    return jsonify({
+        "annotations": annotations,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": total_pages,
+        "total": total
+    })
+
+
+@app.route("/annotation_log/download", methods=["GET"])
+def annotation_log_download():
+    """Download full annotation log as CSV with sorted labels and modified column."""
+    import io
+    
+    annotation_log_path = os.path.join(g_state.annflux_folder, "annotation_log.csv")
+    
+    if not os.path.exists(annotation_log_path):
+        return "No annotation log available", 404
+    
+    # Build label depth map for hierarchical sorting
+    label_defs_path = os.path.join(g_state.annflux_folder, "label_defs.json")
+    depth_map = _build_label_depth_map(label_defs_path)
+    
+    # Read all annotations (full data, no pagination)
+    df = pandas.read_csv(annotation_log_path, dtype={"uid": str, "label_true": str,
+                                                      "label_predicted": str, "annotator": str})
+    
+    # Sort labels hierarchically and detect mismatches
+    def process_labels(row):
+        true_sorted = _sort_multilabel_by_hierarchy(row["label_true"] or "", depth_map, ",")
+        pred_sorted = _sort_multilabel_by_hierarchy(row["label_predicted"] or "", depth_map, ",")
+        true_set = set(row["label_true"].split(",")) if row["label_true"] else set()
+        pred_set = set(row["label_predicted"].split(",")) if row["label_predicted"] else set()
+        is_mismatch = true_set != pred_set
+        return pandas.Series([true_sorted, pred_sorted, is_mismatch])
+    
+    if not df.empty:
+        df[["label_true_sorted", "label_predicted_sorted", "is_mismatch"]] = df.apply(process_labels, axis=1)
+    else:
+        df["label_true_sorted"] = df["label_true"]
+        df["label_predicted_sorted"] = df["label_predicted"]
+        df["is_mismatch"] = False
+    
+    # Build output dataframe with renamed columns
+    output_df = pandas.DataFrame({
+        "uid": df["uid"],
+        "date": df["date"],
+        "annotator": df["annotator"],
+        "label_true": df["label_true_sorted"],
+        "label_predicted": df["label_predicted_sorted"],
+        "modified": df["is_mismatch"].apply(lambda x: "yes" if x else "no")
+    })
+    
+    # Sort by date descending
+    output_df = output_df.sort_values("date", ascending=False)
+    
+    # Generate CSV in memory
+    csv_buffer = io.StringIO()
+    output_df.to_csv(csv_buffer, index=False)
+    csv_data = csv_buffer.getvalue()
+    
+    # Return as downloadable file
+    response = Response(csv_data, mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=annotation_log.csv"
+    return response
 
 
 @app.route("/label", methods=["POST"])

@@ -123,7 +123,8 @@ def train_then_features(
                 data = add_annotations_and_set(data, source)
                 model_out_folder = tempfile.mkdtemp()
                 class_to_label_path = extractor.train_peft(
-                    data, model_out_folder, train_parameters
+                    data, model_out_folder, train_parameters,
+                    label_defs_path=source.label_definitions_path
                 )
                 with open(Path(model_out_folder) / "model.json", "w") as f:
                     json.dump(

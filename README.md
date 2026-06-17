@@ -86,6 +86,13 @@ HIGH
 
 # Changelog
 
+## 1.3.1.2
+
+- Add `/annotation_log` endpoint with paged table, daily/weekly statistics, and hierarchical label sorting
+- Add `/annotation_log/download` CSV export with `modified` column (yes/no for corrections)
+- Highlight mismatches where `label_true != label_predicted` in annotation log
+- Add toolbar link to annotation log in `/simple` annotator
+
 ## 1.3.1.1
 
 - Fix NN example images fullscreen overlay (handle both uid string and data object in `openOverlay`)

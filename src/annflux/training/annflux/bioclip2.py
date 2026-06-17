@@ -1,3 +1,5 @@
+import json
+import os
 from collections import Counter
 from pathlib import Path
 from typing import Tuple
@@ -17,6 +19,43 @@ from tqdm import tqdm
 from annflux.tools.data import canon_
 from annflux.tools.mixed import get_basic_logger
 from annflux.training.annflux.feature_extractor import BaseFeatureExtractor, PeftTrainableMixin, TrainParameters
+
+
+def _build_label_depth_map(label_defs_path: str | None) -> dict:
+    """Build a map of label -> depth (distance from root) from label_defs.json."""
+    if not label_defs_path or not os.path.exists(label_defs_path):
+        return {}
+    with open(label_defs_path) as f:
+        defs = json.load(f)
+    # Build parent map from [[child, parent], ...] format
+    parent_map = {}
+    for child, parent in defs.get("labels", []):
+        if parent and parent != "null":
+            parent_map[child] = parent
+    # Compute depth for each label (distance from root)
+    depth_cache = {}
+    def get_depth(label):
+        if label in depth_cache:
+            return depth_cache[label]
+        depth = 0
+        current = label
+        while current in parent_map:
+            depth += 1
+            current = parent_map[current]
+        depth_cache[label] = depth
+        return depth
+    all_labels = set(parent_map.keys()) | set(parent_map.values())
+    return {label: get_depth(label) for label in all_labels}
+
+
+def _sort_multilabel_by_hierarchy(multilabel: str, depth_map: dict, separator: str = " ") -> str:
+    """Sort components of a multilabel string by hierarchy depth (root -> leaf)."""
+    components = multilabel.split(separator) if multilabel else []
+    if not depth_map or len(components) <= 1:
+        return multilabel
+    # Sort by depth (ascending = root first), then alphabetically as tiebreaker
+    sorted_components = sorted(components, key=lambda x: (depth_map.get(x, 999), x))
+    return separator.join(sorted_components)
 
 
 def compute_feature(image_path_, model, preprocess):
@@ -143,6 +182,7 @@ class BioClip2FeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin):
         out_folder: Path | str,
         train_parameters: TrainParameters,
         logger=None,
+        label_defs_path: str | None = None,
     ):
         """
         Fine-tunes the BioClip2 vision encoder with LoRA using a contrastive
@@ -156,13 +196,19 @@ class BioClip2FeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin):
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         data = data.copy()
+        # Build depth map from label_defs.json for hierarchy sorting
+        depth_map = _build_label_depth_map(label_defs_path)
         data["caption"] = data["label_true"].apply(
-            lambda x_: canon_(
-                x_,
-                remove_unknown=True,
-                output_separator=" ",
-                replace_space=True,
-                remove_sys=True,
+            lambda x_: _sort_multilabel_by_hierarchy(
+                canon_(
+                    x_,
+                    remove_unknown=True,
+                    output_separator=" ",
+                    replace_space=True,
+                    remove_sys=True,
+                ),
+                depth_map,
+                separator=" ",
             )
         )
         logger.info(f"{Counter(data['caption'])=}")
@@ -179,6 +225,8 @@ class BioClip2FeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin):
         data = data[data["caption"].isin(sufficient_data_classes)]
 
         unique_labels = data.caption.unique().tolist()
+        # Sort parent-to-child: fewer components = parent, more components = child
+        unique_labels = sorted(unique_labels, key=lambda x: (len(x.split(",")), x))
         class_to_label_path = out_folder / "labels.csv"
         pandas.DataFrame(
             data={"class_name": unique_labels, "index": list(range(len(unique_labels)))}

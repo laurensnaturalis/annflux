@@ -19,3 +19,4 @@ src/tmp.json
 test_al_strategies.csv
 tmp.csv
 tmp.json
+models/*
