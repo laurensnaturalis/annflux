@@ -879,7 +879,9 @@ limitations under the License.
 
     /* ── overlay ── */
     function openOverlay(d) {
-        const src = d.image_url ? d.image_url : `/images/full/${d.uid}`;
+        const uid = typeof d === 'string' ? d : d.uid;
+        const imageUrl = typeof d === 'object' && d.image_url ? d.image_url : null;
+        const src = imageUrl || `/images/full/${uid}`;
         $('#overlay-img').attr('src', src);
         $('#overlay').addClass('open');
     }

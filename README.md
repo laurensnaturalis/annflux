@@ -86,6 +86,12 @@ HIGH
 
 # Changelog
 
+## 1.3.1.1
+
+- Fix NN example images fullscreen overlay (handle both uid string and data object in `openOverlay`)
+- Fix test output parser to handle errors and seconds-only time format
+- Lazy-import umap to avoid TensorFlow/ParametricUMAP import error
+
 ## 1.3.1.0
 
 - BioClip2 PEFT (LoRA) training support via `open_clip`
