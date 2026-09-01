@@ -201,7 +201,7 @@ limitations under the License.
 </div>
 
 <div id="toolbar">
-    <h1>Simple Annotator</h1>
+    <h1>Simple Annotator{% if user %} — {{ user }}{% endif %}</h1>
     <div id="instruction">For each row: verify or edit the labels, then click <strong>Approve</strong>. Save is enabled once all rows are approved.</div>
     <input id="filter-input" type="text" placeholder="Filter by predicted label…">
     <label style="color:#aaa;font-size:0.85em">Sort:

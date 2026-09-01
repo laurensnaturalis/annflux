@@ -148,13 +148,15 @@ def linear_retraining(state, status_callback):
         state.features[state.labeled_indices], targets, test_size=0.10, random_state=42
     )
 
-    # PyTorch model definition
+    # PyTorch model definition - 2-layer MLP with GELU
     class LinearModel(nn.Module):
         def __init__(self, input_dim, num_classes):
             super().__init__()
             self.features = nn.Sequential(
                 nn.Linear(input_dim, input_dim),
-                nn.ReLU(),
+                nn.GELU(),
+                nn.Linear(input_dim, input_dim),
+                nn.GELU(),
             )
             self.classifier = nn.Linear(input_dim, num_classes)
 

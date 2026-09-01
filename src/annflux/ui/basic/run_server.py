@@ -291,7 +291,8 @@ def nocache(view):
 @app.route("/simple")
 @auth.login_required
 def simple_annotator_endpoint():
-    return render_template("simple_annotator.html")
+    username = request.headers.get("X-Forwarded-User") or request.headers.get("Remote-User")
+    return render_template("simple_annotator.html", user=username)
 
 
 @app.route("/annflux")
