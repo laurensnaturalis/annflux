@@ -773,7 +773,7 @@ def _append_annotation_log(label_update: dict):
     except Exception as e:
         logger.error(f"Could not read predictions for annotation log: {e}", exc_info=True)
 
-    annotator = auth.current_user() or ""
+    annotator = request.headers.get("X-Forwarded-User") or request.headers.get("Remote-User") or ""
     annotation_date = datetime.now().isoformat(timespec="seconds")
     file_exists = os.path.exists(annotation_log_path)
     with open(annotation_log_path, "a", newline="") as f:
@@ -794,8 +794,12 @@ def _append_annotation_log(label_update: dict):
             )
 
 
-def _sort_multilabel_by_hierarchy(multilabel: str, depth_map: dict, separator: str = " ") -> str:
+def _sort_multilabel_by_hierarchy(multilabel, depth_map: dict, separator: str = " ") -> str:
     """Sort components of a multilabel string by hierarchy depth (root -> leaf)."""
+    if multilabel is None or pandas.isna(multilabel):
+        multilabel = ""
+    else:
+        multilabel = str(multilabel)
     components = multilabel.split(separator) if multilabel else []
     if not depth_map or len(components) <= 1:
         return multilabel
@@ -858,11 +862,11 @@ def annotation_log():
     
     # Sort labels hierarchically and detect mismatches
     def process_labels(row):
-        true_sorted = _sort_multilabel_by_hierarchy(row["label_true"] or "", depth_map, ",")
-        pred_sorted = _sort_multilabel_by_hierarchy(row["label_predicted"] or "", depth_map, ",")
+        true_sorted = _sort_multilabel_by_hierarchy(row["label_true"], depth_map, ",")
+        pred_sorted = _sort_multilabel_by_hierarchy(row["label_predicted"], depth_map, ",")
         # Normalize for comparison (split, sort alphabetically, rejoin)
-        true_set = set(row["label_true"].split(",")) if row["label_true"] else set()
-        pred_set = set(row["label_predicted"].split(",")) if row["label_predicted"] else set()
+        true_set = set(true_sorted.split(",")) if true_sorted else set()
+        pred_set = set(pred_sorted.split(",")) if pred_sorted else set()
         is_mismatch = true_set != pred_set
         return pandas.Series([true_sorted, pred_sorted, is_mismatch])
     
@@ -969,10 +973,10 @@ def annotation_log_download():
     
     # Sort labels hierarchically and detect mismatches
     def process_labels(row):
-        true_sorted = _sort_multilabel_by_hierarchy(row["label_true"] or "", depth_map, ",")
-        pred_sorted = _sort_multilabel_by_hierarchy(row["label_predicted"] or "", depth_map, ",")
-        true_set = set(row["label_true"].split(",")) if row["label_true"] else set()
-        pred_set = set(row["label_predicted"].split(",")) if row["label_predicted"] else set()
+        true_sorted = _sort_multilabel_by_hierarchy(row["label_true"], depth_map, ",")
+        pred_sorted = _sort_multilabel_by_hierarchy(row["label_predicted"], depth_map, ",")
+        true_set = set(true_sorted.split(",")) if true_sorted else set()
+        pred_set = set(pred_sorted.split(",")) if pred_sorted else set()
         is_mismatch = true_set != pred_set
         return pandas.Series([true_sorted, pred_sorted, is_mismatch])
     
