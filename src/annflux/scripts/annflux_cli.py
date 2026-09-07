@@ -39,7 +39,7 @@ from urllib3.exceptions import ProtocolError
 
 from annflux.repo_results_to_embedding import embed_and_prepare
 from annflux.repository.model import ClipModel
-from annflux.scripts.extract_video_frames import frame_capture
+#from annflux.scripts.extract_video_frames import frame_capture
 from annflux.scripts.tile_images import tile_and_save, link_files, download_files
 from annflux.shared import AnnfluxSource
 from annflux.tools.api_sdk import is_port_open, call_predict
@@ -263,7 +263,7 @@ def read_table(path: str, dtype=None):
 
 
 stream_pipeline_steps = {
-    "extract_video_frames": frame_capture,
+#    "extract_video_frames": frame_capture,
     "tile": tile_and_save,
     "link_files": link_files,
     "download_files": download_files,

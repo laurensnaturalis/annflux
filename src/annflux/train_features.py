@@ -223,12 +223,14 @@ def train_then_features(
 
 
 def add_annotations_and_set(data: pandas.DataFrame, source):
+    print(f"add_annotations and set {data.shape=}")
     annotations = json.load(open(source.labels_path))
     subset_split = json.load(open(source.split_path))
     test_uids = set(subset_split["test"])
     data["label_true"] = [annotations.get(uid_) for uid_ in data.uid]
     data["subset"] = ["test" if uid_ in test_uids else None for uid_ in data.uid]
     data.dropna(subset=["label_true"], inplace=True)
+    print(f"add_annotations and set 2 {data.shape=}")
     return data
 
 

@@ -582,6 +582,7 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         """
         Assumes columns 'filename', 'label_true'
         """
+        print(f"{len(data)=}")
         if self.processor is None:
             raise RuntimeError("train_peft called on uninitialized object")
         if isinstance(out_folder, str):
@@ -627,6 +628,9 @@ class ClipFeatureExtractor(BaseFeatureExtractor, PeftTrainableMixin, OpenVinoMix
         data_test = data[data.subset == "test"]
         logger.info(f"{data_train.size=}")
         logger.info(f"{data_test.size=}")
+
+        print(f"{len(data_train)=}")
+        print(f"{len(sufficient_data_classes)=}")
 
         print(Counter(data_train["caption"]))
         data_train, data_val = train_test_split(

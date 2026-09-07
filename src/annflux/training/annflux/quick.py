@@ -620,7 +620,7 @@ def compute_knn(
         state.g_quick_status = "computing knn index"
         knn_index = faiss.index_factory(  # ty:ignore[possibly-missing-attribute]
             features_train.shape[1],
-            "Flat",
+            "HNSW32",
             {"inner": faiss.METRIC_INNER_PRODUCT, "l2": faiss.METRIC_L2}[
                 "l2"
             ],  # ty:ignore[possibly-missing-attribute]
@@ -632,6 +632,8 @@ def compute_knn(
 
         knn_index.train(features_train)
         knn_index.add(features_train)
+
+        print("Train/Add done")
 
         # state.all_distances, state.all_indices = knn_index.search(state.features, k=k)
         all_distances, all_indices = knn_index.search(features_test, k=k)

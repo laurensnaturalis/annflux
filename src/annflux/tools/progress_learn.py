@@ -41,7 +41,7 @@ def estimate_duration(annflux_state: AnnFluxState, step_state: Tuple[str, int, i
                 durations.append(
                     row.timestamp - timings.loc[r - 1, "timestamp"],
                 )
-        logger.info(f"estimate_duration: transitions={transitions[-10:]}")
+        # logger.info(f"estimate_duration: transitions={transitions[-10:]}")
         x = np.vstack(transitions)
 
         # time_estimators = []

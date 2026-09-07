@@ -41,15 +41,17 @@ def make_sex(t_):
 
 def m():
 
-    table = pandas.read_csv("/code/src/annflux/projects/lepisea_june/Augmented_images_other_sources.csv", encoding="latin-1")
+    table = pandas.read_csv("/code/src/annflux/projects/lepisea_june/Augmented_images_other_sources_fixed.csv", encoding="latin-1")
     table["Order"] = "Lepidoptera"
-    table.rename(columns={"sex": "Sex"}, inplace=True)
     table["Family"] = table["Family"].replace("Riodinidae", "Lycaenidae")
     table.loc[table["Genus"] == "Papilio", "Family"] = "Papilionidae"
+    table.loc[table["Genus"] == "Autoba", "Family"] = "Erebidae"
+    table.loc[table["Family"] == "lycaenidae", "Family"] = "Lycaenidae"
+    table.loc[table["Family"] == "Lycaenidae", "Butterfly_Moth"] = "Butterfly"
     print(table.count())
 
     
-    columns = ["Order", "Butterfly_Moth", "family", "Genus", "Species", "Subspecies", "Sex"]
+    columns = ["Order", "Butterfly_Moth", "Family", "Genus", "Species", "Subspecies"]
     taxonomy = table[columns]
     taxonomy.drop_duplicates(inplace=True)
     # print(taxonomy)
@@ -57,21 +59,28 @@ def m():
         lambda t_: " ".join(map(str, t_)), axis=1
     )
     taxonomy["Species"] = taxonomy[["Genus", "Species"]].apply(make_species, axis=1)
-    taxonomy["Subspecies"] = taxonomy[["Species", "Subspecies"]].apply(
-        make_subspecies, axis=1
-    )
-    taxonomy["Sex"] = taxonomy[["Species", "Subspecies", "Sex"]].apply(make_sex, axis=1)
+    # taxonomy["subspecies"] = taxonomy[["Species", "Subspecies"]].apply(
+    #     make_subspecies, axis=1
+    # )
+    # taxonomy["sex"] = taxonomy[["Species", "Subspecies", "Sex"]].apply(make_sex, axis=1)
     taxonomy.dropna(subset=columns, inplace=True, how="all")
     print(len(taxonomy))
     name_to_taxonomy = dict(zip(taxonomy["Name"].values, taxonomy[columns].values))
-    taxonomy.to_csv("taxonomy.csv")
+    taxonomy.to_csv("taxonomy_other.csv")
 
     annotations = {}
     child_to_parent = {}
     seen_conflicts = set()
     table["Name"] = table[columns].apply(lambda t_: " ".join(map(str, t_)), axis=1)
     print(name_to_taxonomy)
-    for _, row in table.iterrows():
+    for i, row in table.iterrows():
+        # if i  == 0:
+        #     print(row["image_filename"])
+        #     print(row["Name"])
+        #     print(row[columns])
+        #     print(f"Processing row {i}")
+        #     break
+
         multilabel_ = name_to_taxonomy[row["Name"]]
         multilabel = []
         for val in multilabel_:
